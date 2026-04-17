@@ -161,7 +161,9 @@ class MediaContextMenuState extends State<MediaContextMenu> {
 
       // Download (video playlists only)
       if (isPlaylist && (widget.item as Playlist).playlistType == 'video') {
-        menuActions.add(_MenuAction(value: 'download_playlist', icon: Symbols.download_rounded, label: t.downloads.downloadNow));
+        menuActions.add(
+          _MenuAction(value: 'download_playlist', icon: Symbols.download_rounded, label: t.downloads.downloadNow),
+        );
       }
 
       // Delete
@@ -244,8 +246,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           ? ancestorMeta.parentRatingKey
           : ancestorMeta?.ratingKey;
       // For episodes, the show key is grandparentRatingKey; for seasons, it's parentRatingKey
-      final itemSeriesKey =
-          mediaType == MediaType.episode ? metadata.grandparentRatingKey : metadata.parentRatingKey;
+      final itemSeriesKey = mediaType == MediaType.episode ? metadata.grandparentRatingKey : metadata.parentRatingKey;
       if ((mediaType == MediaType.episode || mediaType == MediaType.season) &&
           itemSeriesKey != null &&
           ancestorSeriesKey != itemSeriesKey) {
@@ -255,9 +256,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       // Go to Season (for episodes) — hide if already viewing that season's MediaDetailScreen
       if (mediaType == MediaType.episode &&
           metadata.parentTitle != null &&
-          !(ancestorMeta != null &&
-              ancestorMeta.isSeason &&
-              ancestorMeta.ratingKey == metadata.parentRatingKey)) {
+          !(ancestorMeta != null && ancestorMeta.isSeason && ancestorMeta.ratingKey == metadata.parentRatingKey)) {
         menuActions.add(
           _MenuAction(value: 'season', icon: Symbols.playlist_play_rounded, label: t.mediaMenu.goToSeason),
         );
@@ -478,9 +477,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           didNavigate = true;
           await _navigateToRelated(
             context,
-            metadata!.mediaType == MediaType.season
-                ? metadata.parentRatingKey
-                : metadata.grandparentRatingKey,
+            metadata!.mediaType == MediaType.season ? metadata.parentRatingKey : metadata.grandparentRatingKey,
             (metadata) => MediaDetailScreen(metadata: metadata),
             t.messages.errorLoadingSeries,
           );
@@ -894,9 +891,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
         }
 
         appLogger.d('Creating collection "$collectionName" with type $collectionType');
-        final newCollectionId = await client.createCollection(
-          title: collectionName,
-        );
+        final newCollectionId = await client.createCollection(title: collectionName);
 
         if (!context.mounted) return;
 

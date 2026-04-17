@@ -125,11 +125,7 @@ class FolderTreeItem extends StatelessWidget {
             useBackgroundFocus: true,
             disableScale: true,
             descendantsAreFocusable: false,
-            child: GestureDetector(
-              onTap: _handleTap,
-              behavior: HitTestBehavior.opaque,
-              child: rowContent,
-            ),
+            child: GestureDetector(onTap: _handleTap, behavior: HitTestBehavior.opaque, child: rowContent),
           ),
         ),
 

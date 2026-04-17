@@ -43,7 +43,9 @@ class Hub {
 
     return Hub(
       hubKey: json['key'] as String? ?? '',
-      title: kBlurArtwork ? obfuscateText(json['title'] as String? ?? 'Unknown') : json['title'] as String? ?? 'Unknown',
+      title: kBlurArtwork
+          ? obfuscateText(json['title'] as String? ?? 'Unknown')
+          : json['title'] as String? ?? 'Unknown',
       type: json['type'] as String? ?? 'hub',
       hubIdentifier: json['hubIdentifier'] as String?,
       size: (json['size'] as num?)?.toInt() ?? items.length,

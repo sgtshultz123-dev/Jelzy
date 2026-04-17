@@ -159,7 +159,10 @@ class _FolderTreeViewState extends State<FolderTreeView> {
   bool _isFolder(MediaMetadata item) {
     // Folders typically don't have a specific type or might have special indicators
     // Check for common folder indicators
-    return item.key?.contains('/folder') == true || item.type == null || item.type!.isEmpty || item.mediaType == MediaType.unknown;
+    return item.key?.contains('/folder') == true ||
+        item.type == null ||
+        item.type!.isEmpty ||
+        item.mediaType == MediaType.unknown;
   }
 
   List<Widget> _buildTreeItems(List<MediaMetadata> items, int depth, [String parentPath = '']) {
@@ -226,10 +229,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
 
     return RefreshIndicator(
       onRefresh: _loadRootFolders,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        children: _buildTreeItems(_rootFolders, 0),
-      ),
+      child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: _buildTreeItems(_rootFolders, 0)),
     );
   }
 }

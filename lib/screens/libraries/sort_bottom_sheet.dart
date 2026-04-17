@@ -219,7 +219,9 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
       ),
       child: Row(
         children: [
-          Expanded(child: Text(t.libraries.sortBy, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+          Expanded(
+            child: Text(t.libraries.sortBy, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ),
           if (_hasClear)
             _HeaderButton(
               label: t.common.clear,
@@ -277,8 +279,14 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
                               child: SegmentedButton<bool>(
                                 showSelectedIcon: false,
                                 segments: const [
-                                  ButtonSegment(value: false, icon: AppIcon(Symbols.arrow_upward_rounded, fill: 1, size: 16)),
-                                  ButtonSegment(value: true, icon: AppIcon(Symbols.arrow_downward_rounded, fill: 1, size: 16)),
+                                  ButtonSegment(
+                                    value: false,
+                                    icon: AppIcon(Symbols.arrow_upward_rounded, fill: 1, size: 16),
+                                  ),
+                                  ButtonSegment(
+                                    value: true,
+                                    icon: AppIcon(Symbols.arrow_downward_rounded, fill: 1, size: 16),
+                                  ),
                                 ],
                                 selected: {_currentDescending},
                                 onSelectionChanged: (Set<bool> newSelection) {
@@ -306,12 +314,7 @@ class _HeaderButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isClose;
 
-  const _HeaderButton({
-    this.label,
-    required this.isFocused,
-    required this.onPressed,
-    this.isClose = false,
-  });
+  const _HeaderButton({this.label, required this.isFocused, required this.onPressed, this.isClose = false});
 
   @override
   Widget build(BuildContext context) {
@@ -323,10 +326,7 @@ class _HeaderButton extends StatelessWidget {
         circular: true,
         alwaysShowFocus: true,
         onTap: onPressed,
-        child: IconButton(
-          icon: AppIcon(Symbols.close_rounded, fill: 1),
-          onPressed: onPressed,
-        ),
+        child: IconButton(icon: AppIcon(Symbols.close_rounded, fill: 1), onPressed: onPressed),
       );
     }
     // Pill background always visible so Clear looks identical in library vs hub
@@ -350,11 +350,7 @@ class _HeaderButton extends StatelessWidget {
             ),
             child: Text(
               label ?? '',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xE6FFFFFF),
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xE6FFFFFF)),
             ),
           ),
         ),

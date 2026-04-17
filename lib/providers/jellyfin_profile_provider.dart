@@ -3,17 +3,14 @@ import '../models/registered_server.dart';
 import '../services/jellyfin_auth_service.dart';
 import '../services/server_registry.dart';
 import '../services/storage_service.dart';
+
 /// Minimal model for Jellyfin user display (avatar + switch profile).
 class JellyfinProfileUser {
   final String userId;
   final String userName;
   final String? primaryImageTag;
 
-  JellyfinProfileUser({
-    required this.userId,
-    required this.userName,
-    this.primaryImageTag,
-  });
+  JellyfinProfileUser({required this.userId, required this.userName, this.primaryImageTag});
 }
 
 /// Provides current Jellyfin user and list for switch profile when app is using Jellyfin.
@@ -29,11 +26,7 @@ class JellyfinProfileProvider extends ChangeNotifier {
   JellyfinProfileUser? get currentUser {
     if (_data?.currentUser == null) return null;
     final u = _data!.currentUser!;
-    return JellyfinProfileUser(
-      userId: u.userId,
-      userName: u.userName,
-      primaryImageTag: u.primaryImageTag,
-    );
+    return JellyfinProfileUser(userId: u.userId, userName: u.userName, primaryImageTag: u.primaryImageTag);
   }
 
   String get baseUrl => _data?.baseUrl ?? '';
@@ -42,11 +35,7 @@ class JellyfinProfileProvider extends ChangeNotifier {
   List<JellyfinProfileUser> get users {
     if (_data == null || _data!.users.isEmpty) return [];
     return _data!.users
-        .map((u) => JellyfinProfileUser(
-              userId: u.userId,
-              userName: u.userName,
-              primaryImageTag: u.primaryImageTag,
-            ))
+        .map((u) => JellyfinProfileUser(userId: u.userId, userName: u.userName, primaryImageTag: u.primaryImageTag))
         .toList();
   }
 
@@ -120,4 +109,3 @@ class JellyfinProfileProvider extends ChangeNotifier {
     return ok;
   }
 }
-

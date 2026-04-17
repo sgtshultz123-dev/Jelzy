@@ -17,6 +17,7 @@ enum LibrariesLoadState { initial, loading, loaded, error }
 class LibrariesProvider extends ChangeNotifier {
   DataAggregationService? _aggregationService;
   List<MediaLibrary> _libraries = [];
+
   /// Full display order keys from storage (includes [kJellyfinFavoritesKey] when present).
   List<String> _savedOrderKeys = [];
   LibrariesLoadState _loadState = LibrariesLoadState.initial;
@@ -26,8 +27,7 @@ class LibrariesProvider extends ChangeNotifier {
   List<MediaLibrary> get libraries => List.unmodifiable(_libraries);
 
   /// Order of keys for sidebar/sheet display (includes Favorites key). Null if not yet loaded.
-  List<String>? get displayOrderKeys =>
-      _savedOrderKeys.isEmpty ? null : List.unmodifiable(_savedOrderKeys);
+  List<String>? get displayOrderKeys => _savedOrderKeys.isEmpty ? null : List.unmodifiable(_savedOrderKeys);
 
   /// Whether libraries are currently being loaded
   bool get isLoading => _loadState == LibrariesLoadState.loading;
@@ -107,9 +107,7 @@ class LibrariesProvider extends ChangeNotifier {
   /// [orderedLibraries] may include a synthetic Favorites item (globalKey == [kJellyfinFavoritesKey]);
   /// only real libraries are stored in [_libraries]; full key list (including Favorites) is persisted.
   Future<void> updateLibraryOrder(List<MediaLibrary> orderedLibraries) async {
-    final realLibraries = orderedLibraries
-        .where((lib) => lib.globalKey != kJellyfinFavoritesKey)
-        .toList();
+    final realLibraries = orderedLibraries.where((lib) => lib.globalKey != kJellyfinFavoritesKey).toList();
     final allKeys = orderedLibraries.map((lib) => lib.globalKey).toList();
 
     _libraries = List.from(realLibraries);

@@ -59,7 +59,6 @@ import '../focus/dpad_navigator.dart';
 import '../focus/key_event_utils.dart';
 import '../i18n/strings.g.dart';
 
-
 class VideoPlayerScreen extends StatefulWidget {
   final MediaMetadata metadata;
   final AudioTrack? preferredAudioTrack;
@@ -656,12 +655,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
     if (player == null || track.uri == null) return;
     appLogger.d('[Sub] addExternal: uri=${track.uri?.length ?? 0}chars title=${track.title}');
     try {
-      await player!.addSubtitleTrack(
-        uri: track.uri!,
-        title: track.title,
-        language: track.language,
-        select: true,
-      );
+      await player!.addSubtitleTrack(uri: track.uri!, title: track.title, language: track.language, select: true);
       appLogger.d('[Sub] addExternal: done. player.track.subtitle=${player!.state.track.subtitle?.id}');
       _onSubtitleTrackChanged(track);
     } catch (e) {
@@ -1018,10 +1012,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
         final startPosition = result.isTranscode ? null : resumePosition;
 
         // Always start playing immediately; external subtitles load on demand when user selects one
-        await player!.open(
-          Media(result.videoUrl!, start: startPosition, headers: requestHeaders),
-          play: true,
-        );
+        await player!.open(Media(result.videoUrl!, start: startPosition, headers: requestHeaders), play: true);
 
         // Apply subtitle styling to ExoPlayer native layer (CaptionStyleCompat + libass font scale)
         // Must be called after open() since that's when ExoPlayer initializes
@@ -1037,7 +1028,6 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
             subtitlePosition: settingsService.getSubtitlePosition(),
           );
         }
-
       }
 
       // Update available versions from the playback data
@@ -1395,7 +1385,6 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
 
     // Update OS media controls playback state
     _updateMediaControlsPlaybackState();
-
   }
 
   void _onVideoCompleted(bool completed) async {
@@ -1587,9 +1576,11 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
   /// supported by all MPV builds.
   Future<void> _setLiveStreamOptions() async {
     final p = player!;
-    await p.setProperty('stream-lavf-o',
-        'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,'
-        'reconnect_on_network_error=1,reconnect_delay_max=30');
+    await p.setProperty(
+      'stream-lavf-o',
+      'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,'
+          'reconnect_on_network_error=1,reconnect_delay_max=30',
+    );
     await p.setProperty('demuxer-lavf-o', 'max_reload=1000');
     await p.setProperty('force-seekable', 'no');
   }
@@ -1598,9 +1589,11 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
   /// Enables auto-reconnect on network drops (up to ~10 min).
   Future<void> _setVodStreamOptions() async {
     final p = player!;
-    await p.setProperty('stream-lavf-o',
-        'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,'
-        'reconnect_on_network_error=1,reconnect_delay_max=600');
+    await p.setProperty(
+      'stream-lavf-o',
+      'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,'
+          'reconnect_on_network_error=1,reconnect_delay_max=600',
+    );
   }
 
   Future<void> _switchLiveChannel(int delta) async {
@@ -1745,7 +1738,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
 
     appLogger.d('Normalized media_kit language: ${track.language} -> $normalizedTrackLang');
 
-      for (final serverTrack in _currentMediaInfo!.audioTracks) {
+    for (final serverTrack in _currentMediaInfo!.audioTracks) {
       final matchLang = serverTrack.languageCode == normalizedTrackLang;
       final matchTitle = (track.title == null || track.title!.isEmpty)
           ? true
@@ -2038,9 +2031,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen> with WidgetsBindin
       },
       child: OverlaySheetHost(
         child: Builder(
-          builder: (sheetContext) => _isPlayerInitialized && player != null
-              ? _buildVideoPlayer(sheetContext)
-              : _buildLoadingSpinner(),
+          builder: (sheetContext) =>
+              _isPlayerInitialized && player != null ? _buildVideoPlayer(sheetContext) : _buildLoadingSpinner(),
         ),
       ),
     );

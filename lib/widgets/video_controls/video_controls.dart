@@ -493,8 +493,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
     final marker = _currentMarker!;
     final endTime = marker.endTime;
     final duration = widget.player.state.duration;
-    final isAtEnd = duration > Duration.zero &&
-        (duration - endTime).inMilliseconds <= 1000;
+    final isAtEnd = duration > Duration.zero && (duration - endTime).inMilliseconds <= 1000;
 
     if (marker.isCredits && isAtEnd) {
       // Credits extend to end of video — don't seek (unreliable due to
@@ -1019,7 +1018,12 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
       final settings = await SettingsService.getInstance();
       final introPattern = settings.getIntroPattern();
       final creditsPattern = settings.getCreditsPattern();
-      final extras = await client.getPlaybackExtras(widget.metadata.ratingKey, introPattern: introPattern, creditsPattern: creditsPattern, forceRefresh: forceRefresh);
+      final extras = await client.getPlaybackExtras(
+        widget.metadata.ratingKey,
+        introPattern: introPattern,
+        creditsPattern: creditsPattern,
+        forceRefresh: forceRefresh,
+      );
       appLogger.d('_loadPlaybackExtras: got ${extras.chapters.length} chapters');
 
       if (mounted) {
@@ -1118,9 +1122,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
       isScreenLocked: _isScreenLocked,
       isFullscreen: _isFullscreen,
       isAlwaysOnTop: _isAlwaysOnTop,
-      onTogglePIPMode: (_isPipSupported && !PlatformDetector.isTV())
-          ? widget.onTogglePIPMode
-          : null,
+      onTogglePIPMode: (_isPipSupported && !PlatformDetector.isTV()) ? widget.onTogglePIPMode : null,
       onCycleBoxFitMode: widget.player.playerType != 'exoplayer' ? widget.onCycleBoxFitMode : null,
       onToggleRotationLock: _toggleRotationLock,
       onToggleScreenLock: _toggleScreenLock,
@@ -2230,7 +2232,11 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
                                   const SizedBox(width: 8),
                                   Text(
                                     t.videoControls.longPressToUnlock,
-                                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -2313,7 +2319,8 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
     final hasNextEpisode = widget.onNext != null;
 
     // Show "Next Episode" only when credits extend to end AND there's a next episode
-    final bool creditsAtEnd = isCredits &&
+    final bool creditsAtEnd =
+        isCredits &&
         widget.player.state.duration > Duration.zero &&
         (widget.player.state.duration - _currentMarker!.endTime).inMilliseconds <= 1000;
     final bool showNextEpisode = creditsAtEnd && hasNextEpisode;
@@ -2443,10 +2450,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
       if (token == null) return;
 
       // Find external subtitle tracks from the refreshed metadata
-      final existingUris = widget.player.state.tracks.subtitle
-          .where((t) => t.uri != null)
-          .map((t) => t.uri!)
-          .toSet();
+      final existingUris = widget.player.state.tracks.subtitle.where((t) => t.uri != null).map((t) => t.uri!).toSet();
 
       for (final plexTrack in data.mediaInfo!.subtitleTracks) {
         if (!plexTrack.isExternal) continue;

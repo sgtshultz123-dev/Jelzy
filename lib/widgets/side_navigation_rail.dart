@@ -130,6 +130,7 @@ class NavigationRailItem extends StatelessWidget {
 class SideNavigationRail extends StatefulWidget {
   /// Selected tab as a [NavigationTabId]. Prefer [selectedIndex] for int-based callers.
   final NavigationTabId? selectedTab;
+
   /// Selected tab as an int index (alternative to [selectedTab]).
   final int? selectedIndex;
   final String? selectedLibraryKey;
@@ -137,8 +138,10 @@ class SideNavigationRail extends StatefulWidget {
   final bool isSidebarFocused;
   final bool alwaysExpanded;
   final bool isReconnecting;
+
   /// Callback for index-based selection (int → void).
   final ValueChanged<int>? onDestinationSelectedIndex;
+
   /// Callback for NavigationTabId-based selection.
   final ValueChanged<NavigationTabId>? onDestinationSelected;
   final ValueChanged<String> onLibrarySelected;
@@ -245,7 +248,8 @@ class SideNavigationRailState extends State<SideNavigationRail> {
   void didUpdateWidget(covariant SideNavigationRail oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Auto-collapse after navigation (selection changed)
-    if (oldWidget.resolvedSelectedTab != widget.resolvedSelectedTab || oldWidget.selectedLibraryKey != widget.selectedLibraryKey) {
+    if (oldWidget.resolvedSelectedTab != widget.resolvedSelectedTab ||
+        oldWidget.selectedLibraryKey != widget.selectedLibraryKey) {
       _isTouchExpanded = false;
     }
   }
@@ -348,8 +352,7 @@ class SideNavigationRailState extends State<SideNavigationRail> {
       if (!mounted) return;
       final ctx = nextNode.context;
       if (ctx != null) {
-        Scrollable.ensureVisible(ctx,
-            alignment: 0.5, duration: const Duration(milliseconds: 200));
+        Scrollable.ensureVisible(ctx, alignment: 0.5, duration: const Duration(milliseconds: 200));
       }
     });
     return KeyEventResult.handled;
@@ -446,107 +449,106 @@ class SideNavigationRailState extends State<SideNavigationRail> {
                   child: Focus(
                     canRequestFocus: false,
                     skipTraversal: true,
-                    onKeyEvent: (node, event) =>
-                        _handleVerticalNavigation(node, event, focusOrder),
+                    onKeyEvent: (node, event) => _handleVerticalNavigation(node, event, focusOrder),
                     child: Column(
-                    children: [
-                      // Safe area for status bar and macOS traffic lights
-                      SizedBox(height: _getTopPadding(context)),
+                      children: [
+                        // Safe area for status bar and macOS traffic lights
+                        SizedBox(height: _getTopPadding(context)),
 
-                      // Navigation content
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          clipBehavior: Clip.hardEdge,
-                          children: [
-                            // Reconnect button when offline
-                            if (widget.isOfflineMode && widget.onReconnect != null) ...[
-                              _buildReconnectItem(isCollapsed: isCollapsed),
-                              const SizedBox(height: 8),
-                            ],
+                        // Navigation content
+                        Expanded(
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              // Reconnect button when offline
+                              if (widget.isOfflineMode && widget.onReconnect != null) ...[
+                                _buildReconnectItem(isCollapsed: isCollapsed),
+                                const SizedBox(height: 8),
+                              ],
 
-                            // In online mode, show full navigation
-                            if (!widget.isOfflineMode) ...[
-                              // Home
-                              _buildNavItem(
-                                icon: Symbols.home_rounded,
-                                selectedIcon: Symbols.home_rounded,
-                                label: Translations.of(context).common.home,
-                                isSelected: widget.resolvedSelectedTab == NavigationTabId.discover,
-                                isFocused: _focusTracker.isFocused(_kHome),
-                                onTap: () => _dispatchTabSelected(NavigationTabId.discover),
-                                focusNode: _focusTracker.get(_kHome),
-                                isCollapsed: isCollapsed,
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              // Libraries section
-                              _buildLibrariesSection(visibleLibraries, t, isCollapsed: isCollapsed),
-
-                              const SizedBox(height: 8),
-
-                              // Live TV (only if DVR available)
-                              if (context.watch<MultiServerProvider>().hasLiveTv) ...[
+                              // In online mode, show full navigation
+                              if (!widget.isOfflineMode) ...[
+                                // Home
                                 _buildNavItem(
-                                  icon: Symbols.live_tv_rounded,
-                                  selectedIcon: Symbols.live_tv_rounded,
-                                  label: Translations.of(context).navigation.liveTv,
-                                  isSelected: widget.resolvedSelectedTab == NavigationTabId.liveTv,
-                                  isFocused: _focusTracker.isFocused('liveTv'),
-                                  onTap: () => _dispatchTabSelected(NavigationTabId.liveTv),
-                                  focusNode: _focusTracker.get('liveTv'),
+                                  icon: Symbols.home_rounded,
+                                  selectedIcon: Symbols.home_rounded,
+                                  label: Translations.of(context).common.home,
+                                  isSelected: widget.resolvedSelectedTab == NavigationTabId.discover,
+                                  isFocused: _focusTracker.isFocused(_kHome),
+                                  onTap: () => _dispatchTabSelected(NavigationTabId.discover),
+                                  focusNode: _focusTracker.get(_kHome),
+                                  isCollapsed: isCollapsed,
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Libraries section
+                                _buildLibrariesSection(visibleLibraries, t, isCollapsed: isCollapsed),
+
+                                const SizedBox(height: 8),
+
+                                // Live TV (only if DVR available)
+                                if (context.watch<MultiServerProvider>().hasLiveTv) ...[
+                                  _buildNavItem(
+                                    icon: Symbols.live_tv_rounded,
+                                    selectedIcon: Symbols.live_tv_rounded,
+                                    label: Translations.of(context).navigation.liveTv,
+                                    isSelected: widget.resolvedSelectedTab == NavigationTabId.liveTv,
+                                    isFocused: _focusTracker.isFocused('liveTv'),
+                                    onTap: () => _dispatchTabSelected(NavigationTabId.liveTv),
+                                    focusNode: _focusTracker.get('liveTv'),
+                                    isCollapsed: isCollapsed,
+                                  ),
+
+                                  const SizedBox(height: 8),
+                                ],
+
+                                // Search
+                                _buildNavItem(
+                                  icon: Symbols.search_rounded,
+                                  selectedIcon: Symbols.search_rounded,
+                                  label: Translations.of(context).common.search,
+                                  isSelected: widget.resolvedSelectedTab == NavigationTabId.search,
+                                  isFocused: _focusTracker.isFocused(_kSearch),
+                                  onTap: () => _dispatchTabSelected(NavigationTabId.search),
+                                  focusNode: _focusTracker.get(_kSearch),
                                   isCollapsed: isCollapsed,
                                 ),
 
                                 const SizedBox(height: 8),
                               ],
 
-                              // Search
+                              // Downloads
                               _buildNavItem(
-                                icon: Symbols.search_rounded,
-                                selectedIcon: Symbols.search_rounded,
-                                label: Translations.of(context).common.search,
-                                isSelected: widget.resolvedSelectedTab == NavigationTabId.search,
-                                isFocused: _focusTracker.isFocused(_kSearch),
-                                onTap: () => _dispatchTabSelected(NavigationTabId.search),
-                                focusNode: _focusTracker.get(_kSearch),
+                                icon: Symbols.download_rounded,
+                                selectedIcon: Symbols.download_rounded,
+                                label: Translations.of(context).navigation.downloads,
+                                isSelected: widget.resolvedSelectedTab == NavigationTabId.downloads,
+                                isFocused: _focusTracker.isFocused(_kDownloads),
+                                onTap: () => _dispatchTabSelected(NavigationTabId.downloads),
+                                focusNode: _focusTracker.get(_kDownloads),
                                 isCollapsed: isCollapsed,
                               ),
 
                               const SizedBox(height: 8),
+
+                              // Settings
+                              _buildNavItem(
+                                icon: Symbols.settings_rounded,
+                                selectedIcon: Symbols.settings_rounded,
+                                label: Translations.of(context).common.settings,
+                                isSelected: widget.resolvedSelectedTab == NavigationTabId.settings,
+                                isFocused: _focusTracker.isFocused(_kSettings),
+                                onTap: () => _dispatchTabSelected(NavigationTabId.settings),
+                                focusNode: _focusTracker.get(_kSettings),
+                                isCollapsed: isCollapsed,
+                              ),
                             ],
-
-                            // Downloads
-                            _buildNavItem(
-                              icon: Symbols.download_rounded,
-                              selectedIcon: Symbols.download_rounded,
-                              label: Translations.of(context).navigation.downloads,
-                              isSelected: widget.resolvedSelectedTab == NavigationTabId.downloads,
-                              isFocused: _focusTracker.isFocused(_kDownloads),
-                              onTap: () => _dispatchTabSelected(NavigationTabId.downloads),
-                              focusNode: _focusTracker.get(_kDownloads),
-                              isCollapsed: isCollapsed,
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // Settings
-                            _buildNavItem(
-                              icon: Symbols.settings_rounded,
-                              selectedIcon: Symbols.settings_rounded,
-                              label: Translations.of(context).common.settings,
-                              isSelected: widget.resolvedSelectedTab == NavigationTabId.settings,
-                              isFocused: _focusTracker.isFocused(_kSettings),
-                              onTap: () => _dispatchTabSelected(NavigationTabId.settings),
-                              focusNode: _focusTracker.get(_kSettings),
-                              isCollapsed: isCollapsed,
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -620,7 +622,8 @@ class SideNavigationRailState extends State<SideNavigationRail> {
   Widget _buildLibrariesSection(List<MediaLibrary> visibleLibraries, dynamic t, {bool isCollapsed = false}) {
     final librariesProvider = context.watch<LibrariesProvider>();
     final isLoading = librariesProvider.isLoading;
-    final isLibrariesSelected = widget.resolvedSelectedTab == NavigationTabId.libraries && widget.selectedLibraryKey == null;
+    final isLibrariesSelected =
+        widget.resolvedSelectedTab == NavigationTabId.libraries && widget.selectedLibraryKey == null;
     final isLibrariesFocused = _focusTracker.isFocused(_kLibraries);
 
     return Column(
@@ -689,7 +692,9 @@ class SideNavigationRailState extends State<SideNavigationRail> {
                                 Translations.of(context).navigation.libraries,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: widget.resolvedSelectedTab == NavigationTabId.libraries ? FontWeight.w600 : FontWeight.w400,
+                                  fontWeight: widget.resolvedSelectedTab == NavigationTabId.libraries
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
                                   color: widget.resolvedSelectedTab == NavigationTabId.libraries ? t.text : t.textMuted,
                                 ),
                               ),
@@ -784,7 +789,8 @@ class SideNavigationRailState extends State<SideNavigationRail> {
   }
 
   Widget _buildLibraryItem(MediaLibrary library, dynamic t, {bool showServerName = false}) {
-    final isSelected = widget.resolvedSelectedTab == NavigationTabId.libraries && widget.selectedLibraryKey == library.globalKey;
+    final isSelected =
+        widget.resolvedSelectedTab == NavigationTabId.libraries && widget.selectedLibraryKey == library.globalKey;
     final isFocused = _focusTracker.isFocused(library.globalKey);
     final focusNode = _focusTracker.get(library.globalKey);
 

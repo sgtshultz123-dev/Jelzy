@@ -78,11 +78,7 @@ class _JellyfinProfileSwitchScreenState extends State<JellyfinProfileSwitchScree
                     Positioned(
                       right: -4,
                       bottom: -4,
-                      child: Icon(
-                        Symbols.check_circle_rounded,
-                        size: 24,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      child: Icon(Symbols.check_circle_rounded, size: 24, color: Theme.of(context).colorScheme.primary),
                     ),
                 ],
               ),

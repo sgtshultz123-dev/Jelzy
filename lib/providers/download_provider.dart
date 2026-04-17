@@ -336,10 +336,7 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Get episode downloads filtered by show and/or season ratingKey.
-  List<DownloadProgress> _getEpisodeDownloads({
-    String? showRatingKey,
-    String? seasonRatingKey,
-  }) {
+  List<DownloadProgress> _getEpisodeDownloads({String? showRatingKey, String? seasonRatingKey}) {
     return _downloads.entries
         .where((entry) {
           final meta = _metadata[entry.key];
@@ -781,8 +778,13 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Queue all episodes from a TV show for download
-  Future<int> _queueShowDownload(MediaMetadata show, JellyfinClient client,
-      {DownloadVersionConfig? versionConfig, DownloadFilter filter = DownloadFilter.all, int? maxCount}) async {
+  Future<int> _queueShowDownload(
+    MediaMetadata show,
+    JellyfinClient client, {
+    DownloadVersionConfig? versionConfig,
+    DownloadFilter filter = DownloadFilter.all,
+    int? maxCount,
+  }) async {
     int count = 0;
     final seasons = await client.getChildren(show.itemId);
 
@@ -793,8 +795,13 @@ class DownloadProvider extends ChangeNotifier {
       if (season.type == 'season') {
         if (remaining != null && remaining <= 0) break;
         final seasonWithServer = _ensureServerId(season, show.serverId);
-        final queued = await _queueSeasonDownload(seasonWithServer, client,
-            versionConfig: versionConfig, filter: filter, maxCount: remaining);
+        final queued = await _queueSeasonDownload(
+          seasonWithServer,
+          client,
+          versionConfig: versionConfig,
+          filter: filter,
+          maxCount: remaining,
+        );
         count += queued;
         if (remaining != null) remaining -= queued;
       }
@@ -804,8 +811,13 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Queue all episodes from a season for download
-  Future<int> _queueSeasonDownload(MediaMetadata season, JellyfinClient client,
-      {DownloadVersionConfig? versionConfig, DownloadFilter filter = DownloadFilter.all, int? maxCount}) async {
+  Future<int> _queueSeasonDownload(
+    MediaMetadata season,
+    JellyfinClient client, {
+    DownloadVersionConfig? versionConfig,
+    DownloadFilter filter = DownloadFilter.all,
+    int? maxCount,
+  }) async {
     int count = 0;
     final episodes = await client.getChildren(season.itemId);
 
@@ -845,8 +857,11 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Queue missing episodes for a show
-  Future<int> _queueMissingShowEpisodes(MediaMetadata show, JellyfinClient client,
-      {DownloadVersionConfig? versionConfig}) async {
+  Future<int> _queueMissingShowEpisodes(
+    MediaMetadata show,
+    JellyfinClient client, {
+    DownloadVersionConfig? versionConfig,
+  }) async {
     int queuedCount = 0;
 
     final seasons = await client.getChildren(show.itemId);
@@ -863,8 +878,11 @@ class DownloadProvider extends ChangeNotifier {
   }
 
   /// Queue missing episodes for a season
-  Future<int> _queueMissingSeasonEpisodes(MediaMetadata season, JellyfinClient client,
-      {DownloadVersionConfig? versionConfig}) async {
+  Future<int> _queueMissingSeasonEpisodes(
+    MediaMetadata season,
+    JellyfinClient client, {
+    DownloadVersionConfig? versionConfig,
+  }) async {
     int queuedCount = 0;
 
     final episodes = await client.getChildren(season.itemId);

@@ -117,7 +117,6 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   /// Track which tabs have loaded data (used to trigger focus after tab restore)
   final Set<int> _loadedTabs = {};
 
-
   /// Effective number of tabs for the selected library (4 for movie/show, 1 for collection/playlist).
   int _effectiveTabCount = 5;
 
@@ -146,11 +145,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       ];
     }
     if (_effectiveTabCount == 3) {
-      return [
-        _recommendedTabChipFocusNode,
-        _browseTabChipFocusNode,
-        _favoritesTabChipFocusNode,
-      ];
+      return [_recommendedTabChipFocusNode, _browseTabChipFocusNode, _favoritesTabChipFocusNode];
     }
     if (_effectiveTabCount == 1) {
       return [_browseTabChipFocusNode];
@@ -247,14 +242,12 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       return result;
     }
 
-    final primary = allLibraries
-        .where((l) => l.type.toLowerCase() == 'movie' || l.type.toLowerCase() == 'show')
-        .toList()
-      ..sort((a, b) => a.title.compareTo(b.title));
-    final secondary = allLibraries
-        .where((l) => l.type.toLowerCase() != 'movie' && l.type.toLowerCase() != 'show')
-        .toList()
-      ..sort((a, b) => a.title.compareTo(b.title));
+    final primary =
+        allLibraries.where((l) => l.type.toLowerCase() == 'movie' || l.type.toLowerCase() == 'show').toList()
+          ..sort((a, b) => a.title.compareTo(b.title));
+    final secondary =
+        allLibraries.where((l) => l.type.toLowerCase() != 'movie' && l.type.toLowerCase() != 'show').toList()
+          ..sort((a, b) => a.title.compareTo(b.title));
     return [...primary, fakeFavorites, ...secondary];
   }
 
@@ -445,7 +438,11 @@ class _LibrariesScreenState extends State<LibrariesScreen>
 
   MediaLibrary? _getSelectedLibrary() {
     if (_selectedLibraryGlobalKey == null) return null;
-    final list = context.read<LibrariesProvider>().libraries.where((l) => l.globalKey == _selectedLibraryGlobalKey).toList();
+    final list = context
+        .read<LibrariesProvider>()
+        .libraries
+        .where((l) => l.globalKey == _selectedLibraryGlobalKey)
+        .toList();
     return list.isNotEmpty ? list.first : null;
   }
 
@@ -458,12 +455,18 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       }
     }
     switch (index) {
-      case 0: return _browseTabKey.currentState;
-      case 1: return _recommendedTabKey.currentState;
-      case 2: return _favoritesTabKey.currentState;
-      case 3: return _effectiveTabCount == 4 ? _genreTabKey.currentState : _collectionsTabKey.currentState;
-      case 4: return _playlistsTabKey.currentState;
-      default: return null;
+      case 0:
+        return _browseTabKey.currentState;
+      case 1:
+        return _recommendedTabKey.currentState;
+      case 2:
+        return _favoritesTabKey.currentState;
+      case 3:
+        return _effectiveTabCount == 4 ? _genreTabKey.currentState : _collectionsTabKey.currentState;
+      case 4:
+        return _playlistsTabKey.currentState;
+      default:
+        return null;
     }
   }
 
@@ -478,7 +481,10 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     // Only focus if this is the currently active tab and in keyboard mode
     if (tabController.index == tabIndex && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && tabController.index == tabIndex && !suppressAutoFocus && InputModeTracker.isKeyboardMode(context)) {
+        if (mounted &&
+            tabController.index == tabIndex &&
+            !suppressAutoFocus &&
+            InputModeTracker.isKeyboardMode(context)) {
           _focusCurrentTab();
         }
       });
@@ -607,10 +613,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       playbackStateProvider.clearShuffle();
 
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const AuthScreen()),
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false);
       }
     }
   }
@@ -756,7 +761,10 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     // However, on first load the tab might finish loading before the tab index
     // is restored. Check if the current tab has already loaded and focus if so.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _selectedLibraryGlobalKey == libraryGlobalKey && _loadedTabs.contains(tabController.index) && InputModeTracker.isKeyboardMode(context)) {
+      if (mounted &&
+          _selectedLibraryGlobalKey == libraryGlobalKey &&
+          _loadedTabs.contains(tabController.index) &&
+          InputModeTracker.isKeyboardMode(context)) {
         _focusCurrentTab();
       }
     });
@@ -803,13 +811,10 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       final hiddenLibrariesProvider = context.read<HiddenLibrariesProvider>();
       final allLibraries = librariesProvider.libraries;
       final hiddenKeys = hiddenLibrariesProvider.hiddenLibraryKeys;
-      final visibleLibraries = allLibraries
-          .where((lib) => !hiddenKeys.contains(lib.globalKey))
-          .where((lib) {
-            final t = lib.type.toLowerCase();
-            return t == 'movie' || t == 'show';
-          })
-          .toList();
+      final visibleLibraries = allLibraries.where((lib) => !hiddenKeys.contains(lib.globalKey)).where((lib) {
+        final t = lib.type.toLowerCase();
+        return t == 'movie' || t == 'show';
+      }).toList();
 
       final hubs = <Hub>[];
       for (final lib in visibleLibraries) {
@@ -821,16 +826,18 @@ class _LibrariesScreenState extends State<LibrariesScreen>
               .map((item) => item.copyWith(serverId: lib.serverId, serverName: lib.serverName))
               .toList();
           if (tagged.isNotEmpty) {
-            hubs.add(Hub(
-              hubKey: 'favorites_${lib.globalKey}',
-              title: lib.title,
-              type: lib.type,
-              size: tagged.length,
-              more: tagged.length >= 20,
-              items: tagged,
-              serverId: lib.serverId,
-              serverName: lib.serverName,
-            ));
+            hubs.add(
+              Hub(
+                hubKey: 'favorites_${lib.globalKey}',
+                title: lib.title,
+                type: lib.type,
+                size: tagged.length,
+                more: tagged.length >= 20,
+                items: tagged,
+                serverId: lib.serverId,
+                serverName: lib.serverName,
+              ),
+            );
           }
         } catch (e) {
           appLogger.w('Failed to load favorites for ${lib.title}', error: e);
@@ -1321,10 +1328,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       final titleStyle = Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge;
       if (_effectiveTabCount == 1) {
         final isCollection = selectedLibrary?.type.toLowerCase() == 'collection';
-        return Text(
-          isCollection ? t.libraries.tabs.collections : t.libraries.tabs.playlists,
-          style: titleStyle,
-        );
+        return Text(isCollection ? t.libraries.tabs.collections : t.libraries.tabs.playlists, style: titleStyle);
       }
       // Movies/Shows: tabs only (no library title)
       final chips = <Widget>[];
@@ -1387,34 +1391,34 @@ class _LibrariesScreenState extends State<LibrariesScreen>
         },
         itemBuilder: (context) => _buildGroupedLibraryMenuItems(visibleLibraries),
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(ContentTypeHelper.getLibraryIcon(displayLibrary.type), fill: 1, size: 20),
-            const SizedBox(width: 8),
-            if (_hasMultipleServers(visibleLibraries) && displayLibrary.serverName != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(displayLibrary.title, style: Theme.of(context).textTheme.titleMedium),
-                  Text(
-                    displayLibrary.serverName!,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppIcon(ContentTypeHelper.getLibraryIcon(displayLibrary.type), fill: 1, size: 20),
+              const SizedBox(width: 8),
+              if (_hasMultipleServers(visibleLibraries) && displayLibrary.serverName != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(displayLibrary.title, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      displayLibrary.serverName!,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                      ),
                     ),
-                  ),
-                ],
-              )
-            else
-              Text(displayLibrary.title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(width: 4),
-            const AppIcon(Symbols.arrow_drop_down_rounded, fill: 1, size: 24),
-          ],
+                  ],
+                )
+              else
+                Text(displayLibrary.title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(width: 4),
+              const AppIcon(Symbols.arrow_drop_down_rounded, fill: 1, size: 24),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -1438,10 +1442,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
       return [
         SliverFillRemaining(
           child: Center(
-            child: EmptyStateWidget(
-              message: t.libraries.noFavorites,
-              icon: Symbols.favorite_rounded,
-            ),
+            child: EmptyStateWidget(message: t.libraries.noFavorites, icon: Symbols.favorite_rounded),
           ),
         ),
       ];
@@ -1514,10 +1515,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                 return false;
               },
               child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  scrollbars: false,
-                  physics: anySheetOpen ? const NeverScrollableScrollPhysics() : null,
-                ),
+                behavior: ScrollConfiguration.of(
+                  context,
+                ).copyWith(scrollbars: false, physics: anySheetOpen ? const NeverScrollableScrollPhysics() : null),
                 child: child!,
               ),
             );
@@ -1530,7 +1530,8 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                 builder: (context) {
                   final statusBarHeight = MediaQuery.of(context).padding.top;
                   final useSideNav = PlatformDetector.shouldUseSideNavigation(context);
-                  final hasHeaderOnly = useSideNav &&
+                  final hasHeaderOnly =
+                      useSideNav &&
                       (selectedLibrary == null ||
                           _selectedLibraryGlobalKey == kJellyfinFavoritesKey ||
                           _effectiveTabCount == 1);
@@ -1547,19 +1548,12 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                     shadowColor: Colors.transparent,
                     scrolledUnderElevation: 0,
                     flexibleSpace: Padding(
-                      padding: EdgeInsets.only(
-                        top: statusBarHeight,
-                        left: 16,
-                        right: 16,
-                        bottom: dims.barPadding,
-                      ),
+                      padding: EdgeInsets.only(top: statusBarHeight, left: 16, right: 16, bottom: dims.barPadding),
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: dims.barPadding),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: _buildAppBarTitle(visibleLibraries, selectedLibrary),
-                            ),
+                            Expanded(child: _buildAppBarTitle(visibleLibraries, selectedLibrary)),
                             Focus(
                               focusNode: _refreshButtonFocusNode,
                               onKeyEvent: _handleRefreshKeyEvent,
@@ -1593,7 +1587,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                                 builder: (context) {
                                   return Container(
                                     decoration: BoxDecoration(
-                                      color: _isProfileFocused ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+                                      color: _isProfileFocused
+                                          ? Colors.white.withValues(alpha: 0.2)
+                                          : Colors.transparent,
                                       borderRadius: const BorderRadius.all(Radius.circular(20)),
                                     ),
                                     child: ProfileAppBarButton(
@@ -1630,7 +1626,10 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                   child: EmptyStateWidget(message: t.libraries.noLibrariesFound, icon: Symbols.video_library_rounded),
                 )
               else ...[
-                if (_selectedLibraryGlobalKey != null && selectedLibrary != null && _selectedLibraryGlobalKey != kJellyfinFavoritesKey && !PlatformDetector.shouldUseSideNavigation(context))
+                if (_selectedLibraryGlobalKey != null &&
+                    selectedLibrary != null &&
+                    _selectedLibraryGlobalKey != kJellyfinFavoritesKey &&
+                    !PlatformDetector.shouldUseSideNavigation(context))
                   SliverToBoxAdapter(
                     child: Container(
                       padding: EdgeInsets.symmetric(
@@ -1639,9 +1638,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                       ),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: _buildTabChipsForCurrentLibrary(selectedLibrary),
-                        ),
+                        child: Row(children: _buildTabChipsForCurrentLibrary(selectedLibrary)),
                       ),
                     ),
                   ),
@@ -1653,7 +1650,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
                     child: TabBarView(
                       key: ValueKey(_selectedLibraryGlobalKey),
                       controller: tabController,
-                      physics: (PlatformDetector.isDesktop(context) || PlatformDetector.isTV()) ? const NeverScrollableScrollPhysics() : null,
+                      physics: (PlatformDetector.isDesktop(context) || PlatformDetector.isTV())
+                          ? const NeverScrollableScrollPhysics()
+                          : null,
                       children: _buildTabViewChildren(selectedLibrary),
                     ),
                   ),

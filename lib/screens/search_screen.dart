@@ -115,8 +115,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
       }
 
       final hasLiveTv = multiServerProvider.hasLiveTv;
-      final categorizedResults = await multiServerProvider.aggregationService
-          .searchCategorizedAcrossServers(
+      final categorizedResults = await multiServerProvider.aggregationService.searchCategorizedAcrossServers(
         query,
         limitPerType: _previewLimit,
         includeLiveTv: hasLiveTv,
@@ -131,15 +130,17 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
         final items = categorizedResults[category.itemType];
         if (items == null || items.isEmpty) continue;
 
-        hubs.add(Hub(
-          hubKey: 'search_${category.itemType}_${Uri.encodeComponent(query.trim())}',
-          title: category.title,
-          type: category.itemType.toLowerCase(),
-          size: items.length,
-          more: true,
-          items: items,
-          serverId: items.first.serverId,
-        ));
+        hubs.add(
+          Hub(
+            hubKey: 'search_${category.itemType}_${Uri.encodeComponent(query.trim())}',
+            title: category.title,
+            type: category.itemType.toLowerCase(),
+            size: items.length,
+            more: true,
+            items: items,
+            serverId: items.first.serverId,
+          ),
+        );
       }
 
       setState(() {
@@ -310,12 +311,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
         body: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                right: 16,
-                bottom: 8,
-              ),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8, left: 16, right: 16, bottom: 8),
               sliver: SliverToBoxAdapter(
                 child: Text(
                   t.common.search,
@@ -324,10 +320,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
               ),
             ),
             SliverToBoxAdapter(child: _buildSearchHeader()),
-            SliverPadding(
-              padding: const EdgeInsets.only(bottom: 8),
-              sliver: _buildResultsSliver(),
-            ),
+            SliverPadding(padding: const EdgeInsets.only(bottom: 8), sliver: _buildResultsSliver()),
           ],
         ),
       );
@@ -339,12 +332,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 8,
-              left: 16,
-              right: 16,
-              bottom: 8,
-            ),
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8, left: 16, right: 16, bottom: 8),
             child: Text(
               t.common.search,
               style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
@@ -359,10 +347,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
 
   Widget _buildResultsSliver() {
     if (_isSearching) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: const Center(child: CircularProgressIndicator()),
-      );
+      return SliverFillRemaining(hasScrollBody: false, child: const Center(child: CircularProgressIndicator()));
     }
     if (!_hasSearched) {
       return SliverFillRemaining(
@@ -390,8 +375,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-        (context, index) {
+        delegate: SliverChildBuilderDelegate((context, index) {
           final hub = _searchHubs[index];
           return HubSection(
             key: index < _hubKeys.length ? _hubKeys[index] : null,
@@ -411,9 +395,7 @@ class _SearchScreenState extends State<SearchScreen> with Refreshable, FullRefre
                 : null,
             onNavigateToSidebar: _navigateToSidebar,
           );
-        },
-        childCount: _searchHubs.length,
-        ),
+        }, childCount: _searchHubs.length),
       ),
     );
   }

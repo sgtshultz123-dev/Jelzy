@@ -437,7 +437,11 @@ abstract class PlayerBase with PlayerStreamControllersMixin implements Player {
       }
     }
 
-    return (tracks: Tracks(audio: audioTracks, subtitle: subtitleTracks), selectedAudioId: selectedAudioId, selectedSubtitleId: selectedSubtitleId);
+    return (
+      tracks: Tracks(audio: audioTracks, subtitle: subtitleTracks),
+      selectedAudioId: selectedAudioId,
+      selectedSubtitleId: selectedSubtitleId,
+    );
   }
 
   /// Update the selected audio track.
@@ -588,11 +592,9 @@ abstract class PlayerBase with PlayerStreamControllersMixin implements Player {
       }
     } catch (e) {
       // Font configuration is not critical - continue without it
-      logController.add(PlayerLog(
-        prefix: 'fonts',
-        level: PlayerLogLevel.warn,
-        text: 'Failed to configure subtitle fonts: $e',
-      ));
+      logController.add(
+        PlayerLog(prefix: 'fonts', level: PlayerLogLevel.warn, text: 'Failed to configure subtitle fonts: $e'),
+      );
     }
   }
 

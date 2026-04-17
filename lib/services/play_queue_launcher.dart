@@ -138,7 +138,10 @@ class PlayQueueLauncher {
   }
 
   /// Launch shuffled playback for a show or season.
-  Future<PlayQueueResult> launchShuffledShow({required MediaMetadata metadata, bool showLoadingIndicator = true}) async {
+  Future<PlayQueueResult> launchShuffledShow({
+    required MediaMetadata metadata,
+    bool showLoadingIndicator = true,
+  }) async {
     final mediaType = metadata.mediaType;
 
     if (mediaType != MediaType.show && mediaType != MediaType.season) {
@@ -189,11 +192,7 @@ class PlayQueueLauncher {
       execute: (dismissLoading) async {
         final folderUri = await client.buildFolderUri(folderKey);
 
-        var playQueue = await client.createPlayQueue(
-          uri: folderUri,
-          type: 'video',
-          shuffle: shuffle ? 1 : 0,
-        );
+        var playQueue = await client.createPlayQueue(uri: folderUri, type: 'video', shuffle: shuffle ? 1 : 0);
 
         if (playQueue != null && (playQueue.items == null || playQueue.items!.isEmpty)) {
           final fetchedQueue = await client.getPlayQueue(playQueue.playQueueID);
@@ -204,12 +203,7 @@ class PlayQueueLauncher {
 
         await dismissLoading();
 
-        return _launchFromQueue(
-          playQueue: playQueue,
-          ratingKey: folderKey,
-          serverId: serverId,
-          serverName: serverName,
-        );
+        return _launchFromQueue(playQueue: playQueue, ratingKey: folderKey, serverId: serverId, serverName: serverName);
       },
     );
   }

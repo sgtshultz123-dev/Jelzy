@@ -188,10 +188,7 @@ class FocusableAppBarBackButton extends StatelessWidget {
       child: ListenableBuilder(
         listenable: focusNode,
         builder: (context, _) {
-          return AppBarBackButton(
-            style: BackButtonStyle.circular,
-            onPressed: onPressed,
-          );
+          return AppBarBackButton(style: BackButtonStyle.circular, onPressed: onPressed);
         },
       ),
     );

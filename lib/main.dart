@@ -131,7 +131,9 @@ void main() async {
 
   // Log app version and git commit at startup
   final packageInfo = await PackageInfo.fromPlatform();
-  final commitSuffix = gitCommit.isNotEmpty ? ' (${gitCommit.length >= 7 ? gitCommit.substring(0, 7) : gitCommit})' : '';
+  final commitSuffix = gitCommit.isNotEmpty
+      ? ' (${gitCommit.length >= 7 ? gitCommit.substring(0, 7) : gitCommit})'
+      : '';
   String renderer = '';
   if (Platform.isAndroid) {
     renderer = ' [${await const MethodChannel('com.jelzy/theme').invokeMethod<String>('getRenderer')}]';
@@ -249,7 +251,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       _memoryCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         final rss = ProcessInfo.currentRss;
-        if (rss > 1536 * 1024 * 1024) { // 1.5GB
+        if (rss > 1536 * 1024 * 1024) {
+          // 1.5GB
           appLogger.w('RSS high ($rss bytes), evicting image caches');
           _evictImageCaches();
         }
@@ -324,7 +327,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         // Database is session-scoped and must survive suspend/resume.
         InAppReviewService.instance.endSession();
         if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-          if (ProcessInfo.currentRss > 1024 * 1024 * 1024) { // 1GB
+          if (ProcessInfo.currentRss > 1024 * 1024 * 1024) {
+            // 1GB
             _evictImageCaches();
           }
         }
@@ -388,11 +392,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
             downloadProvider: context.read<DownloadProvider>(),
           ),
           update: (_, syncService, downloadProvider, previous) {
-            return previous ??
-                OfflineWatchProvider(
-                  syncService: syncService,
-                  downloadProvider: downloadProvider,
-                );
+            return previous ?? OfflineWatchProvider(syncService: syncService, downloadProvider: downloadProvider);
           },
         ),
         // Existing providers
@@ -417,23 +417,20 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
               behavior: HitTestBehavior.translucent,
               child: InputModeTracker(
                 child: MaterialApp(
-                title: t.app.title,
-                debugShowCheckedModeBanner: false,
-                theme: themeProvider.lightTheme,
-                darkTheme: themeProvider.darkTheme,
-                themeMode: themeProvider.materialThemeMode,
-                navigatorKey: rootNavigatorKey,
-                navigatorObservers: [routeObserver, BackKeySuppressorObserver()],
-                home: const OrientationAwareSetup(),
-                builder: (context, child) => ScaffoldMessenger(
-                  key: rootScaffoldMessengerKey,
-                  child: Scaffold(
-                    backgroundColor: Colors.transparent,
-                    body: child,
+                  title: t.app.title,
+                  debugShowCheckedModeBanner: false,
+                  theme: themeProvider.lightTheme,
+                  darkTheme: themeProvider.darkTheme,
+                  themeMode: themeProvider.materialThemeMode,
+                  navigatorKey: rootNavigatorKey,
+                  navigatorObservers: [routeObserver, BackKeySuppressorObserver()],
+                  home: const OrientationAwareSetup(),
+                  builder: (context, child) => ScaffoldMessenger(
+                    key: rootScaffoldMessengerKey,
+                    child: Scaffold(backgroundColor: Colors.transparent, body: child),
                   ),
                 ),
               ),
-            ),
             ),
           );
         },
@@ -567,27 +564,18 @@ class _SetupScreenState extends State<SetupScreen> {
           downloadProvider.resumeQueuedDownloads(result.firstClient!);
         });
 
-        Navigator.pushReplacement(
-          context,
-          fadeRoute(MainScreen(client: result.firstClient!)),
-        );
+        Navigator.pushReplacement(context, fadeRoute(MainScreen(client: result.firstClient!)));
       } else {
         // Check if any server is reachable — if so, it's an auth issue, not network
         if (await _isAnyServerReachable(servers)) {
           appLogger.i('Server reachable but auth failed — redirecting to login');
           if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            fadeRoute(const AuthScreen()),
-          );
+          Navigator.pushReplacement(context, fadeRoute(const AuthScreen()));
         } else {
           _setStatus(t.common.startingOfflineMode);
           await downloadProvider.ensureInitialized();
           if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            fadeRoute(const MainScreen(isOfflineMode: true)),
-          );
+          Navigator.pushReplacement(context, fadeRoute(const MainScreen(isOfflineMode: true)));
         }
       }
     } catch (e, stackTrace) {
@@ -597,18 +585,14 @@ class _SetupScreenState extends State<SetupScreen> {
         _setStatus(t.common.startingOfflineMode);
         await downloadProvider.ensureInitialized();
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          fadeRoute(const MainScreen(isOfflineMode: true)),
-        );
+        Navigator.pushReplacement(context, fadeRoute(const MainScreen(isOfflineMode: true)));
       }
     }
   }
 
   Future<bool> _isAnyServerReachable(List<RegisteredServer> servers) async {
     for (final server in servers) {
-      if (await JellyfinAuthService.testConnection(server.jellyfinData.baseUrl,
-          timeout: const Duration(seconds: 3))) {
+      if (await JellyfinAuthService.testConnection(server.jellyfinData.baseUrl, timeout: const Duration(seconds: 3))) {
         return true;
       }
     }
@@ -622,9 +606,9 @@ class _SetupScreenState extends State<SetupScreen> {
         _statusMessage,
         key: ValueKey(_statusMessage),
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -644,7 +628,8 @@ class _SetupScreenState extends State<SetupScreen> {
         final Widget statusIcon;
         if (connected == null) {
           statusIcon = const SizedBox(
-            width: 12, height: 12,
+            width: 12,
+            height: 12,
             child: CircularProgressIndicator(strokeWidth: 1.5, color: coralColor),
           );
         } else if (connected) {
@@ -676,17 +661,20 @@ class _SetupScreenState extends State<SetupScreen> {
         children: [
           Center(child: SvgPicture.asset('assets/jelzy_adaptive_foreground.svg', width: 288, height: 288)),
           Positioned(
-            left: 0, right: 0,
+            left: 0,
+            right: 0,
             bottom: MediaQuery.of(context).size.height * 0.5 - 170,
             child: _buildStatusText(context),
           ),
           Positioned(
-            left: 0, right: 0,
+            left: 0,
+            right: 0,
             top: MediaQuery.of(context).size.height * 0.5 + 180,
             child: Center(
               child: _serverStatus.isEmpty
                   ? const SizedBox(
-                      width: 20, height: 20,
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: coralColor),
                     )
                   : _buildServerStatusList(context),

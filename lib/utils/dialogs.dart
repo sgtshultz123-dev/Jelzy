@@ -103,10 +103,7 @@ Future<({bool confirmed, bool checked})> showConfirmDialogWithCheckbox(
               ),
               FocusableButton(
                 onPressed: () => Navigator.pop(dialogContext, true),
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(dialogContext, true),
-                  child: Text(confirmText),
-                ),
+                child: FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(confirmText)),
               ),
             ],
           );
@@ -120,8 +117,19 @@ Future<({bool confirmed, bool checked})> showConfirmDialogWithCheckbox(
 
 /// Shows a delete confirmation dialog.
 /// Convenience wrapper around [showConfirmDialog] with destructive styling.
-Future<bool> showDeleteConfirmation(BuildContext context, {required String title, required String message, String? confirmText}) {
-  return showConfirmDialog(context, title: title, message: message, confirmText: confirmText ?? t.common.delete, isDestructive: true);
+Future<bool> showDeleteConfirmation(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String? confirmText,
+}) {
+  return showConfirmDialog(
+    context,
+    title: title,
+    message: message,
+    confirmText: confirmText ?? t.common.delete,
+    isDestructive: true,
+  );
 }
 
 /// Shows a text input dialog for creating/naming items
@@ -217,10 +225,7 @@ class _MultilineTextInputDialogState extends State<_MultilineTextInputDialog> {
         FocusableButton(
           focusNode: _saveFocusNode,
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: TextButton(
-            onPressed: () => Navigator.pop(context, _controller.text),
-            child: Text(t.common.save),
-          ),
+          child: TextButton(onPressed: () => Navigator.pop(context, _controller.text), child: Text(t.common.save)),
         ),
       ],
     );
@@ -330,7 +335,12 @@ class _OptionPickerDialog<T> extends StatefulWidget {
   final bool focusFirstItem;
   final Future<T?> Function(T value)? onBeforeClose;
 
-  const _OptionPickerDialog({required this.title, required this.options, this.focusFirstItem = false, this.onBeforeClose});
+  const _OptionPickerDialog({
+    required this.title,
+    required this.options,
+    this.focusFirstItem = false,
+    this.onBeforeClose,
+  });
 
   @override
   State<_OptionPickerDialog<T>> createState() => _OptionPickerDialogState<T>();

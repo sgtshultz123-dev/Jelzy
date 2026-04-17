@@ -19,6 +19,7 @@ class PlayerAndroid extends PlayerBase {
       return 0;
     }
   }
+
   static const _eventChannel = EventChannel('com.jelzy/exo_player/events');
 
   int? _bufferSizeBytes;
@@ -60,9 +61,7 @@ class PlayerAndroid extends PlayerBase {
     if (initialized) return;
 
     try {
-      final result = await methodChannel.invokeMethod<bool>('initialize', {
-        'bufferSizeBytes': _bufferSizeBytes,
-      });
+      final result = await methodChannel.invokeMethod<bool>('initialize', {'bufferSizeBytes': _bufferSizeBytes});
       initialized = result == true;
       if (!initialized) {
         throw Exception('Failed to initialize ExoPlayer');
@@ -92,7 +91,12 @@ class PlayerAndroid extends PlayerBase {
   // ============================================
 
   @override
-  Future<void> open(Media media, {bool play = true, bool isLive = false, List<SubtitleTrack>? externalSubtitles}) async {
+  Future<void> open(
+    Media media, {
+    bool play = true,
+    bool isLive = false,
+    List<SubtitleTrack>? externalSubtitles,
+  }) async {
     if (disposed) return;
     await _ensureInitialized();
 
@@ -154,12 +158,7 @@ class PlayerAndroid extends PlayerBase {
 
   @override
   Future<void> addSubtitleTrack({required String uri, String? title, String? language, bool select = false}) async {
-    await invoke('addSubtitleTrack', {
-      'uri': uri,
-      'title': title,
-      'language': language,
-      'select': select,
-    });
+    await invoke('addSubtitleTrack', {'uri': uri, 'title': title, 'language': language, 'select': select});
   }
 
   // ============================================

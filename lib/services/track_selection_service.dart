@@ -16,7 +16,11 @@ import '../utils/language_codes.dart';
 // differently.
 
 /// Find the MPV subtitle track that matches a Plex subtitle track
-SubtitleTrack? findMpvTrackForPlexSubtitle(MediaSubtitleTrack plexTrack, List<SubtitleTrack> mpvTracks, {List<MediaSubtitleTrack>? allPlexTracks}) {
+SubtitleTrack? findMpvTrackForPlexSubtitle(
+  MediaSubtitleTrack plexTrack,
+  List<SubtitleTrack> mpvTracks, {
+  List<MediaSubtitleTrack>? allPlexTracks,
+}) {
   if (mpvTracks.isEmpty) return null;
 
   // For external subtitles, match by URI containing the Plex key
@@ -37,7 +41,9 @@ SubtitleTrack? findMpvTrackForPlexSubtitle(MediaSubtitleTrack plexTrack, List<Su
 
   // Ordinal tiebreaker: precompute position of plexTrack among internal tracks
   final internalMpvTracks = allPlexTracks != null ? mpvTracks.where((t) => !t.isExternal).toList() : null;
-  final plexOrdinal = allPlexTracks != null ? allPlexTracks.where((t) => !t.isExternal).toList().indexOf(plexTrack) : -1;
+  final plexOrdinal = allPlexTracks != null
+      ? allPlexTracks.where((t) => !t.isExternal).toList().indexOf(plexTrack)
+      : -1;
 
   for (final mpvTrack in mpvTracks) {
     // Skip external tracks when matching internal Plex tracks
@@ -86,7 +92,11 @@ SubtitleTrack? findMpvTrackForPlexSubtitle(MediaSubtitleTrack plexTrack, List<Su
 }
 
 /// Find the Plex subtitle track that matches an MPV subtitle track
-MediaSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<MediaSubtitleTrack> plexTracks, {List<SubtitleTrack>? allMpvTracks}) {
+MediaSubtitleTrack? findPlexTrackForMpvSubtitle(
+  SubtitleTrack mpvTrack,
+  List<MediaSubtitleTrack> plexTracks, {
+  List<SubtitleTrack>? allMpvTracks,
+}) {
   if (plexTracks.isEmpty) return null;
 
   // For external subtitles, match by URI containing the Plex key
@@ -154,7 +164,11 @@ MediaSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<Med
 }
 
 /// Find the MPV audio track that matches a Plex audio track
-AudioTrack? findMpvTrackForPlexAudio(MediaAudioTrack plexTrack, List<AudioTrack> mpvTracks, {List<MediaAudioTrack>? allPlexTracks}) {
+AudioTrack? findMpvTrackForPlexAudio(
+  MediaAudioTrack plexTrack,
+  List<AudioTrack> mpvTracks, {
+  List<MediaAudioTrack>? allPlexTracks,
+}) {
   if (mpvTracks.isEmpty) return null;
 
   AudioTrack? bestMatch;
@@ -208,7 +222,11 @@ AudioTrack? findMpvTrackForPlexAudio(MediaAudioTrack plexTrack, List<AudioTrack>
 }
 
 /// Find the Plex audio track that matches an MPV audio track
-MediaAudioTrack? findPlexTrackForMpvAudio(AudioTrack mpvTrack, List<MediaAudioTrack> plexTracks, {List<AudioTrack>? allMpvTracks}) {
+MediaAudioTrack? findPlexTrackForMpvAudio(
+  AudioTrack mpvTrack,
+  List<MediaAudioTrack> plexTracks, {
+  List<AudioTrack>? allMpvTracks,
+}) {
   if (plexTracks.isEmpty) return null;
 
   MediaAudioTrack? bestMatch;
@@ -586,7 +604,11 @@ class TrackSelectionService {
       final plexSelectedTrack = plexMediaInfo!.audioTracks.where((t) => t.selected).firstOrNull;
 
       if (plexSelectedTrack != null) {
-        final matchedMpvTrack = findMpvTrackForPlexAudio(plexSelectedTrack, availableTracks, allPlexTracks: plexMediaInfo!.audioTracks);
+        final matchedMpvTrack = findMpvTrackForPlexAudio(
+          plexSelectedTrack,
+          availableTracks,
+          allPlexTracks: plexMediaInfo!.audioTracks,
+        );
 
         if (matchedMpvTrack != null) {
           return TrackSelectionResult(matchedMpvTrack, TrackSelectionPriority.plexSelected);
@@ -648,7 +670,11 @@ class TrackSelectionService {
       final plexSelectedTrack = plexMediaInfo!.subtitleTracks.where((t) => t.selected).firstOrNull;
 
       if (plexSelectedTrack != null) {
-        final matchedMpvTrack = findMpvTrackForPlexSubtitle(plexSelectedTrack, availableTracks, allPlexTracks: plexMediaInfo!.subtitleTracks);
+        final matchedMpvTrack = findMpvTrackForPlexSubtitle(
+          plexSelectedTrack,
+          availableTracks,
+          allPlexTracks: plexMediaInfo!.subtitleTracks,
+        );
 
         if (matchedMpvTrack != null) {
           return TrackSelectionResult(matchedMpvTrack, TrackSelectionPriority.plexSelected);

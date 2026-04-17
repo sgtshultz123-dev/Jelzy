@@ -358,7 +358,9 @@ class OptimizedImage extends StatelessWidget {
       memCacheHeight: memHeight,
       cacheKey: effectiveCacheKey,
       placeholder: placeholder != null ? placeholder! : (context, url) => _buildPlaceholder(context),
-      errorWidget: errorWidget != null ? errorWidget! : (context, url, error) => _buildErrorWidgetWithLog(context, url, error),
+      errorWidget: errorWidget != null
+          ? errorWidget!
+          : (context, url, error) => _buildErrorWidgetWithLog(context, url, error),
       httpHeaders: headers,
     );
   }
@@ -395,7 +397,9 @@ class OptimizedImage extends StatelessWidget {
 
   /// Log thumbnail load failure (URL redacted, error and status if present) then show broken image.
   Widget _buildErrorWidgetWithLog(BuildContext context, String url, dynamic error) {
-    final redactedUrl = url.replaceAll(RegExp(r'ApiKey=[^&]+'), 'ApiKey=***').replaceAll(RegExp(r'[?&]token=[^&]+'), '&token=***');
+    final redactedUrl = url
+        .replaceAll(RegExp(r'ApiKey=[^&]+'), 'ApiKey=***')
+        .replaceAll(RegExp(r'[?&]token=[^&]+'), '&token=***');
     if (_loggedFailUrls.length < _maxLogFailUrls && _loggedFailUrls.add(redactedUrl)) {
       int? statusCode;
       if (error != null) {

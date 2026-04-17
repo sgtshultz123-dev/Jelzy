@@ -33,7 +33,10 @@ class EpisodeNavigationService {
   /// - Not applicable (e.g., movie content)
   /// - Next episode doesn't exist (end of season/series)
   /// - Previous episode doesn't exist (first episode)
-  Future<AdjacentEpisodes> loadAdjacentEpisodes({required BuildContext context, required MediaMetadata metadata}) async {
+  Future<AdjacentEpisodes> loadAdjacentEpisodes({
+    required BuildContext context,
+    required MediaMetadata metadata,
+  }) async {
     try {
       final playbackState = context.read<PlaybackStateProvider>();
 

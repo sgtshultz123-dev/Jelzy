@@ -7,19 +7,14 @@ class JellyfinStoredUser {
   final String userName;
   final String? primaryImageTag;
 
-  JellyfinStoredUser({
-    required this.userId,
-    required this.accessToken,
-    required this.userName,
-    this.primaryImageTag,
-  });
+  JellyfinStoredUser({required this.userId, required this.accessToken, required this.userName, this.primaryImageTag});
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'accessToken': accessToken,
-        'userName': userName,
-        if (primaryImageTag != null) 'primaryImageTag': primaryImageTag,
-      };
+    'userId': userId,
+    'accessToken': accessToken,
+    'userName': userName,
+    if (primaryImageTag != null) 'primaryImageTag': primaryImageTag,
+  };
 
   factory JellyfinStoredUser.fromJson(Map<String, dynamic> json) {
     return JellyfinStoredUser(
@@ -37,6 +32,7 @@ class JellyfinServerData {
   final String baseUrl;
   final String serverId;
   final String serverName;
+
   /// Stored users (at least one). Current user is selected by [currentUserId].
   final List<JellyfinStoredUser> users;
   final String currentUserId;
@@ -67,12 +63,12 @@ class JellyfinServerData {
   }
 
   Map<String, dynamic> toJson() => {
-        'baseUrl': baseUrl,
-        'serverId': serverId,
-        'serverName': serverName,
-        'users': users.map((u) => u.toJson()).toList(),
-        'currentUserId': currentUserId,
-      };
+    'baseUrl': baseUrl,
+    'serverId': serverId,
+    'serverName': serverName,
+    'users': users.map((u) => u.toJson()).toList(),
+    'currentUserId': currentUserId,
+  };
 
   factory JellyfinServerData.fromJson(Map<String, dynamic> json) {
     final usersJson = json['users'] as List<dynamic>?;
@@ -107,18 +103,10 @@ class RegisteredServer {
   final String serverName;
   final JellyfinServerData jellyfinData;
 
-  RegisteredServer._({
-    required this.serverId,
-    required this.serverName,
-    required this.jellyfinData,
-  });
+  RegisteredServer._({required this.serverId, required this.serverName, required this.jellyfinData});
 
   factory RegisteredServer.jellyfin(JellyfinServerData data) {
-    return RegisteredServer._(
-      serverId: data.serverId,
-      serverName: data.serverName,
-      jellyfinData: data,
-    );
+    return RegisteredServer._(serverId: data.serverId, serverName: data.serverName, jellyfinData: data);
   }
 
   // ─── Plex-compatibility aliases ───────────────────────────────────────────

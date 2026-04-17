@@ -61,21 +61,15 @@ class _QuickConnectAuthorizeDialogState extends State<QuickConnectAuthorizeDialo
 
       if (success) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.common.quickConnectSuccess)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.common.quickConnectSuccess)));
       } else {
         setState(() => _isAuthorizing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.common.quickConnectError)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.common.quickConnectError)));
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAuthorizing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.common.quickConnectError)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.common.quickConnectError)));
     }
   }
 
@@ -112,10 +106,7 @@ class _QuickConnectAuthorizeDialogState extends State<QuickConnectAuthorizeDialo
               controller: _codeController,
               focusNode: _textFieldFocusNode,
               enabled: hasServer && !_isAuthorizing,
-              decoration: InputDecoration(
-                labelText: t.common.quickConnectCode,
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(labelText: t.common.quickConnectCode, border: const OutlineInputBorder()),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _authorize(),
               autofocus: true,
@@ -125,34 +116,34 @@ class _QuickConnectAuthorizeDialogState extends State<QuickConnectAuthorizeDialo
       ),
       actions: [
         FocusTraversalGroup(
-            policy: OrderedTraversalPolicy(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(0),
-                  child: TextButton(
-                    focusNode: _cancelFocusNode,
-                    onPressed: _isAuthorizing ? null : () => Navigator.of(context).pop(),
-                    style: buttonStyle,
-                    child: Text(t.common.cancel),
-                  ),
+          policy: OrderedTraversalPolicy(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(0),
+                child: TextButton(
+                  focusNode: _cancelFocusNode,
+                  onPressed: _isAuthorizing ? null : () => Navigator.of(context).pop(),
+                  style: buttonStyle,
+                  child: Text(t.common.cancel),
                 ),
-                const SizedBox(width: 8),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(1),
-                  child: TextButton(
-                    onPressed: _isAuthorizing ? null : _authorize,
-                    style: buttonStyle,
-                    child: _isAuthorizing
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(t.common.authorize),
-                  ),
+              ),
+              const SizedBox(width: 8),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: TextButton(
+                  onPressed: _isAuthorizing ? null : _authorize,
+                  style: buttonStyle,
+                  child: _isAuthorizing
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(t.common.authorize),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
       ],
     );
   }

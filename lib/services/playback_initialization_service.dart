@@ -148,9 +148,7 @@ class PlaybackInitializationService {
       );
 
       if (!playbackData.hasValidVideoUrl) {
-        throw PlaybackException(
-          playbackData.playbackErrorReason ?? t.messages.fileInfoNotAvailable,
-        );
+        throw PlaybackException(playbackData.playbackErrorReason ?? t.messages.fileInfoNotAvailable);
       }
 
       // Always build server subtitle options (embedded + sidecar) so user can select them.

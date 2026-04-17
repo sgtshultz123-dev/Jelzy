@@ -29,13 +29,8 @@ class JellyfinProfileNetworkAvatar extends StatelessWidget {
       width: s,
       height: s,
       fit: BoxFit.cover,
-      imageBuilder: (context, imageProvider) => Image(
-        image: imageProvider,
-        width: s,
-        height: s,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-      ),
+      imageBuilder: (context, imageProvider) =>
+          Image(image: imageProvider, width: s, height: s, fit: BoxFit.cover, filterQuality: FilterQuality.medium),
       placeholder: (context, loadingProgress) => Icon(placeholderIcon, size: iconSize),
       errorWidget: (context, error, stackTrace) => Icon(placeholderIcon, size: iconSize),
     );

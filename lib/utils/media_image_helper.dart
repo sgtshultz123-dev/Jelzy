@@ -37,10 +37,7 @@ class MediaImageHelper {
   /// the platform-reported DPR doesn't reflect the true physical density
   /// (common on Linux X11 with compositor scaling).
   /// When [performanceProfile] is [PerformanceProfile.small], returns 1.0 for faster loading.
-  static double effectiveDevicePixelRatio(
-    BuildContext context, {
-    PerformanceProfile? performanceProfile,
-  }) {
+  static double effectiveDevicePixelRatio(BuildContext context, {PerformanceProfile? performanceProfile}) {
     if (performanceProfile == PerformanceProfile.small) {
       return 1.0;
     }
@@ -216,9 +213,7 @@ class MediaImageHelper {
   }) {
     final scaledWidth = (displayWidth * scaleFactor).round();
     final scaledHeight = (displayHeight * scaleFactor).round();
-    final (maxW, maxH) = performanceProfile == PerformanceProfile.small
-        ? (600, 900)
-        : (1200, 1800);
+    final (maxW, maxH) = performanceProfile == PerformanceProfile.small ? (600, 900) : (1200, 1800);
 
     return (scaledWidth.clamp(120, maxW), scaledHeight.clamp(180, maxH));
   }

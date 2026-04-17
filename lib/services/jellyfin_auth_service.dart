@@ -10,12 +10,7 @@ class JellyfinAuthResult {
   final String? serverId;
   final String? serverName;
 
-  JellyfinAuthResult({
-    required this.accessToken,
-    required this.userId,
-    this.serverId,
-    this.serverName,
-  });
+  JellyfinAuthResult({required this.accessToken, required this.userId, this.serverId, this.serverName});
 }
 
 /// State returned when initiating Quick Connect (code shown to user, secret used for polling).
@@ -24,11 +19,7 @@ class JellyfinQuickConnectState {
   final String secret;
   final bool authenticated;
 
-  JellyfinQuickConnectState({
-    required this.code,
-    required this.secret,
-    this.authenticated = false,
-  });
+  JellyfinQuickConnectState({required this.code, required this.secret, this.authenticated = false});
 
   factory JellyfinQuickConnectState.fromJson(Map<String, dynamic> json) {
     return JellyfinQuickConnectState(
@@ -100,11 +91,7 @@ class JellyfinAuthService {
     // Optional: server id from response (some servers return it)
     final serverId = data['ServerId'] as String?;
 
-    return JellyfinAuthResult(
-      accessToken: token,
-      userId: userId,
-      serverId: serverId,
-    );
+    return JellyfinAuthResult(accessToken: token, userId: userId, serverId: serverId);
   }
 
   /// Test connection to a Jellyfin server (public system info, no auth).
@@ -171,10 +158,7 @@ class JellyfinAuthService {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final dio = Dio(BaseOptions(baseUrl: baseUrl, connectTimeout: timeout, receiveTimeout: timeout));
-    final response = await dio.get<Map<String, dynamic>>(
-      '/QuickConnect/Connect',
-      queryParameters: {'secret': secret},
-    );
+    final response = await dio.get<Map<String, dynamic>>('/QuickConnect/Connect', queryParameters: {'secret': secret});
     if (response.statusCode != 200 || response.data == null) {
       throw Exception('Quick Connect state failed');
     }
@@ -212,10 +196,6 @@ class JellyfinAuthService {
     if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
       throw Exception('Invalid Quick Connect response');
     }
-    return JellyfinAuthResult(
-      accessToken: token,
-      userId: userId,
-      serverId: data['ServerId'] as String?,
-    );
+    return JellyfinAuthResult(accessToken: token, userId: userId, serverId: data['ServerId'] as String?);
   }
 }

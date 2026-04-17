@@ -126,10 +126,7 @@ Future<MediaNavigationResult> navigateToMediaItem(
         final result = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
-            builder: (context) => MediaDetailScreen(
-              metadata: showStub,
-              isOffline: isOffline,
-            ),
+            builder: (context) => MediaDetailScreen(metadata: showStub, isOffline: isOffline),
           ),
         );
         if (result == true) {

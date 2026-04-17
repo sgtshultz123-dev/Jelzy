@@ -13,6 +13,7 @@ class UserAvatarWidget extends StatelessWidget {
   final bool showIndicators;
   final bool useTextLabels;
   final VoidCallback? onTap;
+
   /// Base URL needed to build the avatar image URL.
   final String? serverBaseUrl;
 
@@ -46,14 +47,16 @@ class UserAvatarWidget extends StatelessWidget {
         children: [
           ClipOval(
             child: hasImage
-                ? blurArtwork(CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => _buildPlaceholderAvatar(theme),
-                    errorWidget: (ctx, url, error) => _buildPlaceholderAvatar(theme),
-                  ))
+                ? blurArtwork(
+                    CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      width: size,
+                      height: size,
+                      fit: BoxFit.cover,
+                      placeholder: (ctx, url) => _buildPlaceholderAvatar(theme),
+                      errorWidget: (ctx, url, error) => _buildPlaceholderAvatar(theme),
+                    ),
+                  )
                 : _buildPlaceholderAvatar(theme),
           ),
           // Password indicator badge

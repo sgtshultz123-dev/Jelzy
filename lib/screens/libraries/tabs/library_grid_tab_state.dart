@@ -54,7 +54,9 @@ abstract class LibraryGridTabState<T, W extends BaseLibraryTab<T>> extends BaseL
     }
     void request({int retryCount = 0}) {
       if (!mounted) return;
-      final node = index == 0 ? firstItemFocusNode : getGridItemFocusNode(index, prefix: focusNodeDebugLabel.replaceAll('_first_item', '_grid_item'));
+      final node = index == 0
+          ? firstItemFocusNode
+          : getGridItemFocusNode(index, prefix: focusNodeDebugLabel.replaceAll('_first_item', '_grid_item'));
       final ctx = node.context;
       if (ctx == null && retryCount < 3 && _gridScrollController.hasClients) {
         // Item not built yet (off-screen); scroll to bring it into view, then retry
@@ -74,6 +76,7 @@ abstract class LibraryGridTabState<T, W extends BaseLibraryTab<T>> extends BaseL
         focusFirstItem();
       }
     }
+
     request();
     WidgetsBinding.instance.addPostFrameCallback((_) => request(retryCount: 1));
   }

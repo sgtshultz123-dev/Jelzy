@@ -11,8 +11,7 @@ import 'log_redaction_manager.dart';
 import 'plex_http_exception.dart';
 
 // Platform-specific imports are conditional
-import 'platform_http_client_stub.dart'
-    if (dart.library.io) 'platform_http_client_io.dart' as platform;
+import 'platform_http_client_stub.dart' if (dart.library.io) 'platform_http_client_io.dart' as platform;
 
 /// Response from [PlexHttpClient] requests.
 class PlexResponse {
@@ -24,11 +23,7 @@ class PlexResponse {
 
   final Map<String, String> headers;
 
-  PlexResponse({
-    required this.statusCode,
-    this.data,
-    required this.headers,
-  });
+  PlexResponse({required this.statusCode, this.data, required this.headers});
 }
 
 /// Abort controller for cancelling in-flight HTTP requests.
@@ -60,8 +55,8 @@ class PlexHttpClient {
     Map<String, String> defaultHeaders = const {},
     this.connectTimeout = const Duration(seconds: 10),
     this.receiveTimeout = const Duration(seconds: 120),
-  })  : _client = client ?? platform.createPlatformClient(),
-        defaultHeaders = Map.of(defaultHeaders);
+  }) : _client = client ?? platform.createPlatformClient(),
+       defaultHeaders = Map.of(defaultHeaders);
 
   /// The underlying [http.Client] for direct streaming / multipart requests.
   http.Client get inner => _client;
@@ -81,12 +76,7 @@ class PlexHttpClient {
     Map<String, String>? headers,
     Duration? timeout,
     AbortController? abort,
-  }) =>
-      _send('GET', path,
-          queryParameters: queryParameters,
-          headers: headers,
-          timeout: timeout,
-          abort: abort);
+  }) => _send('GET', path, queryParameters: queryParameters, headers: headers, timeout: timeout, abort: abort);
 
   Future<PlexResponse> post(
     String path, {
@@ -95,13 +85,15 @@ class PlexHttpClient {
     Object? body,
     Duration? timeout,
     AbortController? abort,
-  }) =>
-      _send('POST', path,
-          queryParameters: queryParameters,
-          headers: headers,
-          body: body,
-          timeout: timeout,
-          abort: abort);
+  }) => _send(
+    'POST',
+    path,
+    queryParameters: queryParameters,
+    headers: headers,
+    body: body,
+    timeout: timeout,
+    abort: abort,
+  );
 
   Future<PlexResponse> put(
     String path, {
@@ -110,13 +102,15 @@ class PlexHttpClient {
     Object? body,
     Duration? timeout,
     AbortController? abort,
-  }) =>
-      _send('PUT', path,
-          queryParameters: queryParameters,
-          headers: headers,
-          body: body,
-          timeout: timeout,
-          abort: abort);
+  }) => _send(
+    'PUT',
+    path,
+    queryParameters: queryParameters,
+    headers: headers,
+    body: body,
+    timeout: timeout,
+    abort: abort,
+  );
 
   Future<PlexResponse> delete(
     String path, {
@@ -124,32 +118,19 @@ class PlexHttpClient {
     Map<String, String>? headers,
     Duration? timeout,
     AbortController? abort,
-  }) =>
-      _send('DELETE', path,
-          queryParameters: queryParameters,
-          headers: headers,
-          timeout: timeout,
-          abort: abort);
+  }) => _send('DELETE', path, queryParameters: queryParameters, headers: headers, timeout: timeout, abort: abort);
 
   /// Fetch raw bytes (e.g. images, BIF files, subtitles).
-  Future<Uint8List> getBytes(
-    String url, {
-    Map<String, String>? headers,
-    Duration? timeout,
-  }) async {
+  Future<Uint8List> getBytes(String url, {Map<String, String>? headers, Duration? timeout}) async {
     final uri = _isAbsoluteUrl(url) ? Uri.parse(url) : _buildUri(url, null);
     final request = http.Request('GET', uri);
     request.headers.addAll({...defaultHeaders, ...?headers});
 
     final sw = Stopwatch()..start();
     try {
-      final streamed = await _client
-          .send(request)
-          .timeout(timeout ?? connectTimeout);
+      final streamed = await _client.send(request).timeout(timeout ?? connectTimeout);
 
-      final bytes = await streamed.stream
-          .toBytes()
-          .timeout(timeout ?? receiveTimeout);
+      final bytes = await streamed.stream.toBytes().timeout(timeout ?? receiveTimeout);
 
       sw.stop();
       _logResponse('GET', uri, streamed.statusCode, sw.elapsedMilliseconds);
@@ -161,20 +142,13 @@ class PlexHttpClient {
   }
 
   /// Stream-download a URL directly into a file.
-  Future<void> downloadFile(
-    String url,
-    String filePath, {
-    Map<String, String>? headers,
-    Duration? timeout,
-  }) async {
+  Future<void> downloadFile(String url, String filePath, {Map<String, String>? headers, Duration? timeout}) async {
     final uri = _isAbsoluteUrl(url) ? Uri.parse(url) : _buildUri(url, null);
     final request = http.Request('GET', uri);
     request.headers.addAll({...defaultHeaders, ...?headers});
 
     try {
-      final streamed = await _client
-          .send(request)
-          .timeout(timeout ?? connectTimeout);
+      final streamed = await _client.send(request).timeout(timeout ?? connectTimeout);
 
       final file = File(filePath);
       final sink = file.openWrite();
@@ -189,8 +163,7 @@ class PlexHttpClient {
   }
 
   /// Send a streamed request (for image cache etc).
-  Future<http.StreamedResponse> sendStreamed(http.BaseRequest request) =>
-      _client.send(request);
+  Future<http.StreamedResponse> sendStreamed(http.BaseRequest request) => _client.send(request);
 
   void close() => _client.close();
 
@@ -211,10 +184,7 @@ class PlexHttpClient {
         ? _appendQuery(Uri.parse(path), queryParameters)
         : _buildUri(path, queryParameters);
 
-    final mergedHeaders = <String, String>{
-      ...defaultHeaders,
-      ...?headers,
-    };
+    final mergedHeaders = <String, String>{...defaultHeaders, ...?headers};
 
     // Build the request — use AbortableRequest when abort is provided
     final http.Request request;
@@ -229,24 +199,16 @@ class PlexHttpClient {
     final sw = Stopwatch()..start();
     try {
       // Phase 1: send + receive headers (connect timeout)
-      final streamed = await _client
-          .send(request)
-          .timeout(timeout ?? connectTimeout);
+      final streamed = await _client.send(request).timeout(timeout ?? connectTimeout);
 
       // Phase 2: consume body (receive timeout)
-      final bytes = await streamed.stream
-          .toBytes()
-          .timeout(timeout ?? receiveTimeout);
+      final bytes = await streamed.stream.toBytes().timeout(timeout ?? receiveTimeout);
 
       sw.stop();
       _logResponse(method, uri, streamed.statusCode, sw.elapsedMilliseconds);
 
       final data = await _decodeBody(bytes, streamed.headers);
-      return PlexResponse(
-        statusCode: streamed.statusCode,
-        data: data,
-        headers: streamed.headers,
-      );
+      return PlexResponse(statusCode: streamed.statusCode, data: data, headers: streamed.headers);
     } catch (e) {
       sw.stop();
       throw PlexHttpException.from(e, uri: uri);
@@ -292,8 +254,7 @@ class PlexHttpClient {
     return parts.join('&');
   }
 
-  static bool _isAbsoluteUrl(String url) =>
-      url.startsWith('http://') || url.startsWith('https://');
+  static bool _isAbsoluteUrl(String url) => url.startsWith('http://') || url.startsWith('https://');
 
   // ---------------------------------------------------------------------------
   // Body serialization
@@ -327,8 +288,7 @@ class PlexHttpClient {
 
   /// Decode the response body: lenient UTF-8, then JSON parse if applicable.
   /// Large payloads are decoded in a background isolate.
-  Future<dynamic> _decodeBody(
-      List<int> bytes, Map<String, String> headers) async {
+  Future<dynamic> _decodeBody(List<int> bytes, Map<String, String> headers) async {
     if (bytes.isEmpty) return null;
 
     final contentType = headers['content-type'] ?? '';
@@ -337,8 +297,7 @@ class PlexHttpClient {
     // For large JSON payloads, do both UTF-8 decode and JSON parse in a
     // single isolate roundtrip to avoid two context switches.
     if (isJson && bytes.length > 50 * 1024) {
-      return await tryIsolateRun(
-          () => jsonDecode(utf8.decode(bytes, allowMalformed: true)));
+      return await tryIsolateRun(() => jsonDecode(utf8.decode(bytes, allowMalformed: true)));
     }
 
     final body = bytes.length > 50 * 1024
@@ -353,9 +312,7 @@ class PlexHttpClient {
   // ---------------------------------------------------------------------------
 
   void _logResponse(String method, Uri uri, int statusCode, int ms) {
-    appLogger.d(
-      '$method ${LogRedactionManager.redact(uri.toString())} → $statusCode (${ms}ms)',
-    );
+    appLogger.d('$method ${LogRedactionManager.redact(uri.toString())} → $statusCode (${ms}ms)');
   }
 }
 

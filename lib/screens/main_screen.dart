@@ -48,12 +48,12 @@ import 'settings/settings_screen.dart';
 import 'profile/jellyfin_profile_switch_screen.dart';
 import '../services/watch_next_service.dart';
 
-
 /// Provides access to the main screen's focus control.
 class MainScreenFocusScope extends InheritedWidget {
   final VoidCallback focusSidebar;
   final VoidCallback focusContent;
   final bool isSidebarFocused;
+
   /// Optional callback to programmatically select a library by global key.
   final void Function(String globalKey)? selectLibrary;
 
@@ -243,11 +243,8 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
 
       Navigator.of(context).push(
         PageRouteBuilder(
-          pageBuilder: (context, _, _) => MediaDetailScreen(
-            metadata: metadata,
-            isOffline: false,
-            onFirstBuild: onRestored,
-          ),
+          pageBuilder: (context, _, _) =>
+              MediaDetailScreen(metadata: metadata, isOffline: false, onFirstBuild: onRestored),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
@@ -302,17 +299,15 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
             ),
             FilledButton(
               onPressed: () async {
-                final url = Uri.parse(
-                    updateInfo['updateUrl'] as String? ?? updateInfo['releaseUrl'] as String);
+                final url = Uri.parse(updateInfo['updateUrl'] as String? ?? updateInfo['releaseUrl'] as String);
                 if (await canLaunchUrl(url)) {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 }
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
               child: Text(
-                  (updateInfo['isStoreUpdate'] as bool? ?? false)
-                      ? t.update.updateInStore
-                      : t.update.viewRelease),
+                (updateInfo['isStoreUpdate'] as bool? ?? false) ? t.update.updateInStore : t.update.viewRelease,
+              ),
             ),
           ],
         );
@@ -452,9 +447,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
     if (!jellyfinProfileProvider.hasMultipleUsers) return;
 
     _isShowingProfileSelection = true;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const JellyfinProfileSwitchScreen()),
-    );
+    await Navigator.of(context).push(MaterialPageRoute(builder: (context) => const JellyfinProfileSwitchScreen()));
     _isShowingProfileSelection = false;
   }
 
@@ -999,9 +992,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
                           child: ColoredBox(
                             color: Theme.of(context).colorScheme.surface,
                             child: Center(
-                              child: CircularProgressIndicator(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                              child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                             ),
                           ),
                         ),
@@ -1016,10 +1007,7 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
     }
 
     return Scaffold(
-      body: IndexedStack(
-        index: _screens.isEmpty ? 0 : _currentIndex.clamp(0, _screens.length - 1),
-        children: _screens,
-      ),
+      body: IndexedStack(index: _screens.isEmpty ? 0 : _currentIndex.clamp(0, _screens.length - 1), children: _screens),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1028,7 +1016,8 @@ class _MainScreenState extends State<MainScreen> with RouteAware, WindowListener
             Builder(
               builder: (context) {
                 final isForcedOffline = context.watch<OfflineModeProvider?>()?.isForcedOffline ?? false;
-                final connectionAvailable = context.watch<OfflineModeProvider?>()?.connectionAvailableWhenForced ?? false;
+                final connectionAvailable =
+                    context.watch<OfflineModeProvider?>()?.connectionAvailableWhenForced ?? false;
                 final label = isForcedOffline ? t.common.goOnline : t.common.reconnect;
                 return Material(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,

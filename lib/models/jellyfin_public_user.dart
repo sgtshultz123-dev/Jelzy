@@ -6,12 +6,7 @@ class JellyfinPublicUser {
   final String? primaryImageTag;
   final bool hasPassword;
 
-  JellyfinPublicUser({
-    required this.id,
-    required this.name,
-    this.primaryImageTag,
-    this.hasPassword = false,
-  });
+  JellyfinPublicUser({required this.id, required this.name, this.primaryImageTag, this.hasPassword = false});
 
   factory JellyfinPublicUser.fromJson(Map<String, dynamic> json) {
     return JellyfinPublicUser(

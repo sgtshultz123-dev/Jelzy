@@ -126,10 +126,13 @@ class DownloadManagerService {
   /// Await this before reading download state from the DB to avoid races.
   late final Future<void> recoveryFuture;
 
-  DownloadManagerService({required AppDatabase database, required DownloadStorageService storageService, PlexHttpClient? http})
-    : _database = database,
-      _storageService = storageService,
-      _http = http ?? httpClient;
+  DownloadManagerService({
+    required AppDatabase database,
+    required DownloadStorageService storageService,
+    PlexHttpClient? http,
+  }) : _database = database,
+       _storageService = storageService,
+       _http = http ?? httpClient;
 
   /// Register a callback to resolve the correct JellyfinClient for a given serverId.
   void setClientResolver(JellyfinClient? Function(String serverId) resolver) {
@@ -506,9 +509,7 @@ class DownloadManagerService {
       final ext = _getExtensionFromUrl(playbackData.videoUrl!) ?? 'mp4';
 
       // Look up show year for episodes
-      final showYear = metadata.type == 'episode'
-          ? await _fetchShowYear(serverId, metadata.seriesId)
-          : null;
+      final showYear = metadata.type == 'episode' ? await _fetchShowYear(serverId, metadata.seriesId) : null;
 
       // Build display name for notifications
       final displayName = metadata.type == 'episode'
@@ -739,7 +740,8 @@ class DownloadManagerService {
 
     // DNS/connection errors fail instantly and exhaust native retries in milliseconds,
     // creating a retry storm. Treat them as permanent failures.
-    final isNetworkError = errorMessage.contains('Unable to resolve host') ||
+    final isNetworkError =
+        errorMessage.contains('Unable to resolve host') ||
         errorMessage.contains('No address associated with hostname') ||
         errorMessage.contains('Network is unreachable') ||
         errorMessage.contains('Connection refused');
@@ -770,9 +772,7 @@ class DownloadManagerService {
       if (isNetworkError) {
         appLogger.w('Network error for $globalKey, failing permanently (no auto-retry): $errorMessage');
       }
-      final userMessage = isServerError
-          ? t.downloads.serverErrorBitrate
-          : errorMessage;
+      final userMessage = isServerError ? t.downloads.serverErrorBitrate : errorMessage;
       await _onDownloadPermanentlyFailed(globalKey, userMessage);
     }
   }
@@ -1497,9 +1497,7 @@ class DownloadManagerService {
   /// Delete episode files
   Future<void> _deleteEpisodeFiles(MediaMetadata episode, String serverId) async {
     try {
-      final parentMetadata = episode.seriesId != null
-          ? await _apiCache.getMetadata(serverId, episode.seriesId!)
-          : null;
+      final parentMetadata = episode.seriesId != null ? await _apiCache.getMetadata(serverId, episode.seriesId!) : null;
       final showYear = parentMetadata?.year;
 
       // Delete video file
@@ -1539,9 +1537,7 @@ class DownloadManagerService {
   /// Delete season files
   Future<void> _deleteSeasonFiles(MediaMetadata season, String serverId) async {
     try {
-      final parentMetadata = season.seasonId != null
-          ? await _apiCache.getMetadata(serverId, season.seasonId!)
-          : null;
+      final parentMetadata = season.seasonId != null ? await _apiCache.getMetadata(serverId, season.seasonId!) : null;
       final showYear = parentMetadata?.year;
 
       // Get all episodes in this season
@@ -1680,9 +1676,11 @@ class DownloadManagerService {
     try {
       final downloadsDir = await _storageService.getDownloadsDirectory();
       var current = dir;
-      while (current.path != downloadsDir.path &&
-             current.path.startsWith(downloadsDir.path)) {
-        if (!await current.exists()) { current = current.parent; continue; }
+      while (current.path != downloadsDir.path && current.path.startsWith(downloadsDir.path)) {
+        if (!await current.exists()) {
+          current = current.parent;
+          continue;
+        }
         final contents = await current.list().toList();
         if (contents.isEmpty) {
           await current.delete();
@@ -1704,9 +1702,7 @@ class DownloadManagerService {
     if (await seasonDir.exists()) {
       final contents = await seasonDir.list().toList();
       final hasVideos = contents.any(
-        (e) =>
-            _videoExtensions.any((ext) => e.path.endsWith(ext)) ||
-            e.path.contains('_subs'),
+        (e) => _videoExtensions.any((ext) => e.path.endsWith(ext)) || e.path.contains('_subs'),
       );
 
       if (!hasVideos) {

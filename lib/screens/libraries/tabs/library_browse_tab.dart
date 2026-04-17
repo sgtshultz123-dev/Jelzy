@@ -40,15 +40,7 @@ import 'base_library_tab.dart';
 /// Each active filter selection for the browse chip count (aligned with
 /// [FiltersBottomSheet]: comma-separated values on one map key count separately).
 int countActiveLibraryFilterSelections(Map<String, String> filters) {
-  const multiValueKeys = {
-    'genre',
-    'Genre',
-    'OfficialRating',
-    'tags',
-    'VideoTypes',
-    'year',
-    'Year',
-  };
+  const multiValueKeys = {'genre', 'Genre', 'OfficialRating', 'tags', 'VideoTypes', 'year', 'Year'};
   var n = 0;
   for (final e in filters.entries) {
     final k = e.key;
@@ -92,8 +84,7 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
   @override
   JellyfinClient get client => getClientForLibrary();
 
-  String _toGlobalKey(String itemId, {String? serverId}) =>
-      '${serverId ?? widget.library.serverId ?? ''}:$itemId';
+  String _toGlobalKey(String itemId, {String? serverId}) => '${serverId ?? widget.library.serverId ?? ''}:$itemId';
 
   @override
   String? get deletionServerId => widget.library.serverId;
@@ -191,8 +182,10 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
   int _currentFirstVisibleIndex = 0;
   int _currentColumnCount = 1;
   double _effectiveTopPadding = _gridTopPadding;
+
   /// Measured chips bar height (platform-dependent); falls back to constant if not yet measured.
   double _measuredChipsBarHeight = 48.0;
+
   /// Layout from the grid delegate — used for accurate scroll↔index mapping.
   SliverGridLayout? _gridLayout;
   final FocusNode _alphaJumpBarFocusNode = FocusNode(debugLabel: 'alpha_jump_bar');
@@ -574,10 +567,7 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
                     itemCount: options.length,
                     itemBuilder: (context, index) {
                       final grouping = options[index];
-                      return RadioListTile<String>(
-                        title: Text(_getGroupingLabel(grouping)),
-                        value: grouping,
-                      );
+                      return RadioListTile<String>(title: Text(_getGroupingLabel(grouping)), value: grouping);
                     },
                   ),
                 );
@@ -600,90 +590,94 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
 
   void _showFiltersBottomSheet() {
     SelectKeyUpSuppressor.suppressSelectUntilKeyUp();
-    OverlaySheetController.of(context).show(
-      builder: (context) => FiltersBottomSheet(
-        filters: _filters,
-        selectedFilters: _selectedFilters,
-        serverId: widget.library.serverId!,
-        libraryKey: widget.library.globalKey,
-        onFiltersChanged: (filters) async {
-          setState(() {
-            _selectedFilters.clear();
-            _selectedFilters.addAll(filters);
+    OverlaySheetController.of(context)
+        .show(
+          builder: (context) => FiltersBottomSheet(
+            filters: _filters,
+            selectedFilters: _selectedFilters,
+            serverId: widget.library.serverId!,
+            libraryKey: widget.library.globalKey,
+            onFiltersChanged: (filters) async {
+              setState(() {
+                _selectedFilters.clear();
+                _selectedFilters.addAll(filters);
+              });
+
+              // Save filters to storage
+              final storage = await StorageService.getInstance();
+              await storage.saveLibraryFilters(filters, sectionId: widget.library.globalKey);
+
+              _loadItems();
+            },
+          ),
+        )
+        .then((_) {
+          if (!mounted) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (items.isNotEmpty) {
+              _navigateToGrid();
+            } else {
+              _firstChipFocusNode.requestFocus();
+            }
           });
-
-          // Save filters to storage
-          final storage = await StorageService.getInstance();
-          await storage.saveLibraryFilters(filters, sectionId: widget.library.globalKey);
-
-          _loadItems();
-        },
-      ),
-    ).then((_) {
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (items.isNotEmpty) {
-          _navigateToGrid();
-        } else {
-          _firstChipFocusNode.requestFocus();
-        }
-      });
-    });
+        });
   }
 
   void _showSortBottomSheet() {
     SelectKeyUpSuppressor.suppressSelectUntilKeyUp();
-    OverlaySheetController.of(context).show(
-      builder: (context) => SortBottomSheet(
-        sortOptions: _sortOptions,
-        selectedSort: _selectedSort,
-        isSortDescending: _isSortDescending,
-        onSortChanged: (sort, descending) {
+    OverlaySheetController.of(context)
+        .show(
+          builder: (context) => SortBottomSheet(
+            sortOptions: _sortOptions,
+            selectedSort: _selectedSort,
+            isSortDescending: _isSortDescending,
+            onSortChanged: (sort, descending) {
+              if (!mounted) return;
+              if (sort.key == _selectedSort?.key && descending == _isSortDescending) return;
+              setState(() {
+                _selectedSort = sort;
+                _isSortDescending = descending;
+              });
+              StorageService.getInstance().then((storage) {
+                storage.saveLibrarySort(widget.library.globalKey, sort.key, descending: descending);
+              });
+              // Sync to server for cross-client display preferences
+              final c = getClientForLibrary();
+              c.updateDisplayPreferences(
+                widget.library.key,
+                sortBy: sort.key,
+                sortOrder: descending ? 'Descending' : 'Ascending',
+              );
+              _loadItems();
+            },
+            onClear: () {
+              if (!mounted) return;
+              setState(() {
+                _selectedSort = null;
+                _isSortDescending = false;
+              });
+              StorageService.getInstance().then((storage) {
+                storage.clearLibrarySort(widget.library.globalKey);
+              });
+              // Sync clear to server (use default sort)
+              final c = getClientForLibrary();
+              c.updateDisplayPreferences(widget.library.key, sortBy: 'SortName', sortOrder: 'Ascending');
+              _loadItems();
+            },
+          ),
+        )
+        .then((_) {
           if (!mounted) return;
-          if (sort.key == _selectedSort?.key && descending == _isSortDescending) return;
-          setState(() {
-            _selectedSort = sort;
-            _isSortDescending = descending;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (items.isNotEmpty) {
+              _navigateToGrid();
+            } else {
+              _firstChipFocusNode.requestFocus();
+            }
           });
-          StorageService.getInstance().then((storage) {
-            storage.saveLibrarySort(widget.library.globalKey, sort.key, descending: descending);
-          });
-          // Sync to server for cross-client display preferences
-          final c = getClientForLibrary();
-          c.updateDisplayPreferences(
-            widget.library.key,
-            sortBy: sort.key,
-            sortOrder: descending ? 'Descending' : 'Ascending',
-          );
-          _loadItems();
-        },
-        onClear: () {
-          if (!mounted) return;
-          setState(() {
-            _selectedSort = null;
-            _isSortDescending = false;
-          });
-          StorageService.getInstance().then((storage) {
-            storage.clearLibrarySort(widget.library.globalKey);
-          });
-          // Sync clear to server (use default sort)
-          final c = getClientForLibrary();
-          c.updateDisplayPreferences(widget.library.key, sortBy: 'SortName', sortOrder: 'Ascending');
-          _loadItems();
-        },
-      ),
-    ).then((_) {
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (items.isNotEmpty) {
-          _navigateToGrid();
-        } else {
-          _firstChipFocusNode.requestFocus();
-        }
-      });
-    });
+        });
   }
 
   /// Navigate focus from chips down to the grid item.
@@ -808,9 +802,7 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
         return a.compareTo(b);
       });
 
-    final chars = sortedKeys
-        .map((key) => FirstCharacter(key: key, title: key, size: charCounts[key]!))
-        .toList();
+    final chars = sortedKeys.map((key) => FirstCharacter(key: key, title: key, size: charCounts[key]!)).toList();
 
     setState(() {
       _firstCharacters = chars;
@@ -975,9 +967,7 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
   /// Uses the grid delegate's layout for accuracy.
   void _scrollToItemIndex(int index) {
     final layout = _gridLayout;
-    if (layout == null ||
-        !_scrollController.hasClients ||
-        !_scrollController.position.hasContentDimensions) {
+    if (layout == null || !_scrollController.hasClients || !_scrollController.position.hasContentDimensions) {
       _isJumpScrolling = false;
       return;
     }
@@ -997,11 +987,13 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
         _isJumpScrolling = false;
       }
     } else {
-      _scrollController.animateTo(clampedOffset, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut).then((_) {
-        if (mounted && gen == _jumpScrollGeneration) {
-          _isJumpScrolling = false;
-        }
-      });
+      _scrollController
+          .animateTo(clampedOffset, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut)
+          .then((_) {
+            if (mounted && gen == _jumpScrollGeneration) {
+              _isJumpScrolling = false;
+            }
+          });
     }
   }
 
@@ -1025,53 +1017,53 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
           _overlayContext = ctx;
           return Stack(
             children: [
-          // Grid fills the entire area, with top padding for chips bar
-          Positioned.fill(child: _buildScrollableContent()),
-          // Chips bar on top with solid background (measure height for alpha jump scroll math)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Builder(
-              key: _chipsBarKey,
-              builder: (context) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  final box = context.findRenderObject() as RenderBox?;
-                  if (box != null && box.hasSize) {
-                    final h = box.size.height;
-                    if ((h - _measuredChipsBarHeight).abs() > 0.5) {
-                      setState(() => _measuredChipsBarHeight = h);
-                    }
-                  }
-                });
-                return _buildChipsBar();
-              },
-            ),
-          ),
-          // Alpha jump bar / scroll handle on the right edge (hidden on Android phone)
-          if (_shouldShowAlphaBarOnThisDevice(context))
-            Positioned(
-              top: _measuredChipsBarHeight,
-              right: 0,
-              bottom: 0,
-              child: _isPhone(context)
-                  ? AlphaScrollHandle(
-                      firstCharacters: _firstCharacters,
-                      onJump: _jumpToIndex,
-                      currentLetter: _currentAlphaLetter,
-                      isScrolling: _isScrollActive,
-                    )
-                  : AlphaJumpBar(
-                      firstCharacters: _firstCharacters,
-                      onJump: _jumpToIndex,
-                      currentLetter: _currentAlphaLetter,
-                      focusNode: _alphaJumpBarFocusNode,
-                      onNavigateLeft: _navigateToGridNearScroll,
-                      onBack: _navigateToGridNearScroll,
-                    ),
-            ),
-        ],
+              // Grid fills the entire area, with top padding for chips bar
+              Positioned.fill(child: _buildScrollableContent()),
+              // Chips bar on top with solid background (measure height for alpha jump scroll math)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Builder(
+                  key: _chipsBarKey,
+                  builder: (context) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      final box = context.findRenderObject() as RenderBox?;
+                      if (box != null && box.hasSize) {
+                        final h = box.size.height;
+                        if ((h - _measuredChipsBarHeight).abs() > 0.5) {
+                          setState(() => _measuredChipsBarHeight = h);
+                        }
+                      }
+                    });
+                    return _buildChipsBar();
+                  },
+                ),
+              ),
+              // Alpha jump bar / scroll handle on the right edge (hidden on Android phone)
+              if (_shouldShowAlphaBarOnThisDevice(context))
+                Positioned(
+                  top: _measuredChipsBarHeight,
+                  right: 0,
+                  bottom: 0,
+                  child: _isPhone(context)
+                      ? AlphaScrollHandle(
+                          firstCharacters: _firstCharacters,
+                          onJump: _jumpToIndex,
+                          currentLetter: _currentAlphaLetter,
+                          isScrolling: _isScrollActive,
+                        )
+                      : AlphaJumpBar(
+                          firstCharacters: _firstCharacters,
+                          onJump: _jumpToIndex,
+                          currentLetter: _currentAlphaLetter,
+                          focusNode: _alphaJumpBarFocusNode,
+                          onNavigateLeft: _navigateToGridNearScroll,
+                          onBack: _navigateToGridNearScroll,
+                        ),
+                ),
+            ],
           );
         },
       ),
@@ -1165,9 +1157,7 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
               onPressed: _showFiltersBottomSheet,
               onNavigateDown: _navigateToGrid,
               onNavigateUp: widget.onBack,
-              onNavigateLeft: _isGroupingChipVisible
-                  ? () => _groupingChipFocusNode.requestFocus()
-                  : _navigateToSidebar,
+              onNavigateLeft: _isGroupingChipVisible ? () => _groupingChipFocusNode.requestFocus() : _navigateToSidebar,
               onNavigateRight: _isSortChipVisible ? () => _sortChipFocusNode.requestFocus() : null,
               onBack: widget.onBack,
             ),
@@ -1184,8 +1174,8 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaMetadata, LibraryB
               onNavigateLeft: _isFiltersChipVisible
                   ? () => _filtersChipFocusNode.requestFocus()
                   : _isGroupingChipVisible
-                      ? () => _groupingChipFocusNode.requestFocus()
-                      : _navigateToSidebar,
+                  ? () => _groupingChipFocusNode.requestFocus()
+                  : _navigateToSidebar,
               onBack: widget.onBack,
             ),
         ],

@@ -29,13 +29,10 @@ import '../../i18n/strings.g.dart';
 /// Screen to add another Jellyfin user on the same server (from Switch profile).
 /// Shows only users not already logged in; layout like auth user step (centered grid, Manual login + Back).
 class JellyfinAddUserScreen extends StatefulWidget {
-  const JellyfinAddUserScreen({
-    super.key,
-    required this.baseUrl,
-    this.existingUserIds = const {},
-  });
+  const JellyfinAddUserScreen({super.key, required this.baseUrl, this.existingUserIds = const {}});
 
   final String baseUrl;
+
   /// User IDs already authorized on this server; they are excluded from the grid.
   final Set<String> existingUserIds;
 
@@ -115,9 +112,7 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
       final dio = Dio(
         BaseOptions(
           baseUrl: _baseUrl,
-          headers: {
-            'Authorization': JellyfinAuthService.authHeaderWithToken(result.accessToken, deviceId: deviceId),
-          },
+          headers: {'Authorization': JellyfinAuthService.authHeaderWithToken(result.accessToken, deviceId: deviceId)},
         ),
       );
       final info = await dio.get<Map<String, dynamic>>('/System/Info');
@@ -198,11 +193,7 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
       );
       final userName = _selectedUser?.name ?? username;
       final primaryImageTag = _selectedUser?.primaryImageTag;
-      await _completeAddUser(
-        result: result,
-        userName: userName,
-        primaryImageTag: primaryImageTag,
-      );
+      await _completeAddUser(result: result, userName: userName, primaryImageTag: primaryImageTag);
     } catch (e, st) {
       if (mounted) {
         setState(() {
@@ -252,16 +243,13 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
           if (!mounted) return;
           final userName = _selectedUser?.name ?? result.userId;
           final primaryImageTag = _selectedUser?.primaryImageTag;
-          await _completeAddUser(
-            result: result,
-            userName: userName,
-            primaryImageTag: primaryImageTag,
-          );
+          await _completeAddUser(result: result, userName: userName, primaryImageTag: primaryImageTag);
         }
       } catch (e) {
         appLogger.d('Quick Connect poll check failed', error: e);
       }
     }
+
     checkOnce();
     _quickConnectPollTimer = Timer.periodic(const Duration(seconds: 3), (_) => checkOnce());
   }
@@ -318,16 +306,8 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
     });
 
     try {
-      final result = await JellyfinAuthService.authenticateByName(
-        baseUrl: _baseUrl,
-        username: user.name,
-        password: '',
-      );
-      await _completeAddUser(
-        result: result,
-        userName: user.name,
-        primaryImageTag: user.primaryImageTag,
-      );
+      final result = await JellyfinAuthService.authenticateByName(baseUrl: _baseUrl, username: user.name, password: '');
+      await _completeAddUser(result: result, userName: user.name, primaryImageTag: user.primaryImageTag);
     } catch (e, st) {
       if (mounted) {
         setState(() {
@@ -417,10 +397,9 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
                   ),
                   child: Text(
                     _quickConnectCode ?? '',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          letterSpacing: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineLarge?.copyWith(letterSpacing: 8, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -445,9 +424,7 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5), width: 1.5),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: theme.colorScheme.primary, width: 4),
-              ),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary, width: 4)),
             )
           : const InputDecoration(border: OutlineInputBorder());
       return Scaffold(
@@ -459,15 +436,9 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_selectedUser != null)
-                Text(
-                  'Sign in as ${_selectedUser!.name}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                )
+                Text('Sign in as ${_selectedUser!.name}', style: Theme.of(context).textTheme.titleSmall)
               else
-                Text(
-                  'Manual login',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                Text('Manual login', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 16),
               Focus(
                 onKeyEvent: (node, event) {
@@ -593,9 +564,7 @@ class _JellyfinAddUserScreenState extends State<JellyfinAddUserScreen> {
     final users = _publicUsers ?? [];
     final isTV = PlatformDetector.isTV();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add user'),
-      ),
+      appBar: AppBar(title: const Text('Add user')),
       body: _loadingUsers
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

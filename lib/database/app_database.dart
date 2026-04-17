@@ -240,9 +240,12 @@ LazyDatabase _openConnection() {
       }
     }
 
-    return NativeDatabase.createInBackground(file, setup: (db) {
-      db.execute('PRAGMA journal_mode=WAL');
-      db.execute('PRAGMA synchronous=NORMAL');
-    });
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) {
+        db.execute('PRAGMA journal_mode=WAL');
+        db.execute('PRAGMA synchronous=NORMAL');
+      },
+    );
   });
 }

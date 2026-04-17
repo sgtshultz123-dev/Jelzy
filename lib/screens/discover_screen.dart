@@ -41,7 +41,6 @@ import 'libraries/state_messages.dart';
 import 'main_screen.dart';
 import '../widgets/profile_app_bar_button.dart';
 
-
 class DiscoverScreen extends StatefulWidget {
   final VoidCallback? onBecameVisible;
 
@@ -653,11 +652,12 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       final filteredHubs = allHubs.where((hub) {
         final hubId = hub.hubIdentifier?.toLowerCase() ?? '';
         final title = hub.title.toLowerCase();
-        return !hubId.contains('continue') &&
-            !title.contains('continue watching');
+        return !hubId.contains('continue') && !title.contains('continue watching');
       }).toList();
 
-      appLogger.d('Received ${continueWatchingItems.length} continue watching items and ${filteredHubs.length} global hubs from all servers');
+      appLogger.d(
+        'Received ${continueWatchingItems.length} continue watching items and ${filteredHubs.length} global hubs from all servers',
+      );
       if (!mounted) return;
       setState(() {
         _hubs = filteredHubs;
@@ -1037,7 +1037,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                         showServerName: showServerNameOnHubs || duplicateHubTitles.contains(_hubs[i].title),
                         onRefresh: updateItem,
                         // Hub index is i + 1 if continue watching exists, otherwise i
-                        onVerticalNavigation: (isUp) => _handleVerticalNavigation(_continueWatching.isNotEmpty ? i + 1 : i, isUp),
+                        onVerticalNavigation: (isUp) =>
+                            _handleVerticalNavigation(_continueWatching.isNotEmpty ? i + 1 : i, isUp),
                         onNavigateUp: (i == 0 && _continueWatching.isEmpty) ? _focusTopBoundary : null,
                         onNavigateToSidebar: _navigateToSidebar,
                       ),
@@ -1252,7 +1253,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
           clipBehavior: Clip.none,
           children: [
             // Background Image with fade/zoom animation and parallax
-            if (heroItem.art != null || heroItem.seriesArt != null || heroItem.thumb != null || heroItem.seriesImageId != null)
+            if (heroItem.art != null ||
+                heroItem.seriesArt != null ||
+                heroItem.thumb != null ||
+                heroItem.seriesImageId != null)
               ClipRect(
                 child: AnimatedBuilder(
                   animation: _scrollController,
@@ -1288,14 +1292,16 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                           imageType: hasBackdrop ? ImageType.art : ImageType.poster,
                         );
 
-                        return blurArtwork(CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
-                          errorWidget: (context, url, error) =>
-                              Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
-                        ));
+                        return blurArtwork(
+                          CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                            errorWidget: (context, url, error) =>
+                                Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -1356,39 +1362,19 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                               imageType: ImageType.logo,
                             );
 
-                            return blurArtwork(CachedNetworkImage(
-                              imageUrl: logoUrl,
-                              filterQuality: FilterQuality.medium,
-                              fit: BoxFit.contain,
-                              memCacheWidth: (400 * dpr).clamp(200, 800).round(),
-                              alignment: isLargeScreen ? Alignment.bottomLeft : Alignment.bottomCenter,
-                              placeholder: (context, url) => Align(
-                                alignment: isLargeScreen ? Alignment.centerLeft : Alignment.center,
-                                child: Text(
-                                  showName,
-                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: isLargeScreen ? TextAlign.left : TextAlign.center,
-                                ),
-                              ),
-                              errorWidget: (context, url, error) {
-                                // Fallback to text if logo fails to load
-                                return Align(
+                            return blurArtwork(
+                              CachedNetworkImage(
+                                imageUrl: logoUrl,
+                                filterQuality: FilterQuality.medium,
+                                fit: BoxFit.contain,
+                                memCacheWidth: (400 * dpr).clamp(200, 800).round(),
+                                alignment: isLargeScreen ? Alignment.bottomLeft : Alignment.bottomCenter,
+                                placeholder: (context, url) => Align(
                                   alignment: isLargeScreen ? Alignment.centerLeft : Alignment.center,
                                   child: Text(
                                     showName,
                                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                                       fontWeight: FontWeight.bold,
                                       shadows: [
                                         Shadow(
@@ -1401,9 +1387,33 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: isLargeScreen ? TextAlign.left : TextAlign.center,
                                   ),
-                                );
-                              },
-                            ), sigma: 10, clip: false);
+                                ),
+                                errorWidget: (context, url, error) {
+                                  // Fallback to text if logo fails to load
+                                  return Align(
+                                    alignment: isLargeScreen ? Alignment.centerLeft : Alignment.center,
+                                    child: Text(
+                                      showName,
+                                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: [
+                                          Shadow(
+                                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: isLargeScreen ? TextAlign.left : TextAlign.center,
+                                    ),
+                                  );
+                                },
+                              ),
+                              sigma: 10,
+                              clip: false,
+                            );
                           },
                         ),
                       )
@@ -1488,7 +1498,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
   Widget _buildSmartPlayButton(MediaMetadata heroItem) {
     final hasProgress =
-        heroItem.resumePositionMs != null && heroItem.duration != null && heroItem.resumePositionMs! > 0 && heroItem.duration! > 0;
+        heroItem.resumePositionMs != null &&
+        heroItem.duration != null &&
+        heroItem.resumePositionMs! > 0 &&
+        heroItem.duration! > 0;
 
     final minutesLeft = hasProgress ? ((heroItem.duration! - heroItem.resumePositionMs!) / 60000).round() : 0;
 

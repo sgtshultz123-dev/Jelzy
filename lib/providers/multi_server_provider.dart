@@ -91,7 +91,11 @@ class MultiServerProvider extends ChangeNotifier {
     _aggregationService.clearCache();
     appLogger.d('MultiServerProvider: Cleared connections, reconnecting to ${servers.length} servers');
 
-    final connectedCount = await _serverManager.connectToAllServers(servers, clientIdentifier: clientIdentifier, deviceId: deviceId);
+    final connectedCount = await _serverManager.connectToAllServers(
+      servers,
+      clientIdentifier: clientIdentifier,
+      deviceId: deviceId,
+    );
 
     appLogger.i('MultiServerProvider: Reconnected to $connectedCount/${servers.length} servers after profile switch');
     notifyListeners();

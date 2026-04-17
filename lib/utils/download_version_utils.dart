@@ -13,11 +13,8 @@ class DownloadVersionConfig {
   final Set<String> acceptedSignatures;
   final Future<int?> Function(MediaMetadata episode, List<MediaVersion> versions)? onVersionMismatch;
 
-  DownloadVersionConfig({
-    this.mediaIndex = 0,
-    Set<String>? acceptedSignatures,
-    this.onVersionMismatch,
-  }) : acceptedSignatures = acceptedSignatures ?? {};
+  DownloadVersionConfig({this.mediaIndex = 0, Set<String>? acceptedSignatures, this.onVersionMismatch})
+    : acceptedSignatures = acceptedSignatures ?? {};
 
   /// Create from a selected version's signature.
   factory DownloadVersionConfig.fromSignature(
@@ -85,11 +82,10 @@ Future<int?> showVersionPickerDialog(BuildContext context, List<MediaVersion> ve
   return showOptionPickerDialog<int>(
     context,
     title: title,
-    options: List.generate(versions.length, (index) => (
-      icon: Symbols.video_file_rounded,
-      label: versions[index].displayLabel,
-      value: index,
-    )),
+    options: List.generate(
+      versions.length,
+      (index) => (icon: Symbols.video_file_rounded, label: versions[index].displayLabel, value: index),
+    ),
   );
 }
 
@@ -106,13 +102,15 @@ Future<List<MediaVersion>?> fetchRepresentativeVersions(JellyfinClient client, M
       final seasons = await client.getChildren(metadata.itemId);
       // Skip Season 0 (Specials) as it may have different encoding
       final firstSeason = seasons.cast<MediaMetadata?>().firstWhere(
-            (s) => s?.type == 'season' && (s?.index ?? 0) > 0,
-            orElse: () => seasons.cast<MediaMetadata?>().firstWhere((s) => s?.type == 'season', orElse: () => null),
-          );
+        (s) => s?.type == 'season' && (s?.index ?? 0) > 0,
+        orElse: () => seasons.cast<MediaMetadata?>().firstWhere((s) => s?.type == 'season', orElse: () => null),
+      );
       if (firstSeason != null) {
         final episodes = await client.getChildren(firstSeason.itemId);
-        final firstEpisode =
-            episodes.cast<MediaMetadata?>().firstWhere((e) => e?.type == 'episode', orElse: () => null);
+        final firstEpisode = episodes.cast<MediaMetadata?>().firstWhere(
+          (e) => e?.type == 'episode',
+          orElse: () => null,
+        );
         episodeRatingKey = firstEpisode?.itemId;
       }
     }

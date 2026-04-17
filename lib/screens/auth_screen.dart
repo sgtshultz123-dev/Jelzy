@@ -123,7 +123,12 @@ class _AuthScreenState extends State<AuthScreen> {
       );
       final userName = _jellyfinSelectedUser?.name ?? username;
       final primaryImageTag = _jellyfinSelectedUser?.primaryImageTag;
-      await _completeJellyfinAuth(baseUrl: baseUrl, result: result, userName: userName, primaryImageTag: primaryImageTag);
+      await _completeJellyfinAuth(
+        baseUrl: baseUrl,
+        result: result,
+        userName: userName,
+        primaryImageTag: primaryImageTag,
+      );
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -148,9 +153,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final dio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
-          headers: {
-            'Authorization': JellyfinAuthService.authHeaderWithToken(result.accessToken, deviceId: deviceId),
-          },
+          headers: {'Authorization': JellyfinAuthService.authHeaderWithToken(result.accessToken, deviceId: deviceId)},
         ),
       );
       final info = await dio.get<Map<String, dynamic>>('/System/Info');
@@ -311,6 +314,7 @@ class _AuthScreenState extends State<AuthScreen> {
         // Ignore poll/network errors; auth exchange failures will leave user on screen
       }
     }
+
     checkOnce(); // poll immediately so we don't wait 3s after user approves
     _quickConnectPollTimer = Timer.periodic(const Duration(seconds: 3), (_) => checkOnce());
   }
@@ -406,7 +410,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ],
                 )
-              :               SingleChildScrollView(
+              : SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -419,10 +423,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 48),
-                      if (_isAuthenticating)
-                        const Center(child: CircularProgressIndicator())
-                      else
-                        _buildAuthContent(),
+                      if (_isAuthenticating) const Center(child: CircularProgressIndicator()) else _buildAuthContent(),
                     ],
                   ),
                 ),
@@ -465,9 +466,7 @@ class _AuthScreenState extends State<AuthScreen> {
             )
           : null,
       focusedBorder: isTV
-          ? OutlineInputBorder(
-              borderSide: BorderSide(color: theme.colorScheme.primary, width: 4),
-            )
+          ? OutlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary, width: 4))
           : null,
     );
 
@@ -518,10 +517,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          FocusTraversalOrder(
-            order: const NumericFocusOrder(1),
-            child: connectButton,
-          ),
+          FocusTraversalOrder(order: const NumericFocusOrder(1), child: connectButton),
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
             Text(
@@ -544,11 +540,7 @@ class _AuthScreenState extends State<AuthScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Select a user',
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
+          Text('Select a user', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 20),
           // Users as clickable squares in a grid — profiles first in focus order for TV
           FocusTraversalOrder(
@@ -744,9 +736,7 @@ class _AuthScreenState extends State<AuthScreen> {
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5), width: 1.5),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: theme.colorScheme.primary, width: 4),
-            ),
+            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary, width: 4)),
           )
         : const InputDecoration(border: OutlineInputBorder());
     final fromProfile = _jellyfinSelectedUser != null;
@@ -755,15 +745,9 @@ class _AuthScreenState extends State<AuthScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (fromProfile)
-          Text(
-            'Sign in as ${_jellyfinSelectedUser!.name}',
-            style: Theme.of(context).textTheme.titleSmall,
-          )
+          Text('Sign in as ${_jellyfinSelectedUser!.name}', style: Theme.of(context).textTheme.titleSmall)
         else
-          Text(
-            'Manual login',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text('Manual login', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 16),
         Focus(
           onKeyEvent: (node, event) {
@@ -901,10 +885,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           child: Text(
             _quickConnectCode ?? '',
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  letterSpacing: 8,
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(letterSpacing: 8, fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(height: 24),
@@ -922,5 +903,4 @@ class _AuthScreenState extends State<AuthScreen> {
       ],
     );
   }
-
 }

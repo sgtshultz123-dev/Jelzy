@@ -55,10 +55,22 @@ class _LibraryFavoritesTabState extends LibraryGridTabState<MediaMetadata, Libra
       focusNode: focusNode,
       onListRefresh: loadItems,
       onBack: widget.onBackToNavigation ?? widget.onBack,
-      onNavigateUp: gc?.isFirstRow == true ? widget.onBack : gc != null ? () => focusGridItemByIndex(gc.index - gc.columnCount, 'favorites_grid_item') : null,
-      onNavigateDown: gc != null && !gc.isLastRow ? () => focusGridItemByIndex(gc.index + gc.columnCount, 'favorites_grid_item') : null,
-      onNavigateLeft: gc?.isFirstColumn == true ? gc?.navigateToSidebar : gc != null ? () => focusGridItemByIndex(gc.index - 1, 'favorites_grid_item') : null,
-      onNavigateRight: gc != null && !gc.isLastColumn ? () => focusGridItemByIndex(gc.index + 1, 'favorites_grid_item') : null,
+      onNavigateUp: gc?.isFirstRow == true
+          ? widget.onBack
+          : gc != null
+          ? () => focusGridItemByIndex(gc.index - gc.columnCount, 'favorites_grid_item')
+          : null,
+      onNavigateDown: gc != null && !gc.isLastRow
+          ? () => focusGridItemByIndex(gc.index + gc.columnCount, 'favorites_grid_item')
+          : null,
+      onNavigateLeft: gc?.isFirstColumn == true
+          ? gc?.navigateToSidebar
+          : gc != null
+          ? () => focusGridItemByIndex(gc.index - 1, 'favorites_grid_item')
+          : null,
+      onNavigateRight: gc != null && !gc.isLastColumn
+          ? () => focusGridItemByIndex(gc.index + 1, 'favorites_grid_item')
+          : null,
       onFocusChange: (hasFocus) => trackGridItemFocus(index, hasFocus),
       scrollTopOffset: gc?.isFirstRow == true ? 8 : null,
     );

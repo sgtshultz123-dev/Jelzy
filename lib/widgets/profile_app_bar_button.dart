@@ -13,12 +13,7 @@ import 'quick_connect_authorize_dialog.dart';
 ///
 /// Pass [menuKey] to open the menu programmatically (e.g. for D-pad Select).
 class ProfileAppBarButton extends StatelessWidget {
-  const ProfileAppBarButton({
-    super.key,
-    this.onSwitchProfile,
-    this.onLogout,
-    this.menuKey,
-  });
+  const ProfileAppBarButton({super.key, this.onSwitchProfile, this.onLogout, this.menuKey});
 
   final VoidCallback? onSwitchProfile;
   final VoidCallback? onLogout;
@@ -59,10 +54,7 @@ class ProfileAppBarButton extends StatelessWidget {
             if (value == 'switch_profile') {
               onSwitchProfile?.call();
             } else if (value == 'quick_connect') {
-              showDialog(
-                context: context,
-                builder: (_) => const QuickConnectAuthorizeDialog(),
-              );
+              showDialog(context: context, builder: (_) => const QuickConnectAuthorizeDialog());
             } else if (value == 'logout') {
               onLogout?.call();
             }

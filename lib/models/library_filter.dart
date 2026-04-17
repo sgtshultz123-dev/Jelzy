@@ -4,6 +4,7 @@ class LibraryFilter {
   final String key;
   final String title;
   final String type;
+
   /// Optional group/category for UI (e.g. "Filters", "Features"). When null, no section header.
   final String? group;
 

@@ -59,12 +59,7 @@ class MediaDetailScreen extends StatefulWidget {
   /// Called once when the screen has been built (for external-restore flow).
   final VoidCallback? onFirstBuild;
 
-  const MediaDetailScreen({
-    super.key,
-    required this.metadata,
-    this.isOffline = false,
-    this.onFirstBuild,
-  });
+  const MediaDetailScreen({super.key, required this.metadata, this.isOffline = false, this.onFirstBuild});
 
   @override
   State<MediaDetailScreen> createState() => _MediaDetailScreenState();
@@ -118,8 +113,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
   final _castSectionKey = GlobalKey();
   final _seasonsSectionKey = GlobalKey();
 
-  String _toGlobalKey(String itemId, {String? serverId}) =>
-      '${serverId ?? widget.metadata.serverId ?? ''}:$itemId';
+  String _toGlobalKey(String itemId, {String? serverId}) => '${serverId ?? widget.metadata.serverId ?? ''}:$itemId';
 
   // WatchStateAware: watch the show/movie and all season itemIds
   @override
@@ -412,9 +406,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
           ),
           const SizedBox(width: 12),
           // Restart / Play from start (when play would resume — hide if play already starts from 0)
-          if (!widget.isOffline &&
-              (metadata.isMovie || metadata.isEpisode) &&
-              metadata.hasActiveProgress) ...[
+          if (!widget.isOffline && (metadata.isMovie || metadata.isEpisode) && metadata.hasActiveProgress) ...[
             Semantics(
               label: t.tooltips.playFromStart,
               button: true,
@@ -735,7 +727,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                       if (client == null) return;
                       final count = await downloadProvider.queueDownload(metadata, client);
                       if (context.mounted) {
-                        final message = count > 1 ? t.downloads.episodesQueued(count: count) : t.downloads.downloadQueued;
+                        final message = count > 1
+                            ? t.downloads.episodesQueued(count: count)
+                            : t.downloads.downloadQueued;
                         showSuccessSnackBar(context, message);
                       }
                     },
@@ -756,40 +750,43 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
             child: IconButton.filledTonal(
               onPressed: () async {
                 try {
-                final isWatched = metadata.isWatched;
-                if (widget.isOffline) {
-                  // Offline mode: queue action for later sync
-                  final offlineWatch = context.read<OfflineWatchProvider>();
-                  if (isWatched) {
-                    await offlineWatch.markAsUnwatched(serverId: metadata.serverId!, itemId: metadata.itemId);
+                  final isWatched = metadata.isWatched;
+                  if (widget.isOffline) {
+                    // Offline mode: queue action for later sync
+                    final offlineWatch = context.read<OfflineWatchProvider>();
+                    if (isWatched) {
+                      await offlineWatch.markAsUnwatched(serverId: metadata.serverId!, itemId: metadata.itemId);
+                    } else {
+                      await offlineWatch.markAsWatched(serverId: metadata.serverId!, itemId: metadata.itemId);
+                    }
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        isWatched ? t.messages.markedAsUnwatchedOffline : t.messages.markedAsWatchedOffline,
+                      );
+                      // Refresh offline next episode
+                      _loadOfflineNextEpisode();
+                    }
                   } else {
-                    await offlineWatch.markAsWatched(serverId: metadata.serverId!, itemId: metadata.itemId);
-                  }
-                  if (mounted) {
-                    showAppSnackBar(
-                      context,
-                      isWatched ? t.messages.markedAsUnwatchedOffline : t.messages.markedAsWatchedOffline,
-                    );
-                    // Refresh offline next episode
-                    _loadOfflineNextEpisode();
-                  }
-                } else {
-                  // Online mode: send to server
-                  final client = _getClientForMetadata(context);
-                  if (client == null) return;
+                    // Online mode: send to server
+                    final client = _getClientForMetadata(context);
+                    if (client == null) return;
 
-                  if (isWatched) {
-                    await client.markAsUnwatched(metadata.itemId);
-                  } else {
-                    await client.markAsWatched(metadata.itemId);
+                    if (isWatched) {
+                      await client.markAsUnwatched(metadata.itemId);
+                    } else {
+                      await client.markAsWatched(metadata.itemId);
+                    }
+                    if (mounted) {
+                      _watchStateChanged = true;
+                      showSuccessSnackBar(
+                        context,
+                        isWatched ? t.messages.markedAsUnwatched : t.messages.markedAsWatched,
+                      );
+                      // Update watch state without full rebuild
+                      _updateWatchState();
+                    }
                   }
-                  if (mounted) {
-                    _watchStateChanged = true;
-                    showSuccessSnackBar(context, isWatched ? t.messages.markedAsUnwatched : t.messages.markedAsWatched);
-                    // Update watch state without full rebuild
-                    _updateWatchState();
-                  }
-                }
                 } catch (e, st) {
                   if (mounted) {
                     showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
@@ -797,10 +794,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                   logErrorWithStackTrace('Failed to update watch state', e, st);
                 }
               },
-            icon: AppIcon(metadata.isWatched ? Symbols.remove_done_rounded : Symbols.check_rounded, fill: 1),
-            tooltip: null,
-            iconSize: 20,
-            style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+              icon: AppIcon(metadata.isWatched ? Symbols.remove_done_rounded : Symbols.check_rounded, fill: 1),
+              tooltip: null,
+              iconSize: 20,
+              style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
             ),
           ),
           // Favorite button
@@ -814,44 +811,41 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                 onPressed: () async {
                   final client = _getClientForMetadata(context);
                   if (client == null) return;
-                final metadata = _fullMetadata ?? widget.metadata;
-                try {
-                  final newState = await client.toggleFavorite(
-                    metadata.itemId,
-                    isCurrentlyFavorite: metadata.isFavorite == true,
-                  );
-                  if (mounted && newState != null) {
-                    setState(() {
-                      _fullMetadata = metadata.copyWith(isFavorite: newState);
-                      _watchStateChanged = true; // so back triggers list refresh
-                    });
-                    showSuccessSnackBar(
-                      context,
-                      newState ? 'Added to favorites' : 'Removed from favorites',
+                  final metadata = _fullMetadata ?? widget.metadata;
+                  try {
+                    final newState = await client.toggleFavorite(
+                      metadata.itemId,
+                      isCurrentlyFavorite: metadata.isFavorite == true,
                     );
-                  } else if (mounted) {
-                    await _loadFullMetadata();
+                    if (mounted && newState != null) {
+                      setState(() {
+                        _fullMetadata = metadata.copyWith(isFavorite: newState);
+                        _watchStateChanged = true; // so back triggers list refresh
+                      });
+                      showSuccessSnackBar(context, newState ? 'Added to favorites' : 'Removed from favorites');
+                    } else if (mounted) {
+                      await _loadFullMetadata();
+                    }
+                  } catch (e, st) {
+                    if (mounted) {
+                      showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
+                    }
+                    logErrorWithStackTrace('Failed to toggle favorite', e, st);
                   }
-                } catch (e, st) {
-                  if (mounted) {
-                    showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
-                  }
-                  logErrorWithStackTrace('Failed to toggle favorite', e, st);
-                }
                 },
                 icon: AppIcon(
-                metadata.isFavorite == true ? Symbols.favorite_rounded : Symbols.favorite_border_rounded,
-                fill: metadata.isFavorite == true ? 1 : 0,
-              ),
-              tooltip: null,
-              iconSize: 20,
-              style: IconButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                maximumSize: const Size(48, 48),
-                foregroundColor: metadata.isFavorite == true ? Colors.red : null,
+                  metadata.isFavorite == true ? Symbols.favorite_rounded : Symbols.favorite_border_rounded,
+                  fill: metadata.isFavorite == true ? 1 : 0,
+                ),
+                tooltip: null,
+                iconSize: 20,
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  maximumSize: const Size(48, 48),
+                  foregroundColor: metadata.isFavorite == true ? Colors.red : null,
+                ),
               ),
             ),
-          ),
           ],
         ],
       ),
@@ -921,20 +915,24 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
       chips.add(_buildCombinedRtChip(critic, audience));
     } else {
       if (metadata.rating != null) {
-        chips.add(_buildRatingChip(
-          metadata.ratingImage,
-          metadata.rating!,
-          Symbols.star_rounded,
-          useReadableLabel: !isRottenTomatoes(metadata.ratingImage),
-        ));
+        chips.add(
+          _buildRatingChip(
+            metadata.ratingImage,
+            metadata.rating!,
+            Symbols.star_rounded,
+            useReadableLabel: !isRottenTomatoes(metadata.ratingImage),
+          ),
+        );
       }
       if (metadata.audienceRating != null) {
-        chips.add(_buildRatingChip(
-          metadata.audienceRatingImage,
-          metadata.audienceRating!,
-          Symbols.star_rounded,
-          useReadableLabel: true,
-        ));
+        chips.add(
+          _buildRatingChip(
+            metadata.audienceRatingImage,
+            metadata.audienceRating!,
+            Symbols.star_rounded,
+            useReadableLabel: true,
+          ),
+        );
       }
     }
 
@@ -1224,7 +1222,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = key.currentContext;
       if (ctx != null) {
-        Scrollable.ensureVisible(ctx, duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200), curve: Curves.easeOut);
+        Scrollable.ensureVisible(
+          ctx,
+          duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -1401,7 +1403,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
         setState(() {
           _focusedSeasonIndex--;
         });
-        scrollListToIndex(_seasonsScrollController, _focusedSeasonIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _seasonsScrollController,
+          _focusedSeasonIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1412,7 +1419,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
         setState(() {
           _focusedSeasonIndex++;
         });
-        scrollListToIndex(_seasonsScrollController, _focusedSeasonIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _seasonsScrollController,
+          _focusedSeasonIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1511,7 +1523,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     );
   }
 
-
   /// Handle key events for the cast row (locked focus pattern)
   KeyEventResult _handleCastKeyEvent(FocusNode _, KeyEvent event) {
     final key = event.logicalKey;
@@ -1526,7 +1537,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     if (key.isLeftKey) {
       if (_focusedCastIndex > 0) {
         setState(() => _focusedCastIndex--);
-        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: 120.0 + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _castScrollController,
+          _focusedCastIndex,
+          itemExtent: 120.0 + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1535,7 +1551,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     if (key.isRightKey) {
       if (_focusedCastIndex < roleCount - 1) {
         setState(() => _focusedCastIndex++);
-        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: 120.0 + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _castScrollController,
+          _focusedCastIndex,
+          itemExtent: 120.0 + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1577,11 +1598,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => PersonDetailScreen(
-                actor: actor,
-                client: client,
-                serverId: widget.metadata.serverId ?? '',
-              ),
+              builder: (_) =>
+                  PersonDetailScreen(actor: actor, client: client, serverId: widget.metadata.serverId ?? ''),
             ),
           );
         }
@@ -1605,7 +1623,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     if (key.isLeftKey) {
       if (_focusedSimilarIndex > 0) {
         setState(() => _focusedSimilarIndex--);
-        scrollListToIndex(_similarItemsScrollController, _focusedSimilarIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _similarItemsScrollController,
+          _focusedSimilarIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1614,7 +1637,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     if (key.isRightKey) {
       if (_focusedSimilarIndex < _similarItems!.length - 1) {
         setState(() => _focusedSimilarIndex++);
-        scrollListToIndex(_similarItemsScrollController, _focusedSimilarIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _similarItemsScrollController,
+          _focusedSimilarIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -1915,12 +1943,14 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                                     imageType: ImageType.art,
                                   );
 
-                                  return blurArtwork(CachedNetworkImage(
-                                    imageUrl: imageUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => const PlaceholderContainer(),
-                                    errorWidget: (context, url, error) => const PlaceholderContainer(),
-                                  ));
+                                  return blurArtwork(
+                                    CachedNetworkImage(
+                                      imageUrl: imageUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => const PlaceholderContainer(),
+                                      errorWidget: (context, url, error) => const PlaceholderContainer(),
+                                    ),
+                                  );
                                 },
                               )
                             : const PlaceholderContainer(),
@@ -2016,31 +2046,35 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                                           imageType: ImageType.logo,
                                         );
 
-                                        return blurArtwork(CachedNetworkImage(
-                                          imageUrl: logoUrl,
-                                          filterQuality: FilterQuality.medium,
-                                          fit: BoxFit.contain,
-                                          alignment: Alignment.centerLeft,
-                                          memCacheWidth: (400 * dpr).clamp(200, 800).round(),
-                                          placeholder: (context, url) => Align(
+                                        return blurArtwork(
+                                          CachedNetworkImage(
+                                            imageUrl: logoUrl,
+                                            filterQuality: FilterQuality.medium,
+                                            fit: BoxFit.contain,
                                             alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              metadata.title,
-                                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                                color: Colors.white.withValues(alpha: 0.3),
-                                                fontWeight: FontWeight.bold,
-                                                shadows: [
-                                                  Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8),
-                                                ],
+                                            memCacheWidth: (400 * dpr).clamp(200, 800).round(),
+                                            placeholder: (context, url) => Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                metadata.title,
+                                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                                  color: Colors.white.withValues(alpha: 0.3),
+                                                  fontWeight: FontWeight.bold,
+                                                  shadows: [
+                                                    Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8),
+                                                  ],
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
+                                            errorWidget: (context, url, error) {
+                                              return _buildTitleText(context, metadata.title);
+                                            },
                                           ),
-                                          errorWidget: (context, url, error) {
-                                            return _buildTitleText(context, metadata.title);
-                                          },
-                                        ), sigma: 10, clip: false);
+                                          sigma: 10,
+                                          clip: false,
+                                        );
                                       },
                                     ),
                                   )
@@ -2084,7 +2118,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                           ),
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -2122,7 +2155,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                                       if (metadata.summary != null) ...[
                                         Text(
                                           t.discover.overview,
-                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                                         ),
                                         const SizedBox(height: 12),
                                         isTv
@@ -2170,9 +2205,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                                 Text(
                                   '${metadata.effectiveUnwatchedCount!} ${t.accessibility.mediaCardUnwatched}',
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ],
                             ],
@@ -2298,7 +2333,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
     // If there's a primaryExtraKey, try to find that specific trailer
     final metadata = _fullMetadata ?? widget.metadata;
     if (metadata.primaryExtraKey != null) {
-        // Extract item ID from primaryExtraKey (e.g., "/items/52601" -> "52601")
+      // Extract item ID from primaryExtraKey (e.g., "/items/52601" -> "52601")
       final primaryKey = metadata.primaryExtraKey!.split('/').last;
       try {
         return _extras!.firstWhere((extra) => extra.itemId == primaryKey);
@@ -2352,11 +2387,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PersonDetailScreen(
-                          actor: actor,
-                          client: client,
-                          serverId: widget.metadata.serverId ?? '',
-                        ),
+                        builder: (_) =>
+                            PersonDetailScreen(actor: actor, client: client, serverId: widget.metadata.serverId ?? ''),
                       ),
                     );
                   },
@@ -2390,8 +2422,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAw
                                 children: [
                                   Text(
                                     actor.tag,
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -2607,7 +2640,10 @@ class _SeasonCardState extends State<_SeasonCard> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Padding(padding: EdgeInsets.only(top: 2), child: Icon(Symbols.star_rounded, size: 14, fill: 1, color: Colors.amber)),
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Icon(Symbols.star_rounded, size: 14, fill: 1, color: Colors.amber),
+                                ),
                                 const SizedBox(width: 3),
                                 Text(
                                   (widget.season.userRating! / 2) == (widget.season.userRating! / 2).truncateToDouble()
@@ -2705,4 +2741,3 @@ class _SeasonCardState extends State<_SeasonCard> {
     );
   }
 }
-

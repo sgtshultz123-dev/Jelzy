@@ -175,7 +175,9 @@ KeyEventResult handleBackOrLeftKeyAction(KeyEvent event, VoidCallback onBack) {
   if (key.isBackKey) return handleBackKeyAction(event, onBack);
   if (key.isLeftKey) {
     if (event is KeyDownEvent) onBack();
-    return event is KeyDownEvent || event is KeyRepeatEvent || event is KeyUpEvent ? KeyEventResult.handled : KeyEventResult.ignored;
+    return event is KeyDownEvent || event is KeyRepeatEvent || event is KeyUpEvent
+        ? KeyEventResult.handled
+        : KeyEventResult.ignored;
   }
   return KeyEventResult.ignored;
 }

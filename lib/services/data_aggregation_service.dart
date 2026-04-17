@@ -120,7 +120,9 @@ class DataAggregationService {
 
       try {
         final hubs = await client.getGlobalHubs(limit: limit ?? 10);
-        appLogger.i('Home hubs: getGlobalHubs(server $serverId) -> ${hubs.length} hub(s)${hubs.isNotEmpty ? ": ${hubs.map((h) => h.title).join(", ")}" : ""}');
+        appLogger.i(
+          'Home hubs: getGlobalHubs(server $serverId) -> ${hubs.length} hub(s)${hubs.isNotEmpty ? ": ${hubs.map((h) => h.title).join(", ")}" : ""}',
+        );
 
         // Filter out items from hidden libraries if specified
         if (hiddenLibraryKeys != null && hiddenLibraryKeys.isNotEmpty) {
@@ -208,16 +210,21 @@ class DataAggregationService {
           return true;
         }).toList();
 
-        appLogger.i('Home hubs: server $serverId has ${serverLibraries.length} lib(s), ${visibleLibraries.length} visible (movie/show); keys=${visibleLibraries.map((l) => l.key).join(",")}');
+        appLogger.i(
+          'Home hubs: server $serverId has ${serverLibraries.length} lib(s), ${visibleLibraries.length} visible (movie/show); keys=${visibleLibraries.map((l) => l.key).join(",")}',
+        );
 
         // Fetch hubs from all libraries in parallel
         final libraryHubFutures = visibleLibraries.map((library) async {
           try {
             final hubs = await client.getLibraryHubs(library.key);
-            appLogger.i('Home hubs: getLibraryHubs(${library.title}, key=${library.key}) -> ${hubs.length} hub(s)${hubs.isNotEmpty ? ", ${hubs.first.items.length} items" : ""}');
+            appLogger.i(
+              'Home hubs: getLibraryHubs(${library.title}, key=${library.key}) -> ${hubs.length} hub(s)${hubs.isNotEmpty ? ", ${hubs.first.items.length} items" : ""}',
+            );
             // Only rename "Recently Added" hubs so server keeps its varied hub titles (Top in Action, etc.)
             return hubs.map((h) {
-              final isRecentlyAdded = (h.hubIdentifier?.toLowerCase().contains('recently_added') ?? false) ||
+              final isRecentlyAdded =
+                  (h.hubIdentifier?.toLowerCase().contains('recently_added') ?? false) ||
                   h.title.toLowerCase().contains('recently added');
               final title = isRecentlyAdded ? 'Recently Added in ${library.title}' : h.title;
               return Hub(
@@ -305,24 +312,26 @@ class DataAggregationService {
 
     final results = <String, List<MediaMetadata>>{};
 
-    await Future.wait(types.map((itemType) async {
-      try {
-        final items = await _perServer<MediaMetadata>(
-          operationName: 'searching $itemType for "$query"',
-          operation: (serverId, client, server) async {
-            if (itemType == 'Person') {
-              return await client.searchPersons(query, limit: limitPerType);
-            }
-            return await client.search(query, includeItemTypes: itemType, limit: limitPerType);
-          },
-        );
-        if (items.isNotEmpty) {
-          results[itemType] = items;
+    await Future.wait(
+      types.map((itemType) async {
+        try {
+          final items = await _perServer<MediaMetadata>(
+            operationName: 'searching $itemType for "$query"',
+            operation: (serverId, client, server) async {
+              if (itemType == 'Person') {
+                return await client.searchPersons(query, limit: limitPerType);
+              }
+              return await client.search(query, includeItemTypes: itemType, limit: limitPerType);
+            },
+          );
+          if (items.isNotEmpty) {
+            results[itemType] = items;
+          }
+        } catch (e) {
+          appLogger.w('Categorized search failed for type $itemType: $e');
         }
-      } catch (e) {
-        appLogger.w('Categorized search failed for type $itemType: $e');
-      }
-    }));
+      }),
+    );
 
     appLogger.i('Categorized search: ${results.entries.map((e) => '${e.key}=${e.value.length}').join(', ')}');
     return results;

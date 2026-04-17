@@ -487,12 +487,7 @@ class _MediaCardList extends StatelessWidget {
         ),
         Text('$episodeNum · ', style: style),
         Expanded(
-          child: Text(
-            episodeTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
-          ),
+          child: Text(episodeTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
         ),
       ],
     );
@@ -567,7 +562,10 @@ class _MediaCardList extends StatelessWidget {
                     const SizedBox(height: 2),
                   ],
                   // Subtitle (S# · Episode Title, or year/parent title)
-                  if (item is MediaMetadata && (item as MediaMetadata).isEpisode && (item as MediaMetadata).parentIndex != null && (item as MediaMetadata).parentRatingKey != null) ...[
+                  if (item is MediaMetadata &&
+                      (item as MediaMetadata).isEpisode &&
+                      (item as MediaMetadata).parentIndex != null &&
+                      (item as MediaMetadata).parentRatingKey != null) ...[
                     _buildEpisodeSubtitle(context, item as MediaMetadata),
                     const SizedBox(height: 4),
                   ] else if (subtitle != null) ...[
@@ -662,9 +660,7 @@ Widget _buildPosterImage(
     final episodePosterMode = context.select<SettingsProvider, EpisodePosterMode>((s) => s.episodePosterMode);
     final hideSpoilers = context.select<SettingsProvider, bool>((s) => s.hideSpoilers);
     final shouldBlur =
-        hideSpoilers &&
-        item.shouldHideSpoiler &&
-        episodePosterMode == EpisodePosterMode.episodeThumbnail;
+        hideSpoilers && item.shouldHideSpoiler && episodePosterMode == EpisodePosterMode.episodeThumbnail;
     posterUrl = item.posterThumb(mode: episodePosterMode, mixedHubContext: mixedHubContext);
 
     Widget image;
@@ -752,12 +748,7 @@ class _MediaCardHelpers {
             ),
             Text(' · ', style: subtitleStyle),
             Expanded(
-              child: Text(
-                episodeTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: subtitleStyle,
-              ),
+              child: Text(episodeTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: subtitleStyle),
             ),
           ],
         );
@@ -772,19 +763,9 @@ class _MediaCardHelpers {
 
     // For other media types, show subtitle/parent/year
     if (metadata.displaySubtitle != null) {
-      return Text(
-        metadata.displaySubtitle!,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: subtitleStyle,
-      );
+      return Text(metadata.displaySubtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: subtitleStyle);
     } else if (metadata.parentTitle != null) {
-      return Text(
-        metadata.parentTitle!,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: subtitleStyle,
-      );
+      return Text(metadata.parentTitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: subtitleStyle);
     } else if (metadata.year != null) {
       return Text(
         metadata.editionTitle != null ? '${metadata.year} · ${metadata.editionTitle}' : '${metadata.year}',
@@ -909,10 +890,7 @@ void _navigateToSeason(BuildContext context, MediaMetadata episode, {bool isOffl
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MediaDetailScreen(
-          metadata: showStub,
-          isOffline: isOffline,
-        ),
+        builder: (_) => MediaDetailScreen(metadata: showStub, isOffline: isOffline),
       ),
     );
   } else if (episode.parentRatingKey != null) {
@@ -928,7 +906,12 @@ void _navigateToSeason(BuildContext context, MediaMetadata episode, {bool isOffl
       serverId: episode.serverId,
       serverName: episode.serverName,
     );
-    Navigator.push(context, MaterialPageRoute(builder: (_) => MediaDetailScreen(metadata: seasonStub, isOffline: isOffline)));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MediaDetailScreen(metadata: seasonStub, isOffline: isOffline),
+      ),
+    );
   }
 }
 
@@ -993,12 +976,7 @@ class _ClickableTextState extends State<_ClickableText> {
     final baseStyle = widget.style ?? const TextStyle();
 
     if (isKeyboard) {
-      return Text(
-        widget.text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: baseStyle,
-      );
+      return Text(widget.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: baseStyle);
     }
 
     return MouseRegion(

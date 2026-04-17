@@ -55,27 +55,22 @@ class _LibraryGenreTabState extends BaseLibraryTabState<Hub, LibraryGenreTab> {
     final hubs = <Hub>[];
     for (final g in genreValues) {
       final genreName = g.title.isNotEmpty ? g.title : g.key;
-      final filters = <String, String>{
-        'genre': g.key,
-        if (typeId.isNotEmpty) 'type': typeId,
-      };
-      final items = await client.getLibraryContent(
-        sectionId,
-        size: _itemsPerGenre,
-        filters: filters,
-      );
+      final filters = <String, String>{'genre': g.key, if (typeId.isNotEmpty) 'type': typeId};
+      final items = await client.getLibraryContent(sectionId, size: _itemsPerGenre, filters: filters);
       if (items.isEmpty) continue;
-      hubs.add(Hub(
-        hubKey: 'genre_${sectionId}_${g.key}',
-        title: genreName,
-        type: type,
-        hubIdentifier: 'genre',
-        size: items.length,
-        more: true,
-        items: items,
-        serverId: widget.library.serverId,
-        serverName: widget.library.serverName,
-      ));
+      hubs.add(
+        Hub(
+          hubKey: 'genre_${sectionId}_${g.key}',
+          title: genreName,
+          type: type,
+          hubIdentifier: 'genre',
+          size: items.length,
+          more: true,
+          items: items,
+          serverId: widget.library.serverId,
+          serverName: widget.library.serverName,
+        ),
+      );
     }
 
     return hubs;
@@ -108,9 +103,7 @@ class _LibraryGenreTabState extends BaseLibraryTabState<Hub, LibraryGenreTab> {
     if (_hubKeys.isEmpty || items.isEmpty) return;
 
     // Restore to last focused hub if known, otherwise first hub
-    final index = _lastFocusedHubIndex != null && _lastFocusedHubIndex! < _hubKeys.length
-        ? _lastFocusedHubIndex!
-        : 0;
+    final index = _lastFocusedHubIndex != null && _lastFocusedHubIndex! < _hubKeys.length ? _lastFocusedHubIndex! : 0;
     _hubKeys[index].currentState?.requestFocusFromMemory();
   }
 
@@ -136,7 +129,12 @@ class _LibraryGenreTabState extends BaseLibraryTabState<Hub, LibraryGenreTab> {
             _lastFocusedHubIndex = index;
             widget.onBack?.call();
           },
-          onNavigateUp: index == 0 ? () { _lastFocusedHubIndex = 0; widget.onBack?.call(); } : null,
+          onNavigateUp: index == 0
+              ? () {
+                  _lastFocusedHubIndex = 0;
+                  widget.onBack?.call();
+                }
+              : null,
           onNavigateToSidebar: _navigateToSidebar,
           // No onHeaderTap: uses default HubSection behavior → push HubDetailScreen (full-screen, like home)
         );

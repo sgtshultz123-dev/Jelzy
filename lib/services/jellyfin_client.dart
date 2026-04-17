@@ -36,6 +36,7 @@ class JellyfinClient {
   /// DateCreated,DateLastMediaAdded for sort; CommunityRating,CriticRating,PremiereDate,SortName for sort/display.
   static const String _listFields =
       'Genres,UserData,RunTimeTicks,ItemCounts,EndDate,Status,DateCreated,DateLastMediaAdded,CommunityRating,CriticRating,PremiereDate,SortName';
+
   /// Like _listFields plus ImageTags; use for BoxSet/collection lists so we only request thumb when server has an image (avoids 404s).
   static const String _collectionListFields =
       'Genres,UserData,RunTimeTicks,ItemCounts,EndDate,Status,DateCreated,DateLastMediaAdded,CommunityRating,CriticRating,PremiereDate,SortName,ImageTags';
@@ -103,12 +104,29 @@ class JellyfinClient {
         data: {
           'PlayableMediaTypes': ['Video', 'Audio'],
           'SupportedCommands': [
-            'VolumeUp', 'VolumeDown', 'Mute', 'Unmute',
-            'SetVolume', 'SetAudioStreamIndex', 'SetSubtitleStreamIndex',
-            'Play', 'Playstate', 'PlayNext', 'PlayPrevious', 'Seek',
-            'DisplayContent', 'GoToHome', 'GoToSettings',
-            'NavigateUp', 'NavigateDown', 'NavigateLeft', 'NavigateRight',
-            'Select', 'Back', 'ToggleContextMenu', 'TakeScreenshot',
+            'VolumeUp',
+            'VolumeDown',
+            'Mute',
+            'Unmute',
+            'SetVolume',
+            'SetAudioStreamIndex',
+            'SetSubtitleStreamIndex',
+            'Play',
+            'Playstate',
+            'PlayNext',
+            'PlayPrevious',
+            'Seek',
+            'DisplayContent',
+            'GoToHome',
+            'GoToSettings',
+            'NavigateUp',
+            'NavigateDown',
+            'NavigateLeft',
+            'NavigateRight',
+            'Select',
+            'Back',
+            'ToggleContextMenu',
+            'TakeScreenshot',
           ],
           'SupportsMediaControl': true,
           'SupportsPersistentIdentifier': true,
@@ -128,8 +146,10 @@ class JellyfinClient {
     final response = await _dio.get<Map<String, dynamic>>('/Users/${config.userId}');
 
     if (response.statusCode == 401) {
-      appLogger.w('loadUserPolicy: 401 Unauthorized — token rejected by server '
-          '(server=$serverName, deviceId=${config.deviceId})');
+      appLogger.w(
+        'loadUserPolicy: 401 Unauthorized — token rejected by server '
+        '(server=$serverName, deviceId=${config.deviceId})',
+      );
       throw DioException(
         requestOptions: response.requestOptions,
         response: response,
@@ -207,9 +227,7 @@ class JellyfinClient {
     // For collections (BoxSet): only set thumb when the API reports a Primary image, so we don't request and get 404.
     final bool hasPrimaryImage = (item['ImageTags'] as Map<String, dynamic>?)?['Primary'] != null;
     final bool isCollection = type == 'collection';
-    final thumbForItem = id.isEmpty
-        ? null
-        : (isCollection ? (hasPrimaryImage ? id : null) : id);
+    final thumbForItem = id.isEmpty ? null : (isCollection ? (hasPrimaryImage ? id : null) : id);
     final hasBackdrop = (item['BackdropImageTags'] as List?)?.isNotEmpty == true;
     final hasParentBackdrop = (item['ParentBackdropImageTags'] as List?)?.isNotEmpty == true;
 
@@ -344,12 +362,7 @@ class JellyfinClient {
       if (name == null || name.isEmpty) continue;
       final characterRole = p['Role'] as String?;
       final id = p['Id']?.toString();
-      roles.add(CastRole(
-        tag: name,
-        role: characterRole,
-        thumb: id,
-        tagKey: id,
-      ));
+      roles.add(CastRole(tag: name, role: characterRole, thumb: id, tagKey: id));
     }
     return roles.isEmpty ? null : roles;
   }
@@ -395,13 +408,7 @@ class JellyfinClient {
     if (type == 'movies') type = 'movie';
     if (type == 'tvshows') type = 'show';
 
-    return MediaLibrary(
-      key: id,
-      title: name,
-      type: type,
-      serverId: serverId,
-      serverName: serverName,
-    );
+    return MediaLibrary(key: id, title: name, type: type, serverId: serverId, serverName: serverName);
   }
 
   Future<Map<String, dynamic>> getServerIdentity() async {
@@ -418,16 +425,18 @@ class JellyfinClient {
     final response = await _dio.get<Map<String, dynamic>>('/Users/${config.userId}/Views');
     final list = response.data?['Items'] as List?;
     if (list == null) return [];
-    final all = list
-        .map((e) => _viewToLibrary(e as Map<String, dynamic>))
-        .toList();
+    final all = list.map((e) => _viewToLibrary(e as Map<String, dynamic>)).toList();
 
     // Split: content libraries (Movies, Shows, etc.) vs Collections/Playlists (always at bottom).
     bool isCollectionOrPlaylist(MediaLibrary l) {
       final t = l.type.toLowerCase();
-      return t == 'collection' || t == 'boxset' || t == 'boxsets' ||
-          t == 'playlist' || t == 'playlists' ||
-          l.title == 'Collections' || l.title == 'Playlists';
+      return t == 'collection' ||
+          t == 'boxset' ||
+          t == 'boxsets' ||
+          t == 'playlist' ||
+          t == 'playlists' ||
+          l.title == 'Collections' ||
+          l.title == 'Playlists';
     }
 
     final contentLibraries = all.where((l) => !isCollectionOrPlaylist(l)).toList();
@@ -449,38 +458,46 @@ class JellyfinClient {
     final result = <MediaLibrary>[...contentLibraries];
 
     if (hasCollectionLib) {
-      result.add(collectionPlaylistFromViews.firstWhere((l) {
-        final t = l.type.toLowerCase();
-        return t == 'collection' || t == 'boxset' || t == 'boxsets' || l.title == 'Collections';
-      }));
+      result.add(
+        collectionPlaylistFromViews.firstWhere((l) {
+          final t = l.type.toLowerCase();
+          return t == 'collection' || t == 'boxset' || t == 'boxsets' || l.title == 'Collections';
+        }),
+      );
     } else {
       final collections = await getGlobalCollections();
       if (collections.isNotEmpty) {
-        result.add(MediaLibrary(
-          key: syntheticCollectionsKey,
-          title: 'Collections',
-          type: 'collection',
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        result.add(
+          MediaLibrary(
+            key: syntheticCollectionsKey,
+            title: 'Collections',
+            type: 'collection',
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
     }
 
     if (hasPlaylistLib) {
-      result.add(collectionPlaylistFromViews.firstWhere((l) {
-        final t = l.type.toLowerCase();
-        return t == 'playlist' || t == 'playlists' || l.title == 'Playlists';
-      }));
+      result.add(
+        collectionPlaylistFromViews.firstWhere((l) {
+          final t = l.type.toLowerCase();
+          return t == 'playlist' || t == 'playlists' || l.title == 'Playlists';
+        }),
+      );
     } else {
       final playlists = await getPlaylists(playlistType: 'video');
       if (playlists.isNotEmpty) {
-        result.add(MediaLibrary(
-          key: syntheticPlaylistsKey,
-          title: 'Playlists',
-          type: 'playlist',
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        result.add(
+          MediaLibrary(
+            key: syntheticPlaylistsKey,
+            title: 'Playlists',
+            type: 'playlist',
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
     }
 
@@ -495,11 +512,7 @@ class JellyfinClient {
     dynamic cancelToken,
   }) async {
     if (_offlineMode) return [];
-    final query = <String, dynamic>{
-      'ParentId': sectionId,
-      'Recursive': true,
-      'Fields': _listFields,
-    };
+    final query = <String, dynamic>{'ParentId': sectionId, 'Recursive': true, 'Fields': _listFields};
     if (start != null) query['StartIndex'] = start;
     if (size != null) query['Limit'] = size;
 
@@ -523,9 +536,7 @@ class JellyfinClient {
           if (v.contains(':')) {
             final parts = v.split(':');
             sortBy = parts[0];
-            sortOrder = (parts.length > 1 && parts[1].toLowerCase() == 'desc')
-                ? 'Descending'
-                : 'Ascending';
+            sortOrder = (parts.length > 1 && parts[1].toLowerCase() == 'desc') ? 'Descending' : 'Ascending';
           } else {
             sortBy = v;
             sortOrder = 'Ascending';
@@ -589,7 +600,9 @@ class JellyfinClient {
       query['SeriesStatus'] = seriesStatusValue;
     }
 
-    appLogger.d('Jellyfin getLibraryContent: ParentId=$sectionId Fields=${query['Fields']} IncludeItemTypes=$includeItemTypes StartIndex=${query['StartIndex']} Limit=${query['Limit']}');
+    appLogger.d(
+      'Jellyfin getLibraryContent: ParentId=$sectionId Fields=${query['Fields']} IncludeItemTypes=$includeItemTypes StartIndex=${query['StartIndex']} Limit=${query['Limit']}',
+    );
 
     final response = await _dio.get<Map<String, dynamic>>(
       '/Users/${config.userId}/Items',
@@ -644,10 +657,7 @@ class JellyfinClient {
           'SeriesId': itemId,
           'Fields': 'Overview,Genres,UserData,RunTimeTicks,Chapters,People,ItemCounts',
         };
-        final response = await _dio.get<Map<String, dynamic>>(
-          '/Shows/NextUp',
-          queryParameters: query,
-        );
+        final response = await _dio.get<Map<String, dynamic>>('/Shows/NextUp', queryParameters: query);
         final data = response.data;
         var items = data?['Items'] as List?;
         if (items != null && items.isNotEmpty) {
@@ -701,9 +711,7 @@ class JellyfinClient {
     if (_offlineMode) return [];
     // Prefer local trailers (streamable in-app); fall back to remote (URLs open in browser).
     try {
-      final localResponse = await _dio.get<dynamic>(
-        '/Users/${config.userId}/Items/$itemId/LocalTrailers',
-      );
+      final localResponse = await _dio.get<dynamic>('/Users/${config.userId}/Items/$itemId/LocalTrailers');
       final localData = localResponse.data;
       final localList = localData is List ? localData : (localData is Map ? (localData['Items'] as List?) ?? [] : null);
       if (localList != null && localList.isNotEmpty) {
@@ -733,15 +741,17 @@ class JellyfinClient {
         final url = t['Url'] as String?;
         if (url == null || url.isEmpty) continue;
         final name = t['Name'] as String? ?? 'Trailer';
-        list.add(MediaMetadata(
-          itemId: url,
-          key: url,
-          type: 'clip',
-          title: name,
-          subtype: 'trailer',
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        list.add(
+          MediaMetadata(
+            itemId: url,
+            key: url,
+            type: 'clip',
+            title: name,
+            subtype: 'trailer',
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
       return list;
     } catch (e) {
@@ -824,14 +834,16 @@ class JellyfinClient {
         if (includeImages && imageTag != null && imageTag.isNotEmpty) {
           thumb = '${base}Items/$itemId/Images/Chapter/$i?tag=$imageTag&ApiKey=${Uri.encodeComponent(token)}';
         }
-        list.add(Chapter(
-          id: i,
-          index: i,
-          startTimeOffset: _ticksToMs(start),
-          endTimeOffset: _ticksToMs(end),
-          title: c['Name'] as String?,
-          thumb: thumb,
-        ));
+        list.add(
+          Chapter(
+            id: i,
+            index: i,
+            startTimeOffset: _ticksToMs(start),
+            endTimeOffset: _ticksToMs(end),
+            title: c['Name'] as String?,
+            thumb: thumb,
+          ),
+        );
       }
       return list;
     } catch (_) {
@@ -841,9 +853,7 @@ class JellyfinClient {
 
   Future<List<Marker>> getMarkers(String itemId) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/MediaSegments/$itemId',
-      );
+      final response = await _dio.get<Map<String, dynamic>>('/MediaSegments/$itemId');
       final items = response.data?['Items'] as List?;
       if (items == null || items.isEmpty) return [];
       final list = <Marker>[];
@@ -858,12 +868,7 @@ class JellyfinClient {
         final endMs = _ticksToMs(endTicks) ?? 0;
         final type = _normalizeSegmentType(typeRaw);
         if (type != null) {
-          list.add(Marker(
-            id: id++,
-            type: type,
-            startTimeOffset: startMs,
-            endTimeOffset: endMs,
-          ));
+          list.add(Marker(id: id++, type: type, startTimeOffset: startMs, endTimeOffset: endMs));
         }
       }
       return list;
@@ -897,11 +902,7 @@ class JellyfinClient {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/Items/$itemId/Similar',
-        queryParameters: {
-          'UserId': config.userId,
-          'Limit': limit,
-          'Fields': _listFields,
-        },
+        queryParameters: {'UserId': config.userId, 'Limit': limit, 'Fields': _listFields},
       );
       final list = response.data?['Items'] as List?;
       if (list == null) return [];
@@ -916,9 +917,7 @@ class JellyfinClient {
   Future<Map<String, dynamic>?> getPersonDetails(String personId) async {
     if (_offlineMode) return null;
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/Users/${config.userId}/Items/$personId',
-      );
+      final response = await _dio.get<Map<String, dynamic>>('/Users/${config.userId}/Items/$personId');
       if (response.statusCode != 200 || response.data == null) return null;
       final d = response.data!;
       return {
@@ -929,7 +928,9 @@ class JellyfinClient {
         'birthDate': d['PremiereDate'] as String?,
         'deathDate': d['EndDate'] as String?,
         'birthPlace': d['ProductionLocations'] is List
-            ? ((d['ProductionLocations'] as List).isNotEmpty ? (d['ProductionLocations'] as List).first as String? : null)
+            ? ((d['ProductionLocations'] as List).isNotEmpty
+                  ? (d['ProductionLocations'] as List).first as String?
+                  : null)
             : null,
       };
     } catch (e) {
@@ -973,7 +974,13 @@ class JellyfinClient {
         : '${base}Items/$personId/Images/Primary?ApiKey=${Uri.encodeComponent(token)}';
   }
 
-  Future<PlaybackExtras> getPlaybackExtras(String itemId, {bool includeChapterImages = false, String? introPattern, String? creditsPattern, bool forceRefresh = false}) async {
+  Future<PlaybackExtras> getPlaybackExtras(
+    String itemId, {
+    bool includeChapterImages = false,
+    String? introPattern,
+    String? creditsPattern,
+    bool forceRefresh = false,
+  }) async {
     final chapters = await getChapters(itemId, includeImages: includeChapterImages);
     final markers = await getMarkers(itemId);
     return PlaybackExtras(chapters: chapters, markers: markers);
@@ -981,11 +988,11 @@ class JellyfinClient {
 
   /// Maps Jellyfin PlaybackInfo ErrorCode to user-facing message (jellyfin-web parity).
   static String _playbackErrorCodeToMessage(String code) => switch (code) {
-        'NoCompatibleStream' => 'No compatible stream. Try a different quality or check server transcoding settings.',
-        'NotAllowed' => 'Playback not allowed.',
-        'NoCompatibleStreamWithDevice' => 'No compatible stream for this device.',
-        _ => 'Playback failed: $code',
-      };
+    'NoCompatibleStream' => 'No compatible stream. Try a different quality or check server transcoding settings.',
+    'NotAllowed' => 'Playback not allowed.',
+    'NoCompatibleStreamWithDevice' => 'No compatible stream for this device.',
+    _ => 'Playback failed: $code',
+  };
 
   /// Bitrate limits (bps) for transcode quality. Matches jellyfin-web quality options.
   static const int _bitrate15M = 15000000;
@@ -998,34 +1005,33 @@ class JellyfinClient {
   static const int _bitrate720k = 720000;
   static const int _bitrate420k = 420000;
 
-  static bool _isTranscodeMode(PlaybackMode mode) =>
-      mode != PlaybackMode.auto && mode != PlaybackMode.directPlay;
+  static bool _isTranscodeMode(PlaybackMode mode) => mode != PlaybackMode.auto && mode != PlaybackMode.directPlay;
 
   static int _bitrateForPlaybackMode(PlaybackMode mode) => switch (mode) {
-        PlaybackMode.transcode15 => _bitrate15M,
-        PlaybackMode.transcode10 => _bitrate10M,
-        PlaybackMode.transcode8 => _bitrate8M,
-        PlaybackMode.transcode6 => _bitrate6M,
-        PlaybackMode.transcode4 => _bitrate4M,
-        PlaybackMode.transcode3 => _bitrate3M,
-        PlaybackMode.transcode1_5 => _bitrate1_5M,
-        PlaybackMode.transcode720k => _bitrate720k,
-        PlaybackMode.transcode420k => _bitrate420k,
-        _ => _bitrate4M,
-      };
+    PlaybackMode.transcode15 => _bitrate15M,
+    PlaybackMode.transcode10 => _bitrate10M,
+    PlaybackMode.transcode8 => _bitrate8M,
+    PlaybackMode.transcode6 => _bitrate6M,
+    PlaybackMode.transcode4 => _bitrate4M,
+    PlaybackMode.transcode3 => _bitrate3M,
+    PlaybackMode.transcode1_5 => _bitrate1_5M,
+    PlaybackMode.transcode720k => _bitrate720k,
+    PlaybackMode.transcode420k => _bitrate420k,
+    _ => _bitrate4M,
+  };
 
   static int _bitrateForDownloadQuality(DownloadQuality quality) => switch (quality) {
-        DownloadQuality.p15 => _bitrate15M,
-        DownloadQuality.p10 => _bitrate10M,
-        DownloadQuality.p8 => _bitrate8M,
-        DownloadQuality.p6 => _bitrate6M,
-        DownloadQuality.p4 => _bitrate4M,
-        DownloadQuality.p3 => _bitrate3M,
-        DownloadQuality.p1_5 => _bitrate1_5M,
-        DownloadQuality.p720k => _bitrate720k,
-        DownloadQuality.p420k => _bitrate420k,
-        _ => _bitrate4M,
-      };
+    DownloadQuality.p15 => _bitrate15M,
+    DownloadQuality.p10 => _bitrate10M,
+    DownloadQuality.p8 => _bitrate8M,
+    DownloadQuality.p6 => _bitrate6M,
+    DownloadQuality.p4 => _bitrate4M,
+    DownloadQuality.p3 => _bitrate3M,
+    DownloadQuality.p1_5 => _bitrate1_5M,
+    DownloadQuality.p720k => _bitrate720k,
+    DownloadQuality.p420k => _bitrate420k,
+    _ => _bitrate4M,
+  };
 
   /// SubtitleProfiles: Embed = we can read from container (avoids SubtitleCodecNotSupported
   /// transcode). External = we can load via URL. MPV supports all common embedded formats.
@@ -1058,7 +1064,12 @@ class JellyfinClient {
       'MaxStreamingBitrate': 120000000,
       'MaxStaticBitrate': 100000000,
       'DirectPlayProfiles': [
-        {'Container': 'mp4,m4v,mkv,webm', 'Type': 'Video', 'VideoCodec': 'h264,hevc,vp9,av1,mpeg2video,dvhe,dvh1', 'AudioCodec': 'aac,mp3,ac3,eac3,vorbis,opus,flac,truehd,dts'},
+        {
+          'Container': 'mp4,m4v,mkv,webm',
+          'Type': 'Video',
+          'VideoCodec': 'h264,hevc,vp9,av1,mpeg2video,dvhe,dvh1',
+          'AudioCodec': 'aac,mp3,ac3,eac3,vorbis,opus,flac,truehd,dts',
+        },
       ],
       'TranscodingProfiles': [
         {'Container': 'mp4', 'Type': 'Video', 'VideoCodec': 'h264', 'AudioCodec': 'aac', 'Context': 'Streaming'},
@@ -1133,7 +1144,12 @@ class JellyfinClient {
       'MaxStreamingBitrate': 120000000,
       'MaxStaticBitrate': 100000000,
       'DirectPlayProfiles': [
-        {'Container': 'mp4,m4v,mkv,webm', 'Type': 'Video', 'VideoCodec': videoCodecs, 'AudioCodec': 'aac,mp3,ac3,eac3,opus,truehd,dts'},
+        {
+          'Container': 'mp4,m4v,mkv,webm',
+          'Type': 'Video',
+          'VideoCodec': videoCodecs,
+          'AudioCodec': 'aac,mp3,ac3,eac3,opus,truehd,dts',
+        },
       ],
       'TranscodingProfiles': [
         {'Container': 'mp4', 'Type': 'Video', 'VideoCodec': 'h264', 'AudioCodec': 'aac', 'Context': 'Streaming'},
@@ -1152,10 +1168,7 @@ class JellyfinClient {
   /// Derive default audio and subtitle stream indices from MediaStreams (jellyfin-web parity).
   /// Returns (audioIndex, subtitleIndex) - use first with IsDefault, else first of each type.
   /// Subtitle index only when [burnSubtitles] (for AlwaysBurnInSubtitleWhenTranscoding).
-  static ({int? audio, int? subtitle}) _getDefaultStreamIndices(
-    List<dynamic> streams,
-    bool burnSubtitles,
-  ) {
+  static ({int? audio, int? subtitle}) _getDefaultStreamIndices(List<dynamic> streams, bool burnSubtitles) {
     int? audioIdx;
     int? subtitleIdx;
     for (final s in streams) {
@@ -1222,10 +1235,8 @@ class JellyfinClient {
         // Test: omit MediaSourceId when it equals itemId (jellyfin-web #6395 fix - server
         // filters by this and returns no streams when it's the item ID, not a real media source)
         // When pickOptimalFromMultiple, omit MediaSourceId so server returns all sources with capabilities
-        final includeMediaSourceId = !pickOptimalFromMultiple &&
-            mediaSourceId != null &&
-            mediaSourceId.isNotEmpty &&
-            mediaSourceId != itemId;
+        final includeMediaSourceId =
+            !pickOptimalFromMultiple && mediaSourceId != null && mediaSourceId.isNotEmpty && mediaSourceId != itemId;
         final body = <String, dynamic>{
           'UserId': config.userId,
           'IsPlayback': true,
@@ -1238,8 +1249,8 @@ class JellyfinClient {
           'DeviceProfile': _buildDeviceProfile(useExoPlayer: useExoPlayer),
           if (includeMediaSourceId) 'MediaSourceId': mediaSourceId,
           'AlwaysBurnInSubtitleWhenTranscoding': alwaysBurnInSubtitleWhenTranscoding,
-          ...? (audioStreamIndex != null ? {'AudioStreamIndex': audioStreamIndex} : null),
-          ...? (subtitleStreamIndex != null ? {'SubtitleStreamIndex': subtitleStreamIndex} : null),
+          ...?(audioStreamIndex != null ? {'AudioStreamIndex': audioStreamIndex} : null),
+          ...?(subtitleStreamIndex != null ? {'SubtitleStreamIndex': subtitleStreamIndex} : null),
         };
         if (startTimeTicks != null && startTimeTicks > 0) {
           body['StartTimeTicks'] = startTimeTicks;
@@ -1247,19 +1258,16 @@ class JellyfinClient {
         if (maxStreamingBitrate != null && maxStreamingBitrate > 0) {
           body['MaxStreamingBitrate'] = maxStreamingBitrate;
         }
-        appLogger.d('PlaybackInfo request: itemId=$itemId mediaSourceId=${includeMediaSourceId ? mediaSourceId : "omitted (was same as itemId)"} directPlay=$directPlay transcode=$transcode maxBitrate=${maxStreamingBitrate ?? "none"} DeviceProfile=${useExoPlayer ? "Jelzy ExoPlayer" : "Jelzy"} AlwaysBurnInSubtitle=$alwaysBurnInSubtitleWhenTranscoding SubtitleStreamIndex=$subtitleStreamIndex AudioStreamIndex=$audioStreamIndex');
-        final response = await _dio.post<Map<String, dynamic>>(
-          '/Items/$itemId/PlaybackInfo',
-          data: body,
+        appLogger.d(
+          'PlaybackInfo request: itemId=$itemId mediaSourceId=${includeMediaSourceId ? mediaSourceId : "omitted (was same as itemId)"} directPlay=$directPlay transcode=$transcode maxBitrate=${maxStreamingBitrate ?? "none"} DeviceProfile=${useExoPlayer ? "Jelzy ExoPlayer" : "Jelzy"} AlwaysBurnInSubtitle=$alwaysBurnInSubtitleWhenTranscoding SubtitleStreamIndex=$subtitleStreamIndex AudioStreamIndex=$audioStreamIndex',
         );
+        final response = await _dio.post<Map<String, dynamic>>('/Items/$itemId/PlaybackInfo', data: body);
         if (response.statusCode != 200 || response.data == null) return null;
         final data = response.data!;
         final errorCode = data['ErrorCode'] as String?;
         if (errorCode != null && errorCode.isNotEmpty) {
           final errorMessage = data['ErrorMessage'] as String?;
-          final message = errorMessage?.isNotEmpty == true
-              ? errorMessage!
-              : _playbackErrorCodeToMessage(errorCode);
+          final message = errorMessage?.isNotEmpty == true ? errorMessage! : _playbackErrorCodeToMessage(errorCode);
           appLogger.w('PlaybackInfo ErrorCode=$errorCode: $message');
           throw _PlaybackInfoException(message);
         }
@@ -1279,7 +1287,9 @@ class JellyfinClient {
         final container = ((ps['Container'] as String?)?.toLowerCase()) ?? '';
         final sourceId = ps['Id'] as String? ?? '';
 
-        appLogger.d('PlaybackInfo response MediaSource[$idx]: DirectStreamUrl=${directUrl != null && directUrl.isNotEmpty ? "present" : "empty"} TranscodingUrl=${transcodeUrl != null && transcodeUrl.isNotEmpty ? "present" : "empty"} SupportsDirectStream=${ps['SupportsDirectStream']} SupportsDirectPlay=${ps['SupportsDirectPlay']} SupportsTranscoding=$supportsTranscode Container=$container Id=$sourceId');
+        appLogger.d(
+          'PlaybackInfo response MediaSource[$idx]: DirectStreamUrl=${directUrl != null && directUrl.isNotEmpty ? "present" : "empty"} TranscodingUrl=${transcodeUrl != null && transcodeUrl.isNotEmpty ? "present" : "empty"} SupportsDirectStream=${ps['SupportsDirectStream']} SupportsDirectPlay=${ps['SupportsDirectPlay']} SupportsTranscoding=$supportsTranscode Container=$container Id=$sourceId',
+        );
 
         String url;
         String urlSource;
@@ -1298,7 +1308,8 @@ class JellyfinClient {
         } else if (forceTranscode && (maxStreamingBitrate ?? 0) > 0) {
           // User requested transcode but server returned no TranscodingUrl; build transcoding URL
           final bitrate = maxStreamingBitrate ?? 0;
-          url = '/Videos/$itemId/stream.mp4?MaxStreamingBitrate=$bitrate&VideoCodec=h264&AudioCodec=aac&api_key=${config.token}';
+          url =
+              '/Videos/$itemId/stream.mp4?MaxStreamingBitrate=$bitrate&VideoCodec=h264&AudioCodec=aac&api_key=${config.token}';
           if (sourceId.isNotEmpty) url = '$url&mediaSourceId=$sourceId';
           urlSource = 'Transcoding (built fallback)';
         } else if (supportsDirect && container.isNotEmpty) {
@@ -1312,7 +1323,9 @@ class JellyfinClient {
           if (sourceId.isNotEmpty) url = '$url&mediaSourceId=$sourceId';
           urlSource = 'stream (generic fallback)';
         }
-        appLogger.d('PlaybackInfo: chose $urlSource isTranscode=${urlSource.startsWith("Transcod")} (directUrl=${directUrl != null && directUrl.isNotEmpty}, transcodeUrl=${transcodeUrl != null && transcodeUrl.isNotEmpty}, supportsDirect=$supportsDirect, container=$container) maxStreamingBitrate=${maxStreamingBitrate ?? "none"}');
+        appLogger.d(
+          'PlaybackInfo: chose $urlSource isTranscode=${urlSource.startsWith("Transcod")} (directUrl=${directUrl != null && directUrl.isNotEmpty}, transcodeUrl=${transcodeUrl != null && transcodeUrl.isNotEmpty}, supportsDirect=$supportsDirect, container=$container) maxStreamingBitrate=${maxStreamingBitrate ?? "none"}',
+        );
         if (!url.startsWith('http')) {
           url = '${config.baseUrl}${url.startsWith('/') ? url : '/$url'}';
           if (!url.contains('api_key=')) {
@@ -1372,9 +1385,7 @@ class JellyfinClient {
             final source = mediaSources[idx] as Map<String, dynamic>;
             final sourceId = source['Id'] as String? ?? '';
 
-            final startTimeTicks = startPositionMs != null && startPositionMs > 0
-                ? startPositionMs * 10000
-                : null;
+            final startTimeTicks = startPositionMs != null && startPositionMs > 0 ? startPositionMs * 10000 : null;
 
             final settings = await SettingsService.getInstance();
             final alwaysBurnIn = settings.getAlwaysBurnInSubtitleWhenTranscoding();
@@ -1512,17 +1523,19 @@ class JellyfinClient {
               final m = s as Map<String, dynamic>;
               final type = m['Type'] as String?;
               if (type == 'Audio') {
-                audioTracks.add(MediaAudioTrack(
-                  id: audioIdx,
-                  index: audioIdx,
-                  codec: m['Codec'] as String?,
-                  language: m['Language'] as String?,
-                  languageCode: m['Language'] as String?,
-                  title: m['Title'] as String?,
-                  displayTitle: m['DisplayTitle'] as String?,
-                  channels: _toInt(m['Channels']),
-                  selected: m['IsDefault'] == true,
-                ));
+                audioTracks.add(
+                  MediaAudioTrack(
+                    id: audioIdx,
+                    index: audioIdx,
+                    codec: m['Codec'] as String?,
+                    language: m['Language'] as String?,
+                    languageCode: m['Language'] as String?,
+                    title: m['Title'] as String?,
+                    displayTitle: m['DisplayTitle'] as String?,
+                    channels: _toInt(m['Channels']),
+                    selected: m['IsDefault'] == true,
+                  ),
+                );
                 audioIdx++;
               } else if (type == 'Subtitle') {
                 final streamIndex = _toInt(m['Index']) ?? subIdx;
@@ -1532,22 +1545,24 @@ class JellyfinClient {
                 final effectiveMediaSourceId = mediaSourceId ?? sourceId;
                 final subtitleKey = deliveryUrl == null || deliveryUrl.isEmpty
                     ? (effectiveMediaSourceId.isNotEmpty
-                        ? 'Videos/$itemId/$effectiveMediaSourceId/Subtitles/$streamIndex/Stream'
-                        : null)
+                          ? 'Videos/$itemId/$effectiveMediaSourceId/Subtitles/$streamIndex/Stream'
+                          : null)
                     : null;
-                subtitleTracks.add(MediaSubtitleTrack(
-                  id: subIdx,
-                  index: subIdx,
-                  codec: m['Codec'] as String?,
-                  language: m['Language'] as String?,
-                  languageCode: m['Language'] as String?,
-                  title: m['Title'] as String?,
-                  displayTitle: m['DisplayTitle'] as String?,
-                  selected: m['IsDefault'] == true,
-                  forced: m['IsForced'] == true,
-                  key: subtitleKey,
-                  deliveryUrl: deliveryUrl?.isNotEmpty == true ? deliveryUrl : null,
-                ));
+                subtitleTracks.add(
+                  MediaSubtitleTrack(
+                    id: subIdx,
+                    index: subIdx,
+                    codec: m['Codec'] as String?,
+                    language: m['Language'] as String?,
+                    languageCode: m['Language'] as String?,
+                    title: m['Title'] as String?,
+                    displayTitle: m['DisplayTitle'] as String?,
+                    selected: m['IsDefault'] == true,
+                    forced: m['IsForced'] == true,
+                    key: subtitleKey,
+                    deliveryUrl: deliveryUrl?.isNotEmpty == true ? deliveryUrl : null,
+                  ),
+                );
                 subIdx++;
               }
             }
@@ -1563,16 +1578,18 @@ class JellyfinClient {
             }
             for (final ms in mediaSources) {
               final m = ms as Map<String, dynamic>;
-              versions.add(MediaVersion(
-                id: _toInt(m['Index']) ?? 0,
-                videoResolution: m['VideoType'] as String?,
-                videoCodec: m['VideoCodec'] as String?,
-                bitrate: _toInt(m['Bitrate']),
-                width: _toInt(m['Width']),
-                height: _toInt(m['Height']),
-                container: m['Container'] as String?,
-                partKey: '',
-              ));
+              versions.add(
+                MediaVersion(
+                  id: _toInt(m['Index']) ?? 0,
+                  videoResolution: m['VideoType'] as String?,
+                  videoCodec: m['VideoCodec'] as String?,
+                  bitrate: _toInt(m['Bitrate']),
+                  width: _toInt(m['Width']),
+                  height: _toInt(m['Height']),
+                  container: m['Container'] as String?,
+                  partKey: '',
+                ),
+              );
             }
           }
         }
@@ -1608,10 +1625,7 @@ class JellyfinClient {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/DisplayPreferences/$displayPreferencesId',
-        queryParameters: {
-          'userId': config.userId,
-          'client': 'Jelzy',
-        },
+        queryParameters: {'userId': config.userId, 'client': 'Jelzy'},
       );
       return response.data;
     } catch (e) {
@@ -1636,10 +1650,7 @@ class JellyfinClient {
       if (data.isEmpty) return;
       await _dio.post(
         '/DisplayPreferences/$displayPreferencesId',
-        queryParameters: {
-          'userId': config.userId,
-          'client': 'Jelzy',
-        },
+        queryParameters: {'userId': config.userId, 'client': 'Jelzy'},
         data: data,
       );
       appLogger.d('Updated display preferences for $displayPreferencesId');
@@ -1764,11 +1775,7 @@ class JellyfinClient {
   }) async {
     if (_offlineMode) return;
     try {
-      final data = <String, dynamic>{
-        'ItemId': itemId,
-        'PositionTicks': positionMs * 10000,
-        'PlayMethod': playMethod,
-      };
+      final data = <String, dynamic>{'ItemId': itemId, 'PositionTicks': positionMs * 10000, 'PlayMethod': playMethod};
       if (mediaSourceId != null && mediaSourceId.isNotEmpty) data['MediaSourceId'] = mediaSourceId;
       if (playSessionId != null && playSessionId.isNotEmpty) data['PlaySessionId'] = playSessionId;
       await _dio.post('/Sessions/Playing', data: data);
@@ -1788,10 +1795,7 @@ class JellyfinClient {
   }) async {
     if (_offlineMode) return;
     try {
-      final data = <String, dynamic>{
-        'ItemId': itemId,
-        'PositionTicks': positionMs * 10000,
-      };
+      final data = <String, dynamic>{'ItemId': itemId, 'PositionTicks': positionMs * 10000};
       if (durationMs != null) data['PlaybackDurationTicks'] = durationMs * 10000;
       if (mediaSourceId != null && mediaSourceId.isNotEmpty) data['MediaSourceId'] = mediaSourceId;
       if (playSessionId != null && playSessionId.isNotEmpty) data['PlaySessionId'] = playSessionId;
@@ -1845,10 +1849,7 @@ class JellyfinClient {
   /// The current authenticated user approves the code so the other device can sign in.
   Future<bool> authorizeQuickConnect(String code) async {
     try {
-      final response = await _dio.post(
-        '/QuickConnect/Authorize',
-        queryParameters: {'code': code},
-      );
+      final response = await _dio.post('/QuickConnect/Authorize', queryParameters: {'code': code});
       return response.statusCode == 200;
     } catch (e) {
       appLogger.e('QuickConnect Authorize failed: $e');
@@ -1858,10 +1859,7 @@ class JellyfinClient {
 
   Future<bool> rateItem(String itemId, double rating) async {
     try {
-      await _dio.post(
-        '/Users/${config.userId}/Items/$itemId/Rating',
-        data: {'Rating': rating < 0 ? 0 : rating},
-      );
+      await _dio.post('/Users/${config.userId}/Items/$itemId/Rating', data: {'Rating': rating < 0 ? 0 : rating});
       return true;
     } catch (_) {
       return false;
@@ -1899,12 +1897,7 @@ class JellyfinClient {
     if (_offlineMode) return [];
     final response = await _dio.get<Map<String, dynamic>>(
       '/Persons',
-      queryParameters: {
-        'SearchTerm': query,
-        'Limit': limit,
-        'UserId': config.userId,
-        'Fields': _listFields,
-      },
+      queryParameters: {'SearchTerm': query, 'Limit': limit, 'UserId': config.userId, 'Fields': _listFields},
     );
     final list = response.data?['Items'] as List?;
     if (list == null) return [];
@@ -1949,11 +1942,7 @@ class JellyfinClient {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/Users/${config.userId}/Items/Resume',
-        queryParameters: {
-          'ParentId': sectionId,
-          'Limit': 20,
-          'Fields': _listFields,
-        },
+        queryParameters: {'ParentId': sectionId, 'Limit': 20, 'Fields': _listFields},
       );
       final list = response.data?['Items'] as List?;
       if (list == null) return [];
@@ -1991,31 +1980,96 @@ class JellyfinClient {
 
     // Top-level group: Filters → Played, Unplayed, Resumable, Favorites
     filters.addAll([
-      LibraryFilter(filter: 'IsPlayed', filterType: 'boolean', key: 'IsPlayed', title: 'Played', type: 'filter', group: filtersGroup),
-      LibraryFilter(filter: 'IsUnplayed', filterType: 'boolean', key: 'IsUnplayed', title: 'Unplayed', type: 'filter', group: filtersGroup),
-      LibraryFilter(filter: 'IsResumable', filterType: 'boolean', key: 'IsResumable', title: 'Resumable', type: 'filter', group: filtersGroup),
-      LibraryFilter(filter: 'IsFavorite', filterType: 'boolean', key: 'IsFavorite', title: 'Favorites', type: 'filter', group: filtersGroup),
+      LibraryFilter(
+        filter: 'IsPlayed',
+        filterType: 'boolean',
+        key: 'IsPlayed',
+        title: 'Played',
+        type: 'filter',
+        group: filtersGroup,
+      ),
+      LibraryFilter(
+        filter: 'IsUnplayed',
+        filterType: 'boolean',
+        key: 'IsUnplayed',
+        title: 'Unplayed',
+        type: 'filter',
+        group: filtersGroup,
+      ),
+      LibraryFilter(
+        filter: 'IsResumable',
+        filterType: 'boolean',
+        key: 'IsResumable',
+        title: 'Resumable',
+        type: 'filter',
+        group: filtersGroup,
+      ),
+      LibraryFilter(
+        filter: 'IsFavorite',
+        filterType: 'boolean',
+        key: 'IsFavorite',
+        title: 'Favorites',
+        type: 'filter',
+        group: filtersGroup,
+      ),
     ]);
 
     // Top-level group: Status (Shows only, before Features)
     if (t == 'show') {
-      filters.add(LibraryFilter(
-        filter: 'SeriesStatus',
-        filterType: 'string',
-        key: 'seriesStatus:$sectionPrefix',
-        title: 'Status',
-        type: 'filter',
-        group: statusGroup,
-      ));
+      filters.add(
+        LibraryFilter(
+          filter: 'SeriesStatus',
+          filterType: 'string',
+          key: 'seriesStatus:$sectionPrefix',
+          title: 'Status',
+          type: 'filter',
+          group: statusGroup,
+        ),
+      );
     }
 
     // Top-level group: Features → Subtitles, Trailer, Special Features, Theme Song, Theme Video
     filters.addAll([
-      LibraryFilter(filter: 'HasSubtitles', filterType: 'boolean', key: 'HasSubtitles', title: 'Subtitles', type: 'filter', group: featuresGroup),
-      LibraryFilter(filter: 'HasTrailer', filterType: 'boolean', key: 'HasTrailer', title: 'Trailer', type: 'filter', group: featuresGroup),
-      LibraryFilter(filter: 'HasSpecialFeature', filterType: 'boolean', key: 'HasSpecialFeature', title: 'Special Features', type: 'filter', group: featuresGroup),
-      LibraryFilter(filter: 'HasThemeSong', filterType: 'boolean', key: 'HasThemeSong', title: 'Theme Song', type: 'filter', group: featuresGroup),
-      LibraryFilter(filter: 'HasThemeVideo', filterType: 'boolean', key: 'HasThemeVideo', title: 'Theme Video', type: 'filter', group: featuresGroup),
+      LibraryFilter(
+        filter: 'HasSubtitles',
+        filterType: 'boolean',
+        key: 'HasSubtitles',
+        title: 'Subtitles',
+        type: 'filter',
+        group: featuresGroup,
+      ),
+      LibraryFilter(
+        filter: 'HasTrailer',
+        filterType: 'boolean',
+        key: 'HasTrailer',
+        title: 'Trailer',
+        type: 'filter',
+        group: featuresGroup,
+      ),
+      LibraryFilter(
+        filter: 'HasSpecialFeature',
+        filterType: 'boolean',
+        key: 'HasSpecialFeature',
+        title: 'Special Features',
+        type: 'filter',
+        group: featuresGroup,
+      ),
+      LibraryFilter(
+        filter: 'HasThemeSong',
+        filterType: 'boolean',
+        key: 'HasThemeSong',
+        title: 'Theme Song',
+        type: 'filter',
+        group: featuresGroup,
+      ),
+      LibraryFilter(
+        filter: 'HasThemeVideo',
+        filterType: 'boolean',
+        key: 'HasThemeVideo',
+        title: 'Theme Video',
+        type: 'filter',
+        group: featuresGroup,
+      ),
     ]);
 
     // Top-level groups: Genres, Parental Ratings, Tags, Video Types (Movies only), Years
@@ -2047,33 +2101,33 @@ class JellyfinClient {
     ]);
 
     if (t == 'movie') {
-      filters.add(LibraryFilter(
-        filter: 'VideoTypes',
-        filterType: 'string',
-        key: 'videoType:',
-        title: 'Video Types',
-        type: 'filter',
-        group: videoTypesGroup,
-      ));
+      filters.add(
+        LibraryFilter(
+          filter: 'VideoTypes',
+          filterType: 'string',
+          key: 'videoType:',
+          title: 'Video Types',
+          type: 'filter',
+          group: videoTypesGroup,
+        ),
+      );
     }
 
-    filters.add(LibraryFilter(
-      filter: 'year',
-      filterType: 'string',
-      key: 'year:$sectionPrefix',
-      title: 'Years',
-      type: 'filter',
-      group: yearsGroup,
-    ));
+    filters.add(
+      LibraryFilter(
+        filter: 'year',
+        filterType: 'string',
+        key: 'year:$sectionPrefix',
+        title: 'Years',
+        type: 'filter',
+        group: yearsGroup,
+      ),
+    );
 
     return filters;
   }
 
-  Future<List<FirstCharacter>> getFirstCharacters(
-    String sectionId, {
-    int? type,
-    Map<String, String>? filters,
-  }) async {
+  Future<List<FirstCharacter>> getFirstCharacters(String sectionId, {int? type, Map<String, String>? filters}) async {
     if (_offlineMode) return [];
     try {
       final query = <String, dynamic>{
@@ -2151,10 +2205,7 @@ class JellyfinClient {
         if (tagsList.isNotEmpty) query['Tags'] = tagsList.join(',');
       }
 
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/Users/${config.userId}/Items',
-        queryParameters: query,
-      );
+      final response = await _dio.get<Map<String, dynamic>>('/Users/${config.userId}/Items', queryParameters: query);
       final items = response.data?['Items'] as List? ?? [];
 
       final charCounts = <String, int>{};
@@ -2174,9 +2225,7 @@ class JellyfinClient {
           return a.compareTo(b);
         });
 
-      return sortedKeys
-          .map((key) => FirstCharacter(key: key, title: key, size: charCounts[key]!))
-          .toList();
+      return sortedKeys.map((key) => FirstCharacter(key: key, title: key, size: charCounts[key]!)).toList();
     } catch (e) {
       appLogger.e('Failed to get first characters', error: e);
       return [];
@@ -2204,12 +2253,10 @@ class JellyfinClient {
           },
         );
         final list = response.data?['Items'] as List? ?? [];
-        return list
-            .map((e) {
-              final name = e['Name'] as String? ?? '';
-              return LibraryFilterValue(key: name, title: name, type: 'genre');
-            })
-            .toList();
+        return list.map((e) {
+          final name = e['Name'] as String? ?? '';
+          return LibraryFilterValue(key: name, title: name, type: 'genre');
+        }).toList();
       } catch (e) {
         appLogger.d('Jellyfin getFilterValues(genre) failed: $e');
         return [];
@@ -2221,19 +2268,13 @@ class JellyfinClient {
       try {
         final response = await _dio.get<Map<String, dynamic>>(
           '/Years',
-          queryParameters: {
-            'userId': config.userId,
-            'parentId': sectionId,
-            'sortOrder': 'Descending',
-          },
+          queryParameters: {'userId': config.userId, 'parentId': sectionId, 'sortOrder': 'Descending'},
         );
         final list = response.data?['Items'] as List? ?? [];
-        return list
-            .map((e) {
-              final name = (e as Map<String, dynamic>)['Name']?.toString() ?? '';
-              return LibraryFilterValue(key: name, title: name, type: 'year');
-            })
-            .toList();
+        return list.map((e) {
+          final name = (e as Map<String, dynamic>)['Name']?.toString() ?? '';
+          return LibraryFilterValue(key: name, title: name, type: 'year');
+        }).toList();
       } catch (e) {
         appLogger.d('Jellyfin getFilterValues(year) failed: $e');
         return [];
@@ -2294,9 +2335,7 @@ class JellyfinClient {
             }
           }
         }
-        return (seen.toList()..sort())
-            .map((s) => LibraryFilterValue(key: s, title: s, type: 'tag'))
-            .toList();
+        return (seen.toList()..sort()).map((s) => LibraryFilterValue(key: s, title: s, type: 'tag')).toList();
       } catch (e) {
         appLogger.d('Jellyfin getFilterValues(tags) failed: $e');
         return [];
@@ -2328,8 +2367,18 @@ class JellyfinClient {
 
   static List<LibraryFilterValue> _defaultOfficialRatingValues() {
     return [
-      'G', 'PG', 'PG-13', 'R', 'NC-17',
-      'TV-Y', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA', 'NR', 'Unrated',
+      'G',
+      'PG',
+      'PG-13',
+      'R',
+      'NC-17',
+      'TV-Y',
+      'TV-G',
+      'TV-PG',
+      'TV-14',
+      'TV-MA',
+      'NR',
+      'Unrated',
     ].map((s) => LibraryFilterValue(key: s, title: s, type: 'rating')).toList();
   }
 
@@ -2340,8 +2389,18 @@ class JellyfinClient {
       return [
         LibrarySort(key: 'SortName', title: 'Name', defaultDirection: 'asc'),
         LibrarySort(key: 'Random', title: 'Random', defaultDirection: 'asc'),
-        LibrarySort(key: 'CommunityRating', descKey: 'CommunityRating:desc', title: 'Community Rating', defaultDirection: 'desc'),
-        LibrarySort(key: 'CriticRating', descKey: 'CriticRating:desc', title: 'Critics Rating', defaultDirection: 'desc'),
+        LibrarySort(
+          key: 'CommunityRating',
+          descKey: 'CommunityRating:desc',
+          title: 'Community Rating',
+          defaultDirection: 'desc',
+        ),
+        LibrarySort(
+          key: 'CriticRating',
+          descKey: 'CriticRating:desc',
+          title: 'Critics Rating',
+          defaultDirection: 'desc',
+        ),
         LibrarySort(key: 'DateCreated', descKey: 'DateCreated:desc', title: 'Date Added', defaultDirection: 'desc'),
         LibrarySort(key: 'DatePlayed', descKey: 'DatePlayed:desc', title: 'Date Played', defaultDirection: 'desc'),
         LibrarySort(key: 'OfficialRating', title: 'Parental Rating', defaultDirection: 'asc'),
@@ -2355,9 +2414,24 @@ class JellyfinClient {
       return [
         LibrarySort(key: 'SortName', title: 'Name', defaultDirection: 'asc'),
         LibrarySort(key: 'Random', title: 'Random', defaultDirection: 'asc'),
-        LibrarySort(key: 'CommunityRating', descKey: 'CommunityRating:desc', title: 'Community Rating', defaultDirection: 'desc'),
-        LibrarySort(key: 'DateCreated', descKey: 'DateCreated:desc', title: 'Date Show Added', defaultDirection: 'desc'),
-        LibrarySort(key: 'DateLastContentAdded', descKey: 'DateLastContentAdded:desc', title: 'Date Episode Added', defaultDirection: 'desc'),
+        LibrarySort(
+          key: 'CommunityRating',
+          descKey: 'CommunityRating:desc',
+          title: 'Community Rating',
+          defaultDirection: 'desc',
+        ),
+        LibrarySort(
+          key: 'DateCreated',
+          descKey: 'DateCreated:desc',
+          title: 'Date Show Added',
+          defaultDirection: 'desc',
+        ),
+        LibrarySort(
+          key: 'DateLastContentAdded',
+          descKey: 'DateLastContentAdded:desc',
+          title: 'Date Episode Added',
+          defaultDirection: 'desc',
+        ),
         LibrarySort(key: 'DatePlayed', descKey: 'DatePlayed:desc', title: 'Date Played', defaultDirection: 'desc'),
         LibrarySort(key: 'OfficialRating', title: 'Parental Rating', defaultDirection: 'asc'),
         LibrarySort(key: 'PremiereDate', descKey: 'PremiereDate:desc', title: 'Release Date', defaultDirection: 'desc'),
@@ -2397,17 +2471,19 @@ class JellyfinClient {
             .where((m) => ['movie', 'show', 'episode', 'collection'].contains(m.type))
             .toList();
         if (items.isEmpty) continue;
-        hubs.add(Hub(
-          hubKey: 'movie_rec_${sectionId}_${i}_${cat['CategoryId']}',
-          title: title,
-          type: 'movie',
-          hubIdentifier: 'recommendation_$type',
-          size: items.length,
-          more: false,
-          items: items,
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        hubs.add(
+          Hub(
+            hubKey: 'movie_rec_${sectionId}_${i}_${cat['CategoryId']}',
+            title: title,
+            type: 'movie',
+            hubIdentifier: 'recommendation_$type',
+            size: items.length,
+            more: false,
+            items: items,
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
       return hubs;
     } catch (e) {
@@ -2551,17 +2627,19 @@ class JellyfinClient {
     if (nextUpData != null) {
       final items = (nextUpData['Items'] as List?) ?? [];
       if (items.isNotEmpty) {
-        hubs.add(Hub(
-          hubKey: 'next_up',
-          title: 'Next Up',
-          type: 'show',
-          hubIdentifier: 'nextup',
-          size: items.length,
-          more: (_toInt(nextUpData['TotalRecordCount']) ?? 0) > items.length,
-          items: items.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        hubs.add(
+          Hub(
+            hubKey: 'next_up',
+            title: 'Next Up',
+            type: 'show',
+            hubIdentifier: 'nextup',
+            size: items.length,
+            more: (_toInt(nextUpData['TotalRecordCount']) ?? 0) > items.length,
+            items: items.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
     }
 
@@ -2569,17 +2647,19 @@ class JellyfinClient {
     if (moviesData != null) {
       final list = (moviesData['Items'] as List?) ?? [];
       if (list.isNotEmpty) {
-        hubs.add(Hub(
-          hubKey: 'recently_added_movies',
-          title: 'Recently Added Movies',
-          type: 'movie',
-          hubIdentifier: 'recently_added_movies',
-          size: list.length,
-          more: (_toInt(moviesData['TotalRecordCount']) ?? 0) > list.length,
-          items: list.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        hubs.add(
+          Hub(
+            hubKey: 'recently_added_movies',
+            title: 'Recently Added Movies',
+            type: 'movie',
+            hubIdentifier: 'recently_added_movies',
+            size: list.length,
+            more: (_toInt(moviesData['TotalRecordCount']) ?? 0) > list.length,
+            items: list.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
     }
 
@@ -2587,17 +2667,19 @@ class JellyfinClient {
     if (showsData != null) {
       final list = (showsData['Items'] as List?) ?? [];
       if (list.isNotEmpty) {
-        hubs.add(Hub(
-          hubKey: 'recently_added_shows',
-          title: 'Recently Added Shows',
-          type: 'show',
-          hubIdentifier: 'recently_added_shows',
-          size: list.length,
-          more: (_toInt(showsData['TotalRecordCount']) ?? 0) > list.length,
-          items: list.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
-          serverId: serverId,
-          serverName: serverName,
-        ));
+        hubs.add(
+          Hub(
+            hubKey: 'recently_added_shows',
+            title: 'Recently Added Shows',
+            type: 'show',
+            hubIdentifier: 'recently_added_shows',
+            size: list.length,
+            more: (_toInt(showsData['TotalRecordCount']) ?? 0) > list.length,
+            items: list.map((e) => _itemToMetadata(e as Map<String, dynamic>)).toList(),
+            serverId: serverId,
+            serverName: serverName,
+          ),
+        );
       }
     }
 
@@ -2736,10 +2818,7 @@ class JellyfinClient {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/Playlists/$playlistId/Items',
-        queryParameters: {
-          'UserId': config.userId,
-          'Fields': _listFields,
-        },
+        queryParameters: {'UserId': config.userId, 'Fields': _listFields},
       );
       final list = response.data?['Items'] as List?;
       if (list == null) return [];
@@ -2947,10 +3026,7 @@ class JellyfinClient {
     }
   }
 
-  Future<String?> createCollection({
-    required String title,
-    List<String>? itemIds,
-  }) async {
+  Future<String?> createCollection({required String title, List<String>? itemIds}) async {
     try {
       final params = <String, dynamic>{'Name': title};
       if (itemIds != null && itemIds.isNotEmpty) {
@@ -2998,19 +3074,20 @@ class JellyfinClient {
 
   Future<void> scanLibrary(String sectionId) async {
     if (_offlineMode) return;
-    await _dio.post('/Library/Refresh', queryParameters: {
-      'ParentId': sectionId,
-    });
+    await _dio.post('/Library/Refresh', queryParameters: {'ParentId': sectionId});
   }
 
   Future<void> refreshLibraryMetadata(String sectionId) async {
     if (_offlineMode) return;
-    await _dio.post('/Items/$sectionId/Refresh', queryParameters: {
-      'MetadataRefreshMode': 'FullRefresh',
-      'ImageRefreshMode': 'FullRefresh',
-      'ReplaceAllMetadata': 'true',
-      'ReplaceAllImages': 'false',
-    });
+    await _dio.post(
+      '/Items/$sectionId/Refresh',
+      queryParameters: {
+        'MetadataRefreshMode': 'FullRefresh',
+        'ImageRefreshMode': 'FullRefresh',
+        'ReplaceAllMetadata': 'true',
+        'ReplaceAllImages': 'false',
+      },
+    );
   }
 
   Future<int> getLibraryTotalCount(String sectionId) async {
@@ -3039,15 +3116,7 @@ class JellyfinClient {
       final services = response.data!['Services'] as List?;
       final enabled = response.data!['IsEnabled'] as bool? ?? (services != null && services.isNotEmpty);
       if (!enabled) return [];
-      return [
-        LiveTvDvr(
-          key: serverId,
-          uuid: serverId,
-          make: 'Jellyfin',
-          model: 'Live TV',
-          status: 'connected',
-        ),
-      ];
+      return [LiveTvDvr(key: serverId, uuid: serverId, make: 'Jellyfin', model: 'Live TV', status: 'connected')];
     } catch (e) {
       appLogger.d('Jellyfin getDvrs (LiveTv/Info) failed: $e');
       return [];
@@ -3146,7 +3215,9 @@ class JellyfinClient {
       key: m['Id'] as String?,
       ratingKey: m['Id'] as String?,
       guid: m['Id'] as String?,
-      title: isSeries ? (episodeTitle ?? m['Name'] as String? ?? 'Unknown Program') : (m['Name'] as String? ?? 'Unknown Program'),
+      title: isSeries
+          ? (episodeTitle ?? m['Name'] as String? ?? 'Unknown Program')
+          : (m['Name'] as String? ?? 'Unknown Program'),
       summary: m['Overview'] as String?,
       type: m['Type'] as String?,
       year: (m['ProductionYear'] as num?)?.toInt(),
@@ -3171,7 +3242,15 @@ class JellyfinClient {
     try {
       final results = await Future.wait([
         _fetchRecommendedPrograms(count),
-        _fetchProgramsByCategory(count, hubKey: 'shows', isSeries: true, isMovie: false, isSports: false, isKids: false, isNews: false),
+        _fetchProgramsByCategory(
+          count,
+          hubKey: 'shows',
+          isSeries: true,
+          isMovie: false,
+          isSports: false,
+          isKids: false,
+          isNews: false,
+        ),
         _fetchProgramsByCategory(count, hubKey: 'movies', isMovie: true),
         _fetchProgramsByCategory(count, hubKey: 'sports', isSports: true),
         _fetchProgramsByCategory(count, hubKey: 'kids', isKids: true),
@@ -3314,10 +3393,7 @@ class JellyfinClient {
   Future<bool> updateSeriesTimer(LiveTvSubscription seriesTimer) async {
     if (_offlineMode) return false;
     try {
-      final response = await _dio.post(
-        '/LiveTv/SeriesTimers/${seriesTimer.key}',
-        data: seriesTimer.toUpdateJson(),
-      );
+      final response = await _dio.post('/LiveTv/SeriesTimers/${seriesTimer.key}', data: seriesTimer.toUpdateJson());
       return response.statusCode == 204 || response.statusCode == 200;
     } catch (e) {
       appLogger.d('Failed to update series timer', error: e);
@@ -3468,9 +3544,7 @@ class JellyfinClient {
     final name = item['Name'] as String? ?? 'Unknown';
     final userData = item['UserData'] as Map<String, dynamic>? ?? {};
 
-    final isSeries = item['IsSeries'] == true
-        || item['EpisodeTitle'] != null
-        || item['SeriesId'] != null;
+    final isSeries = item['IsSeries'] == true || item['EpisodeTitle'] != null || item['SeriesId'] != null;
     final isMovie = !isSeries && item['IsMovie'] == true;
     final type = isSeries ? 'episode' : (isMovie ? 'movie' : 'movie');
 
@@ -3496,30 +3570,36 @@ class JellyfinClient {
       final backdrop = imgSource['BackdropImageTags'] as List?;
       final parentBackdrop = imgSource['ParentBackdropImageTags'] as List?;
       if (backdrop != null && backdrop.isNotEmpty) {
-        thumbId = '$baseUrl/Items/$imgId/Images/Backdrop?quality=90'
+        thumbId =
+            '$baseUrl/Items/$imgId/Images/Backdrop?quality=90'
             '${token != null && token!.isNotEmpty ? '&ApiKey=$token' : ''}';
       } else if (imageTags?['Thumb'] != null) {
-        thumbId = '$baseUrl/Items/$imgId/Images/Thumb?quality=90'
+        thumbId =
+            '$baseUrl/Items/$imgId/Images/Thumb?quality=90'
             '${token != null && token!.isNotEmpty ? '&ApiKey=$token' : ''}';
       } else if (imgSource['SeriesThumbImageTag'] != null && imgSource['SeriesId'] != null) {
         final seriesId = imgSource['SeriesId'] as String;
-        thumbId = '$baseUrl/Items/$seriesId/Images/Thumb?quality=90'
+        thumbId =
+            '$baseUrl/Items/$seriesId/Images/Thumb?quality=90'
             '${token != null && token!.isNotEmpty ? '&ApiKey=$token' : ''}';
       } else if (imgSource['ParentThumbImageTag'] != null && imgSource['ParentThumbItemId'] != null) {
         final parentId = imgSource['ParentThumbItemId'] as String;
-        thumbId = '$baseUrl/Items/$parentId/Images/Thumb?quality=90'
+        thumbId =
+            '$baseUrl/Items/$parentId/Images/Thumb?quality=90'
             '${token != null && token!.isNotEmpty ? '&ApiKey=$token' : ''}';
       } else if (parentBackdrop != null && parentBackdrop.isNotEmpty && imgSource['ParentBackdropItemId'] != null) {
         final parentId = imgSource['ParentBackdropItemId'] as String;
-        thumbId = '$baseUrl/Items/$parentId/Images/Backdrop?quality=90'
+        thumbId =
+            '$baseUrl/Items/$parentId/Images/Backdrop?quality=90'
             '${token != null && token!.isNotEmpty ? '&ApiKey=$token' : ''}';
       } else if (item['SeriesId'] != null) {
         thumbId = item['SeriesId'] as String;
       }
     }
 
-    final hasBackdrop = (imgSource['BackdropImageTags'] as List?)?.isNotEmpty == true
-        || (item['BackdropImageTags'] as List?)?.isNotEmpty == true;
+    final hasBackdrop =
+        (imgSource['BackdropImageTags'] as List?)?.isNotEmpty == true ||
+        (item['BackdropImageTags'] as List?)?.isNotEmpty == true;
 
     return MediaMetadata(
       itemId: id,
@@ -3578,7 +3658,6 @@ class JellyfinClient {
     );
   }
 
-
   /// Tune a Live TV channel by getting a playback stream URL via PlaybackInfo.
   /// Follows the official jellyfin-web flow: PlaybackInfo -> LiveStreams/Open
   /// (if needed) -> build stream URL from MediaSource capabilities.
@@ -3605,29 +3684,26 @@ class JellyfinClient {
       if (maxBitrate != null && maxBitrate > 0) {
         body['MaxStreamingBitrate'] = maxBitrate;
       }
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/Items/$channelKey/PlaybackInfo',
-        data: body,
-      );
+      final response = await _dio.post<Map<String, dynamic>>('/Items/$channelKey/PlaybackInfo', data: body);
       if (response.statusCode != 200 || response.data == null) return null;
       final data = response.data!;
 
       final mediaSources = data['MediaSources'] as List?;
       if (mediaSources == null || mediaSources.isEmpty) return null;
-      final sourceIdx = mediaSources.length > 1
-          ? _getOptimalMediaSourceIndex(mediaSources)
-          : 0;
+      final sourceIdx = mediaSources.length > 1 ? _getOptimalMediaSourceIndex(mediaSources) : 0;
       var source = mediaSources[sourceIdx] as Map<String, dynamic>;
 
-      appLogger.d('tuneChannel PlaybackInfo source[$sourceIdx]: '
-          'TranscodingUrl=${source['TranscodingUrl']}, '
-          'SupportsDirectStream=${source['SupportsDirectStream']}, '
-          'SupportsTranscoding=${source['SupportsTranscoding']}, '
-          'RequiresOpening=${source['RequiresOpening']}, '
-          'LiveStreamId=${source['LiveStreamId']}, '
-          'OpenToken=${source['OpenToken']}, '
-          'Container=${source['Container']}, '
-          'Id=${source['Id']}');
+      appLogger.d(
+        'tuneChannel PlaybackInfo source[$sourceIdx]: '
+        'TranscodingUrl=${source['TranscodingUrl']}, '
+        'SupportsDirectStream=${source['SupportsDirectStream']}, '
+        'SupportsTranscoding=${source['SupportsTranscoding']}, '
+        'RequiresOpening=${source['RequiresOpening']}, '
+        'LiveStreamId=${source['LiveStreamId']}, '
+        'OpenToken=${source['OpenToken']}, '
+        'Container=${source['Container']}, '
+        'Id=${source['Id']}',
+      );
 
       final requiresOpening = source['RequiresOpening'] as bool? ?? false;
       final existingLiveStreamId = source['LiveStreamId'] as String?;
@@ -3637,25 +3713,21 @@ class JellyfinClient {
         appLogger.d('tuneChannel: RequiresOpening=true, calling LiveStreams/Open');
         final openResponse = await _dio.post<Map<String, dynamic>>(
           '/LiveStreams/Open',
-          queryParameters: {
-            'UserId': config.userId,
-            'ItemId': channelKey,
-            'PlaySessionId': ?playSessionId,
-          },
-          data: {
-            'OpenToken': ?openToken,
-          },
+          queryParameters: {'UserId': config.userId, 'ItemId': channelKey, 'PlaySessionId': ?playSessionId},
+          data: {'OpenToken': ?openToken},
         );
         if (openResponse.statusCode == 200 && openResponse.data != null) {
           final openSource = openResponse.data!['MediaSource'] as Map<String, dynamic>?;
           if (openSource != null) {
             source = openSource;
-            appLogger.d('tuneChannel LiveStreams/Open source: '
-                'TranscodingUrl=${source['TranscodingUrl']}, '
-                'LiveStreamId=${source['LiveStreamId']}, '
-                'SupportsDirectStream=${source['SupportsDirectStream']}, '
-                'SupportsTranscoding=${source['SupportsTranscoding']}, '
-                'Container=${source['Container']}');
+            appLogger.d(
+              'tuneChannel LiveStreams/Open source: '
+              'TranscodingUrl=${source['TranscodingUrl']}, '
+              'LiveStreamId=${source['LiveStreamId']}, '
+              'SupportsDirectStream=${source['SupportsDirectStream']}, '
+              'SupportsTranscoding=${source['SupportsTranscoding']}, '
+              'Container=${source['Container']}',
+            );
           }
         }
       }
@@ -3671,12 +3743,14 @@ class JellyfinClient {
       if (supportsTranscoding && transcodingUrl != null && transcodingUrl.isNotEmpty) {
         streamPath = transcodingUrl.startsWith('/') ? transcodingUrl : '/$transcodingUrl';
       } else if (supportsDirectStream) {
-        streamPath = '/Videos/$channelKey/stream.$container'
+        streamPath =
+            '/Videos/$channelKey/stream.$container'
             '?Static=true&mediaSourceId=$sourceId&LiveStreamId=$liveStreamId';
       } else if (transcodingUrl != null && transcodingUrl.isNotEmpty) {
         streamPath = transcodingUrl.startsWith('/') ? transcodingUrl : '/$transcodingUrl';
       } else {
-        streamPath = '/Videos/$channelKey/stream.$container'
+        streamPath =
+            '/Videos/$channelKey/stream.$container'
             '?Static=true&LiveStreamId=$liveStreamId';
       }
 
@@ -3740,7 +3814,13 @@ class JellyfinClient {
   Future<bool> selectStreams({required String itemId, int? audioStreamIndex, int? subtitleStreamIndex}) async => false;
 
   /// Stub: Move playlist item — not yet implemented.
-  Future<bool> movePlaylistItem({required String playlistId, String? itemId, int? playlistItemId, int? newIndex, int? afterPlaylistItemId}) async => false;
+  Future<bool> movePlaylistItem({
+    required String playlistId,
+    String? itemId,
+    int? playlistItemId,
+    int? newIndex,
+    int? afterPlaylistItemId,
+  }) async => false;
 
   /// Stub: Build favorite channel source for LiveTV.
   String buildFavoriteChannelSource([String? serverId]) => '';

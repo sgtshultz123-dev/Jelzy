@@ -26,12 +26,7 @@ class PersonDetailScreen extends StatefulWidget {
   final JellyfinClient client;
   final String serverId;
 
-  const PersonDetailScreen({
-    super.key,
-    required this.actor,
-    required this.client,
-    required this.serverId,
-  });
+  const PersonDetailScreen({super.key, required this.actor, required this.client, required this.serverId});
 
   @override
   State<PersonDetailScreen> createState() => _PersonDetailScreenState();
@@ -119,11 +114,9 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
     }
   }
 
-  bool get _hasBioContent =>
-      (_overview != null && _overview!.isNotEmpty) || _hasInfoRows;
+  bool get _hasBioContent => (_overview != null && _overview!.isNotEmpty) || _hasInfoRows;
 
-  bool get _hasInfoRows =>
-      _birthDate != null || _deathDate != null || (_birthPlace != null && _birthPlace!.isNotEmpty);
+  bool get _hasInfoRows => _birthDate != null || _deathDate != null || (_birthPlace != null && _birthPlace!.isNotEmpty);
 
   // ── Key event handlers ──
 
@@ -240,7 +233,12 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
     if (key.isLeftKey) {
       if (_focusedFilmographyIndex > 0) {
         setState(() => _focusedFilmographyIndex--);
-        scrollListToIndex(_filmographyScrollController, _focusedFilmographyIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _filmographyScrollController,
+          _focusedFilmographyIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -248,7 +246,12 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
     if (key.isRightKey) {
       if (_focusedFilmographyIndex < _filmography.length - 1) {
         setState(() => _focusedFilmographyIndex++);
-        scrollListToIndex(_filmographyScrollController, _focusedFilmographyIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+        scrollListToIndex(
+          _filmographyScrollController,
+          _focusedFilmographyIndex,
+          itemExtent: _getResponsiveCardWidth() + 4,
+          disableAnimations: disableAnims,
+        );
       }
       return KeyEventResult.handled;
     }
@@ -290,7 +293,11 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = key.currentContext;
       if (ctx != null) {
-        Scrollable.ensureVisible(ctx, duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200), curve: Curves.easeOut);
+        Scrollable.ensureVisible(
+          ctx,
+          duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -356,9 +363,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
                         bottom: false,
                         child: Padding(
                           padding: const EdgeInsets.only(top: 56, left: 24, right: 24, bottom: 8),
-                          child: isWide
-                              ? _buildWideHeader(imageUrl)
-                              : _buildNarrowHeader(imageUrl),
+                          child: isWide ? _buildWideHeader(imageUrl) : _buildNarrowHeader(imageUrl),
                         ),
                       ),
                       if (isTv)
@@ -407,9 +412,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
                             Text(
                               key: _filmographySectionKey,
                               t.discover.moviesAndShows,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 12),
                             _buildFilmographySection(),
@@ -418,9 +421,9 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
                             const SizedBox(height: 16),
                             Text(
                               t.discover.noItemsFound,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                             const SizedBox(height: 24),
                           ],
@@ -468,22 +471,15 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
             margin: const EdgeInsets.only(bottom: 24),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(12)),
-              border: focused
-                  ? Border.all(color: theme.colorScheme.primary, width: 2)
-                  : null,
-              color: focused
-                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                  : null,
+              border: focused ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
+              color: focused ? theme.colorScheme.primary.withValues(alpha: 0.08) : null,
             ),
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_overview != null && _overview!.isNotEmpty) ...[
-                  Text(
-                    t.discover.overview,
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
+                  Text(t.discover.overview, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   CollapsibleText(
                     text: _overview!,
@@ -535,12 +531,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              Text(
-                widget.actor.tag,
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(widget.actor.tag, style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -574,12 +565,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          widget.actor.tag,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(widget.actor.tag, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
       ],
     );
@@ -626,9 +612,7 @@ class _PersonDetailScreenState extends State<PersonDetailScreen> {
             ),
             TextSpan(
               text: value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface),
             ),
           ],
         ),

@@ -191,6 +191,7 @@ class Marker {
   bool get isRecap => type == 'recap';
   bool get isPreview => type == 'preview';
   bool get isCommercial => type == 'commercial';
+
   /// Credits = outro / end credits segment
   bool get isCredits => isOutro;
 
