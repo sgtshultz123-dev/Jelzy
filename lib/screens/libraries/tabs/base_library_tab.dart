@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../focus/input_mode_tracker.dart';
-import '../../../models/plex_library.dart';
-import '../../../utils/app_logger.dart';
+import '../../../models/media_library.dart';
+import '../../../utils/error_message_utils.dart';
 import '../../../mixins/library_tab_state.dart';
 import '../../../mixins/refreshable.dart';
 import '../content_state_builder.dart';
@@ -13,7 +12,7 @@ import '../content_state_builder.dart';
 /// Type parameter T: The type of items this tab displays
 ///
 /// Subclasses must implement:
-/// - [loadData]: Load data from the Plex API
+/// - [loadData]: Load data from the server API
 /// - [buildContent]: Build the UI for displaying loaded items
 ///
 /// Optional overrides:
@@ -22,7 +21,7 @@ import '../content_state_builder.dart';
 /// - [errorContext]: Context for error messages (defaults to "content")
 /// - [getRefreshStream]: Stream to listen for refresh events
 abstract class BaseLibraryTab<T> extends StatefulWidget {
-  final PlexLibrary library;
+  final MediaLibrary library;
   final String? viewMode;
   final String? density;
 
@@ -39,8 +38,12 @@ abstract class BaseLibraryTab<T> extends StatefulWidget {
   final bool suppressAutoFocus;
 
   /// Called when the user presses BACK in the tab content.
-  /// Used to navigate focus back to the tab bar.
+  /// Used to navigate focus back to the tab bar (or refresh for single-tab).
   final VoidCallback? onBack;
+
+  /// Called when the user presses BACK key (vs UP arrow). Typically focuses sidebar.
+  /// When null, [onBack] is used for both.
+  final VoidCallback? onBackToNavigation;
 
   const BaseLibraryTab({
     super.key,
@@ -51,6 +54,7 @@ abstract class BaseLibraryTab<T> extends StatefulWidget {
     this.isActive = false,
     this.suppressAutoFocus = false,
     this.onBack,
+    this.onBackToNavigation,
   });
 }
 
@@ -62,7 +66,7 @@ abstract class BaseLibraryTabState<T, W extends BaseLibraryTab<T>> extends State
   bool get wantKeepAlive => true;
 
   @override
-  PlexLibrary get library => widget.library;
+  MediaLibrary get library => widget.library;
 
   @override
   void refresh() {
@@ -77,8 +81,7 @@ abstract class BaseLibraryTabState<T, W extends BaseLibraryTab<T>> extends State
 
   // Focus management
   bool _hasLoadedData = false;
-  @protected
-  bool hasFocused = false;
+  bool _hasFocused = false;
 
   // Getters for subclasses
   List<T> get items => _items;
@@ -124,7 +127,7 @@ abstract class BaseLibraryTabState<T, W extends BaseLibraryTab<T>> extends State
     // Reload if library changed
     if (oldWidget.library.globalKey != widget.library.globalKey) {
       // Reset focus state for new library
-      hasFocused = false;
+      _hasFocused = false;
       _hasLoadedData = false;
       // Immediately clear stale data before async load
       _items = [];
@@ -165,12 +168,9 @@ abstract class BaseLibraryTabState<T, W extends BaseLibraryTab<T>> extends State
   void tryFocus() {
     // Don't auto-focus if suppressed (e.g., when navigating via tab bar)
     if (widget.suppressAutoFocus) return;
-    // On mobile (touch mode), skip auto-focus to prevent ensureVisible()
-    // from interfering with TabBarView page animations
-    if (!InputModeTracker.isKeyboardMode(context)) return;
 
-    if (widget.isActive && _hasLoadedData && !hasFocused && _items.isNotEmpty) {
-      hasFocused = true;
+    if (widget.isActive && _hasLoadedData && !_hasFocused && _items.isNotEmpty) {
+      _hasFocused = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           focusFirstItem();
@@ -211,14 +211,14 @@ abstract class BaseLibraryTabState<T, W extends BaseLibraryTab<T>> extends State
           widget.onDataLoaded!();
         });
       }
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
 
-      appLogger.e('Error loading $errorContext', error: e);
       setState(() {
-        _errorMessage = 'Failed to load $errorContext: ${e.toString()}';
+        _errorMessage = 'Failed to load $errorContext: ${safeUserMessage(e)}';
         _isLoading = false;
       });
+      logErrorWithStackTrace('Error loading $errorContext', e, st);
     }
   }
 

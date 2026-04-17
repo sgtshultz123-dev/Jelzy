@@ -1,7 +1,7 @@
-name: plezy
-description: "A beautiful Plex client for Flutter"
+name: jelzy
+description: "A beautiful Jellyfin client with HDR/Dolby Vision support"
 publish_to: "none"
-version: 1.33.1+70
+version: 0.1.0+1
 
 environment:
   sdk: ^3.8.1
@@ -10,112 +10,64 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.20.2
+  dio: ^5.4.0
   json_annotation: ^4.9.0
   shared_preferences: ^2.2.2
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
-  http: ^1.2.0
   url_launcher: ^6.3.0
   uuid: ^4.4.0
   window_manager: ^0.5.1
-  logger: ^2.7.0
+  logger: ^2.0.2
   package_info_plus: ^9.0.0
   device_info_plus: ^12.3.0
   provider: ^6.1.2
-  flex_color_picker: ^3.8.0
+  flex_color_picker: ^3.6.0
   qr_flutter: ^4.1.0
-  slang: ^4.14.0
-  slang_flutter: ^4.14.0
+  slang: ^4.12.0
+  slang_flutter: ^4.12.0
   duration: ^4.0.3
   connectivity_plus: ^7.0.0
   os_media_controls:
     git:
-      url: https://github.com/edde746/os-media-controls
-      ref: b4006c601e32a6a1fac9e6f26e6ee9923c7b03c9
+      url: https://github.com/dkmcgowan/media_controls
+      ref: 467251821f76bba37ed4c6d5ee1c9de27c285e34
   rate_limiter: ^1.0.0
   wakelock_plus:
     git:
-      url: https://github.com/edde746/wakelock_plus
+      url: https://github.com/dkmcgowan/wakelock_plus
       path: wakelock_plus
   path_provider: ^2.1.0
   path: ^1.9.0
-  universal_gamepad: ^1.5.0
-  drift: ^2.31.0
-  sqlite3_flutter_libs: ^0.5.42
+  drift: ^2.28.2
+  sqlite3_flutter_libs: ^0.5.41
   crypto: ^3.0.7
-  cryptography: ^2.9.0
   file_picker: ^10.3.10
-  saf_util: ^2.0.0
-  saf_stream: ^2.0.0
-  material_symbols_icons: ^4.2906.0
-  web_socket_channel: ^3.0.1
+  saf_util: ^0.11.0
+  saf_stream: ^0.12.2
+  material_symbols_icons: ^4.2928.1
   in_app_review: ^2.0.11
-  dart_discord_presence: ^1.2.0
   flutter_svg: ^2.2.3
-  background_downloader:
-    git:
-      url: https://github.com/edde746/background_downloader
-      ref: 1f42690
-  sentry_flutter:
-    git:
-      url: https://github.com/edde746/sentry-dart
-      path: packages/flutter
-      ref: build/fetch-native-zip
-  auto_updater:
-    git:
-      url: https://github.com/edde746/auto_updater
-      path: packages/auto_updater
-      ref: 9e150f7
-  cupertino_http: ^2.4.0
+  background_downloader: ^9.5.2
   cronet_http: ^1.6.0
-  win_http: ^0.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.13.0
+  build_runner: ^2.4.7
   json_serializable: ^6.7.1
-  slang_build_runner: ^4.14.0
+  slang_build_runner: ^4.12.0
   dart_code_linter: ^3.2.1
-  drift_dev: ^2.28.3
+  drift_dev: ^2.14.0
 
 dependency_overrides:
-  auto_updater_platform_interface:
-    git:
-      url: https://github.com/edde746/auto_updater
-      ref: 9e150f7
-      path: packages/auto_updater_platform_interface
-  auto_updater_macos:
-    git:
-      url: https://github.com/edde746/auto_updater
-      ref: 9e150f7
-      path: packages/auto_updater_macos
-  auto_updater_windows:
-    git:
-      url: https://github.com/edde746/auto_updater
-      ref: 9e150f7
-      path: packages/auto_updater_windows
-  sentry:
-    git:
-      url: https://github.com/edde746/sentry-dart
-      path: packages/dart
-      ref: build/fetch-native-zip
-  sentry_flutter:
-    git:
-      url: https://github.com/edde746/sentry-dart
-      path: packages/flutter
-      ref: build/fetch-native-zip
-  material_symbols_icons:
-    git:
-      url: https://github.com/edde746/material_symbols_icons
-      ref: 1d8cd83
+  source_gen: ^4.1.2
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/plezy.png
-    - assets/plezy_adaptive_foreground.svg
+    - assets/jelzy.png
     - assets/go-noto-current-regular.ttf
     - assets/shaders/nvscaler/
     - assets/shaders/anime4k/

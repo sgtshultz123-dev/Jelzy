@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "使用 Plex 登录",
@@ -9,7 +9,17 @@
     "authenticationTimeout": "验证超时。请重试。",
     "scanQRToSignIn": "扫描二维码登录",
     "waitingForAuth": "等待验证中...\n请在你的浏览器中完成登录。",
-    "useBrowser": "使用浏览器"
+    "useBrowser": "使用浏览器",
+    "jellyfinServerUrl": "服务器 URL",
+    "jellyfinServerUrlHint": "https://your-jellyfin-server.com",
+    "jellyfinUsername": "用户名",
+    "jellyfinPassword": "密码",
+    "jellyfinSignIn": "登录",
+    "connectionTimeout": "连接超时，请检查服务器 URL。",
+    "serverUnreachable": "服务器无法访问，请检查您的连接。",
+    "invalidPassword": "用户名或密码无效。",
+    "notAuthorized": "未授权，请检查您的凭据。",
+    "serverError": "服务器错误，请稍后再试。"
   },
   "common": {
     "cancel": "取消",
@@ -54,7 +64,15 @@
     "loadingServers": "正在加载服务器...",
     "connectingToServers": "正在连接服务器...",
     "startingOfflineMode": "正在启动离线模式...",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "goOnline": "上线",
+    "connectionAvailable": "连接可用",
+    "quickConnect": "快速连接",
+    "quickConnectSuccess": "快速连接已授权！",
+    "quickConnectError": "快速连接失败，请重试。",
+    "quickConnectDescription": "输入其他设备上显示的快速连接码。",
+    "quickConnectCode": "快速连接码",
+    "authorize": "授权"
   },
   "screens": {
     "licenses": "许可证",
@@ -70,7 +88,8 @@
     "skipVersion": "跳过此版本",
     "viewRelease": "查看发布详情",
     "latestVersion": "已安装的版本是可用的最新版本",
-    "checkFailed": "无法检查更新"
+    "checkFailed": "无法检查更新",
+    "updateInStore": "在商店更新"
   },
   "settings": {
     "title": "设置",
@@ -246,7 +265,16 @@
     "hint": "搜索电影、系列、音乐...",
     "tryDifferentTerm": "尝试不同的搜索词",
     "searchYourMedia": "搜索媒体",
-    "enterTitleActorOrKeyword": "输入标题、演员或关键词"
+    "enterTitleActorOrKeyword": "输入标题、演员或关键词",
+    "categories": {
+      "movies": "电影",
+      "shows": "剧集",
+      "episodes": "单集",
+      "people": "人物",
+      "collections": "合集",
+      "programs": "节目",
+      "channels": "频道"
+    }
   },
   "hotkeys": {
     "setShortcutFor": "为 ${actionName} 设置快捷键",
@@ -331,7 +359,8 @@
     "shufflePlay": "随机播放",
     "playTrailer": "播放预告片",
     "markAsWatched": "标记为已观看",
-    "markAsUnwatched": "标记为未观看"
+    "markAsUnwatched": "标记为未观看",
+    "playFromStart": "从头播放"
   },
   "videoControls": {
     "audioLabel": "音频",
@@ -387,7 +416,7 @@
     "pipErrors": {
       "androidVersion": "需要 Android 8.0 或更高版本",
       "iosVersion": "需要 iOS 15.0 或更高版本",
-      "permissionDisabled": "画中画权限已禁用。请在设置 > 应用 > Plezy > 画中画中启用",
+      "permissionDisabled": "画中画权限已禁用。请在设置 > 应用 > Jelzy > 画中画中启用",
       "notSupported": "此设备不支持画中画模式",
       "voSwitchFailed": "无法切换画中画的视频输出",
       "failed": "画中画启动失败",
@@ -444,7 +473,8 @@
     "switchingToCompatiblePlayer": "正在切换到兼容的播放器...",
     "logsUploaded": "日志已上传",
     "logsUploadFailed": "上传日志失败",
-    "logId": "日志 ID"
+    "logId": "日志 ID",
+    "qualityRevertedOnError": "由于错误，播放质量已还原"
   },
   "subtitlingStyling": {
     "stylingOptions": "样式选项",
@@ -493,7 +523,14 @@
     "rating": "年龄分级",
     "movie": "电影",
     "tvShow": "电视剧",
-    "minutesLeft": "剩余 ${minutes} 分钟"
+    "minutesLeft": "剩余 ${minutes} 分钟",
+    "seasons": "季",
+    "moreLikeThis": "相关推荐",
+    "moviesAndShows": "电影与剧集",
+    "noItemsFound": "未找到项目",
+    "categories": "分类",
+    "episodeCount(count)": "${count} 集",
+    "watchedProgress(watched, total)": "${watched} / ${total} 已观看"
   },
   "errors": {
     "searchFailed": "搜索失败: ${error}",
@@ -545,11 +582,18 @@
     "noCollections": "此媒体库中没有合集",
     "noFoldersFound": "未找到文件夹",
     "folders": "文件夹",
+    "noFavorites": "暂无收藏",
+    "noGenres": "未找到类型",
     "tabs": {
       "recommended": "推荐",
       "browse": "浏览",
       "collections": "合集",
-      "playlists": "播放列表"
+      "playlists": "播放列表",
+      "favorites": "收藏",
+      "genres": "类型",
+      "movies": "电影",
+      "shows": "剧集",
+      "suggestions": "推荐"
     },
     "groupings": {
       "title": "分组",
@@ -798,19 +842,19 @@
     },
     "pairing": {
       "pairWithDesktop": "连接到桌面",
-      "discoveryDescription": "网络上使用相同Plex账户运行Plezy的设备将自动显示",
+      "discoveryDescription": "网络上使用相同Plex账户运行Jelzy的设备将自动显示",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "正在连接...",
       "searchingForDevices": "正在搜索设备...",
       "noDevicesFound": "未在网络上找到设备",
-      "noDevicesHint": "请确保桌面上已打开Plezy，且两台设备在同一WiFi网络上",
+      "noDevicesHint": "请确保桌面上已打开Jelzy，且两台设备在同一WiFi网络上",
       "availableDevices": "可用设备",
       "manualConnection": "手动连接",
       "cryptoInitFailed": "无法初始化安全连接。请确保已登录Plex账户。",
       "validationHostRequired": "请输入主机地址",
       "validationHostFormat": "格式必须为IP:端口（例如 192.168.1.100:48632）",
       "connectionTimedOut": "连接超时。请确保两台设备在同一网络上。",
-      "sessionNotFound": "未找到设备。请确保Plezy正在主机上运行。",
+      "sessionNotFound": "未找到设备。请确保Jelzy正在主机上运行。",
       "authFailed": "认证失败。请确保两台设备使用相同的Plex账户。",
       "failedToConnect": "连接失败：${error}"
     },

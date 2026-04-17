@@ -1,14 +1,14 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 
 import '../../focus/dpad_navigator.dart';
 import '../../mpv/mpv.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_info.dart';
+import '../../models/media_metadata.dart';
 import '../../services/fullscreen_state_manager.dart';
 import '../../utils/desktop_window_padding.dart';
 import '../../utils/platform_detector.dart';
@@ -29,10 +29,10 @@ import 'widgets/track_chapter_controls.dart';
 /// Desktop-specific video controls layout with top bar and bottom controls
 class DesktopVideoControls extends StatefulWidget {
   final Player player;
-  final PlexMetadata metadata;
+  final MediaMetadata metadata;
   final VoidCallback? onNext;
   final VoidCallback? onPrevious;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final int seekTimeSmall;
   final VoidCallback onSeekToPreviousChapter;
@@ -83,7 +83,7 @@ class DesktopVideoControls extends StatefulWidget {
   final bool showQueueTab;
 
   /// Called when a queue item is selected in the content strip
-  final Function(PlexMetadata)? onQueueItemSelected;
+  final Function(MediaMetadata)? onQueueItemSelected;
 
   /// Called to cancel auto-hide timer (e.g., when content strip is shown)
   final VoidCallback? onCancelAutoHide;

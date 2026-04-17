@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../i18n/strings.g.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_metadata.dart';
 import '../providers/download_provider.dart';
-import '../services/plex_client.dart';
+import '../services/jellyfin_client.dart';
 import 'dialogs.dart';
 import 'download_version_utils.dart';
 
@@ -16,8 +16,8 @@ enum _DownloadChoice { all, unwatched, next5, next10, custom }
 /// Returns the number of items queued, or null if cancelled.
 Future<int?> showDownloadOptionsAndQueue(
   BuildContext context, {
-  required PlexMetadata metadata,
-  required PlexClient client,
+  required MediaMetadata metadata,
+  required JellyfinClient client,
   required DownloadProvider downloadProvider,
 }) async {
   final mt = metadata.mediaType;
@@ -25,7 +25,7 @@ Future<int?> showDownloadOptionsAndQueue(
   var filter = DownloadFilter.all;
   int? maxCount;
 
-  if (mt == PlexMediaType.show || mt == PlexMediaType.season) {
+  if (mt == MediaType.show || mt == MediaType.season) {
     int? customCount;
     final selected = await showOptionPickerDialog<_DownloadChoice>(
       context,
@@ -81,8 +81,8 @@ Future<int?> showDownloadOptionsAndQueue(
 /// Returns the number of items queued, or null if cancelled.
 Future<int?> showPlaylistDownloadOptionsAndQueue(
   BuildContext context, {
-  required List<PlexMetadata> items,
-  required PlexClient client,
+  required List<MediaMetadata> items,
+  required JellyfinClient client,
   required DownloadProvider downloadProvider,
 }) async {
   final selected = await showOptionPickerDialog<DownloadFilter>(

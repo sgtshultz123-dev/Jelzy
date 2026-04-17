@@ -6,13 +6,13 @@ import 'package:flutter/services.dart';
 
 import '../../../focus/dpad_navigator.dart';
 import '../../../mpv/mpv.dart';
-import '../../../models/plex_media_info.dart';
-import '../../../models/plex_media_version.dart';
+import '../../../models/media_info.dart';
+import '../../../models/media_version.dart';
 import '../../../services/sleep_timer_service.dart';
 import '../../../utils/platform_detector.dart';
 import '../../../i18n/strings.g.dart';
 import '../../../widgets/overlay_sheet.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_metadata.dart';
 import '../models/track_controls_state.dart';
 import '../sheets/chapter_sheet.dart';
 import '../sheets/queue_sheet.dart';
@@ -26,7 +26,7 @@ import '../video_control_button.dart';
 /// Row of track and chapter control buttons for the video player
 class TrackChapterControls extends StatelessWidget {
   final Player player;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final TrackControlsState trackControlsState;
   final Function(Duration position)? onSeekCompleted;
@@ -64,7 +64,7 @@ class TrackChapterControls extends StatelessWidget {
     this.hideChaptersAndQueue = false,
   });
 
-  List<PlexMediaVersion> get availableVersions => trackControlsState.availableVersions;
+  List<MediaVersion> get availableVersions => trackControlsState.availableVersions;
   int get selectedMediaIndex => trackControlsState.selectedMediaIndex;
   int get boxFitMode => trackControlsState.boxFitMode;
   int get audioSyncOffset => trackControlsState.audioSyncOffset;
@@ -96,7 +96,7 @@ class TrackChapterControls extends StatelessWidget {
   bool get isLive => trackControlsState.isLive;
   bool get subtitlesVisible => trackControlsState.subtitlesVisible;
   bool get showQueueButton => trackControlsState.showQueueButton;
-  Function(PlexMetadata)? get onQueueItemSelected => trackControlsState.onQueueItemSelected;
+  Function(MediaMetadata)? get onQueueItemSelected => trackControlsState.onQueueItemSelected;
   String get ratingKey => trackControlsState.ratingKey;
   String? get mediaTitle => trackControlsState.mediaTitle;
   Future<void> Function()? get onSubtitleDownloaded => trackControlsState.onSubtitleDownloaded;

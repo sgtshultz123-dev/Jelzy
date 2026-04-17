@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../focus/focusable_button.dart';
 import '../../focus/focusable_wrapper.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_metadata.dart';
 import '../../i18n/strings.g.dart';
 
 /// Individual item in the folder tree
 /// Can be either a folder (expandable) or a file (tappable)
 class FolderTreeItem extends StatelessWidget {
-  final PlexMetadata item;
+  final MediaMetadata item;
   final int depth;
   final bool isExpanded;
   final bool isFolder;
@@ -43,11 +43,11 @@ class FolderTreeItem extends StatelessWidget {
 
     // File icons based on type
     return switch (item.mediaType) {
-      PlexMediaType.movie => Symbols.movie_rounded,
-      PlexMediaType.show => Symbols.tv_rounded,
-      PlexMediaType.season => Symbols.video_library_rounded,
-      PlexMediaType.episode => Symbols.play_circle_rounded,
-      PlexMediaType.collection => Symbols.collections_rounded,
+      MediaType.movie => Symbols.movie_rounded,
+      MediaType.show => Symbols.tv_rounded,
+      MediaType.season => Symbols.video_library_rounded,
+      MediaType.episode => Symbols.play_circle_rounded,
+      MediaType.collection => Symbols.collections_rounded,
       _ => Symbols.insert_drive_file_rounded,
     };
   }

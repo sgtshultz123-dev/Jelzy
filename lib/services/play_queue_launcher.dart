@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/play_queue_response.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_playlist.dart';
+import '../models/media_metadata.dart';
+import '../models/playlist.dart';
 import '../providers/playback_state_provider.dart';
 import '../utils/app_logger.dart';
 import '../utils/snackbar_helper.dart';
 import '../utils/video_player_navigation.dart';
 import '../i18n/strings.g.dart';
-import 'plex_client.dart';
+import 'jellyfin_client.dart';
 
 /// Result type for play queue operations
 sealed class PlayQueueResult {
@@ -38,7 +38,7 @@ class PlayQueueError extends PlayQueueResult {
 /// 4. Handling errors with appropriate feedback
 class PlayQueueLauncher {
   final BuildContext context;
-  final PlexClient client;
+  final JellyfinClient client;
   final String? serverId;
   final String? serverName;
 
@@ -46,12 +46,12 @@ class PlayQueueLauncher {
 
   /// Launch playback from a collection or playlist.
   Future<PlayQueueResult> launchFromCollectionOrPlaylist({
-    required dynamic item, // PlexMetadata (collection) or PlexPlaylist
+    required dynamic item, // MediaMetadata (collection) or Playlist
     required bool shuffle,
     bool showLoadingIndicator = true,
   }) async {
-    final isCollection = item is PlexMetadata;
-    final isPlaylist = item is PlexPlaylist;
+    final isCollection = item is MediaMetadata;
+    final isPlaylist = item is Playlist;
 
     if (!isCollection && !isPlaylist) {
       return PlayQueueError(Exception('Item must be either a collection or playlist'));
@@ -109,8 +109,8 @@ class PlayQueueLauncher {
 
   /// Launch playback from a playlist starting at a specific item.
   Future<PlayQueueResult> launchFromPlaylistItem({
-    required PlexPlaylist playlist,
-    required PlexMetadata selectedItem,
+    required Playlist playlist,
+    required MediaMetadata selectedItem,
     bool showLoadingIndicator = true,
   }) async {
     return _executeWithLoading(
@@ -138,10 +138,10 @@ class PlayQueueLauncher {
   }
 
   /// Launch shuffled playback for a show or season.
-  Future<PlayQueueResult> launchShuffledShow({required PlexMetadata metadata, bool showLoadingIndicator = true}) async {
+  Future<PlayQueueResult> launchShuffledShow({required MediaMetadata metadata, bool showLoadingIndicator = true}) async {
     final mediaType = metadata.mediaType;
 
-    if (mediaType != PlexMediaType.show && mediaType != PlexMediaType.season) {
+    if (mediaType != MediaType.show && mediaType != MediaType.season) {
       return PlayQueueError(Exception('Shuffle play only works for shows and seasons'));
     }
 
@@ -151,7 +151,7 @@ class PlayQueueLauncher {
       execute: (dismissLoading) async {
         // Determine the rating key for the play queue
         String showRatingKey;
-        if (mediaType == PlexMediaType.show) {
+        if (mediaType == MediaType.show) {
           showRatingKey = metadata.ratingKey;
         } else {
           // For seasons, we need the show's rating key
@@ -220,7 +220,7 @@ class PlayQueueLauncher {
     required String ratingKey,
     String? serverId,
     String? serverName,
-    PlexMetadata? selectedItem,
+    MediaMetadata? selectedItem,
     bool copyServerInfo = false,
   }) async {
     if (playQueue == null || playQueue.items == null || playQueue.items!.isEmpty) {

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Logga in med Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Kräver Android 8.0 eller nyare",
       "iosVersion": "Kräver iOS 15.0 eller nyare",
-      "permissionDisabled": "Bild-i-bild-behörighet är inaktiverad. Aktivera den i Inställningar > Appar > Plezy > Bild-i-bild",
+      "permissionDisabled": "Bild-i-bild-behörighet är inaktiverad. Aktivera den i Inställningar > Appar > Jelzy > Bild-i-bild",
       "notSupported": "Denna enhet stöder inte bild-i-bild-läge",
       "voSwitchFailed": "Kunde inte byta videoutgång för bild-i-bild",
       "failed": "Bild-i-bild kunde inte starta",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Anslut till dator",
-      "discoveryDescription": "Enheter i ditt nätverk som kör Plezy med samma Plex-konto visas automatiskt",
+      "discoveryDescription": "Enheter i ditt nätverk som kör Jelzy med samma Plex-konto visas automatiskt",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Ansluter...",
       "searchingForDevices": "Söker efter enheter...",
       "noDevicesFound": "Inga enheter hittades i ditt nätverk",
-      "noDevicesHint": "Se till att Plezy är öppet på din dator och att båda enheterna är på samma WiFi-nätverk",
+      "noDevicesHint": "Se till att Jelzy är öppet på din dator och att båda enheterna är på samma WiFi-nätverk",
       "availableDevices": "Tillgängliga enheter",
       "manualConnection": "Manuell anslutning",
       "cryptoInitFailed": "Kunde inte initiera säker anslutning. Se till att du är inloggad på ett Plex-konto.",
       "validationHostRequired": "Ange värdadress",
       "validationHostFormat": "Format måste vara IP:port (t.ex. 192.168.1.100:48632)",
       "connectionTimedOut": "Anslutningen tog för lång tid. Se till att båda enheterna är på samma nätverk.",
-      "sessionNotFound": "Kunde inte hitta enheten. Se till att Plezy körs på värden.",
+      "sessionNotFound": "Kunde inte hitta enheten. Se till att Jelzy körs på värden.",
       "authFailed": "Autentisering misslyckades. Se till att båda enheterna använder samma Plex-konto.",
       "failedToConnect": "Kunde inte ansluta: ${error}"
     },

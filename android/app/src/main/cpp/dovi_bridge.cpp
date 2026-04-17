@@ -14,7 +14,7 @@
 static const char* BRIDGE_VERSION = "1.0.0";
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_edde746_plezy_exoplayer_DoviBridge_nativeConvertDv7RpuToDv81(
+Java_com_jelzy_app_exoplayer_DoviBridge_nativeConvertDv7RpuToDv81(
     JNIEnv *env, jclass, jbyteArray payload, jint mode) {
 #if !DOVI_REAL_LINKED
     return nullptr;
@@ -110,7 +110,7 @@ Java_com_edde746_plezy_exoplayer_DoviBridge_nativeConvertDv7RpuToDv81(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_edde746_plezy_exoplayer_DoviBridge_nativeIsConversionPathReady(
+Java_com_jelzy_app_exoplayer_DoviBridge_nativeIsConversionPathReady(
     JNIEnv *, jclass) {
 #if DOVI_REAL_LINKED
     return JNI_TRUE;
@@ -120,7 +120,7 @@ Java_com_edde746_plezy_exoplayer_DoviBridge_nativeIsConversionPathReady(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_edde746_plezy_exoplayer_DoviBridge_nativeGetBridgeVersion(
+Java_com_jelzy_app_exoplayer_DoviBridge_nativeGetBridgeVersion(
     JNIEnv *env, jclass) {
     return env->NewStringUTF(BRIDGE_VERSION);
 }

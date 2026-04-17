@@ -5,8 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../mpv/mpv.dart';
 import '../../models/livetv_capture_buffer.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_info.dart';
+import '../../models/media_metadata.dart';
 import '../../utils/desktop_window_padding.dart';
 import '../../i18n/strings.g.dart';
 import 'widgets/circular_control_button.dart';
@@ -29,8 +29,8 @@ import 'widgets/video_timeline_bar.dart';
 /// fade out while the strip slides up — only the top bar stays fixed.
 class MobileVideoControls extends StatefulWidget {
   final Player player;
-  final PlexMetadata metadata;
-  final List<PlexChapter> chapters;
+  final MediaMetadata metadata;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final int seekTimeSmall;
   final Widget trackChapterControls;
@@ -71,7 +71,7 @@ class MobileVideoControls extends StatefulWidget {
   final bool showQueueTab;
 
   /// Callback when a queue item is selected from the content strip
-  final Function(PlexMetadata)? onQueueItemSelected;
+  final Function(MediaMetadata)? onQueueItemSelected;
 
   /// Notifier for controls visibility (used to reset strip on hide)
   final ValueNotifier<bool>? controlsVisible;

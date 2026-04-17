@@ -148,7 +148,7 @@ mixin FocusableDetailScreenMixin<T extends StatefulWidget> on State<T>, GridFocu
                     : getGridItemFocusNode(index, prefix: 'detail_grid_item');
 
                 return FocusableMediaCard(
-                  key: Key(item.ratingKey),
+                  key: Key(item.itemId),
                   item: item,
                   focusNode: focusNode,
                   disableScale: true,
@@ -184,7 +184,7 @@ mixin FocusableDetailScreenMixin<T extends StatefulWidget> on State<T>, GridFocu
                       : getGridItemFocusNode(index, prefix: 'detail_grid_item');
 
                   return FocusableMediaCard(
-                    key: Key(item.ratingKey),
+                    key: Key(item.itemId),
                     item: item,
                     focusNode: focusNode,
                     onRefresh: onRefresh,

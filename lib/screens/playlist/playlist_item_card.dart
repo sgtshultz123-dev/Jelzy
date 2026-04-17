@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../services/plex_client.dart';
-import '../../models/plex_metadata.dart';
+import '../../services/jellyfin_client.dart';
+import '../../models/media_metadata.dart';
 import '../../utils/formatters.dart';
 import '../../utils/provider_extensions.dart';
 import '../../i18n/strings.g.dart';
 import '../../widgets/media_context_menu.dart';
 import '../../widgets/media_progress_bar.dart';
-import '../../widgets/plex_optimized_image.dart';
+import '../../widgets/optimized_image.dart';
 
 /// Custom list item widget for playlist items
 /// Shows drag handle, poster, title/metadata, duration, and remove button
 class PlaylistItemCard extends StatefulWidget {
-  final PlexMetadata item;
+  final MediaMetadata item;
   final int index;
   final VoidCallback onRemove;
   final VoidCallback? onTap;
@@ -159,11 +159,11 @@ class _PlaylistItemCardState extends State<PlaylistItemCard> {
                       ),
 
                       // Progress indicator if partially watched
-                      if (widget.item.viewOffset != null && widget.item.duration != null)
+                      if (widget.item.resumePositionMs != null && widget.item.duration != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: MediaProgressBar(
-                            viewOffset: widget.item.viewOffset!,
+                            viewOffset: widget.item.resumePositionMs!,
                             duration: widget.item.duration!,
                             minHeight: 3,
                           ),
@@ -206,8 +206,8 @@ class _PlaylistItemCardState extends State<PlaylistItemCard> {
     );
   }
 
-  /// Get the correct PlexClient for this item's server
-  PlexClient _getClientForItem(BuildContext context) {
+  /// Get the correct JellyfinClient for this item's server
+  JellyfinClient _getClientForItem(BuildContext context) {
     return context.getClientForServer(widget.item.serverId!);
   }
 
@@ -215,7 +215,7 @@ class _PlaylistItemCardState extends State<PlaylistItemCard> {
     final posterUrl = widget.item.posterThumb();
     return ClipRRect(
       borderRadius: const BorderRadius.all(Radius.circular(6)),
-      child: PlexOptimizedImage.poster(
+      child: OptimizedImage.poster(
         client: _getClientForItem(context),
         imagePath: posterUrl,
         width: 60,
@@ -239,7 +239,7 @@ class _PlaylistItemCardState extends State<PlaylistItemCard> {
   String _buildSubtitle() {
     final itemType = widget.item.mediaType;
 
-    if (itemType == PlexMediaType.episode) {
+    if (itemType == MediaType.episode) {
       // For episodes, show "S#E# - Episode Title"
       final season = widget.item.parentIndex;
       final episode = widget.item.index;
@@ -247,12 +247,9 @@ class _PlaylistItemCardState extends State<PlaylistItemCard> {
         return 'S${season}E$episode${widget.item.displaySubtitle != null ? ' - ${widget.item.displaySubtitle}' : ''}';
       }
       return widget.item.displaySubtitle ?? t.discover.tvShow;
-    } else if (itemType == PlexMediaType.movie) {
-      // For movies, show year and edition
+    } else if (itemType == MediaType.movie) {
+      // For movies, show year
       final year = widget.item.year?.toString();
-      if (year != null && widget.item.editionTitle != null) {
-        return '$year · ${widget.item.editionTitle}';
-      }
       return year ?? t.discover.movie;
     }
 

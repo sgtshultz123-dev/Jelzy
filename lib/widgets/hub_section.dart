@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../focus/dpad_navigator.dart';
@@ -14,7 +14,7 @@ import '../services/settings_service.dart' show EpisodePosterMode;
 import '../utils/grid_size_calculator.dart';
 import '../theme/mono_tokens.dart';
 import '../focus/locked_hub_controller.dart';
-import '../models/plex_hub.dart';
+import '../models/hub.dart';
 import '../screens/hub_detail_screen.dart';
 import '../utils/media_navigation_helper.dart';
 import 'focus_builders.dart';
@@ -32,7 +32,7 @@ import '../i18n/strings.g.dart';
 /// - Children render focus visuals based on the passed index
 /// - Focus never "escapes" to random elements
 class HubSection extends StatefulWidget {
-  final PlexHub hub;
+  final Hub hub;
   final IconData icon;
   final void Function(String)? onRefresh;
   final VoidCallback? onRemoveFromContinueWatching;
@@ -58,6 +58,9 @@ class HubSection extends StatefulWidget {
   /// Use when the parent already provides edge spacing (e.g. inside Padding(16)).
   final bool inset;
 
+  /// When true, reduces top padding for the first hub in a list (Finzy-port compat, ignored).
+  final bool compactTopPadding;
+
   const HubSection({
     super.key,
     required this.hub,
@@ -71,6 +74,7 @@ class HubSection extends StatefulWidget {
     this.onNavigateUp,
     this.onNavigateToSidebar,
     this.inset = false,
+    this.compactTopPadding = false,
   });
 
   @override

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../models/plex_media_version.dart';
-import '../models/plex_metadata.dart';
-import '../services/plex_client.dart';
+import '../models/media_version.dart';
+import '../models/media_metadata.dart';
+import '../services/jellyfin_client.dart';
 import '../utils/app_logger.dart';
 import '../utils/dialogs.dart';
 import '../i18n/strings.g.dart';
@@ -11,7 +11,7 @@ import '../i18n/strings.g.dart';
 class DownloadVersionConfig {
   final int mediaIndex;
   final Set<String> acceptedSignatures;
-  final Future<int?> Function(PlexMetadata episode, List<PlexMediaVersion> versions)? onVersionMismatch;
+  final Future<int?> Function(MediaMetadata episode, List<MediaVersion> versions)? onVersionMismatch;
 
   DownloadVersionConfig({
     this.mediaIndex = 0,
@@ -23,7 +23,7 @@ class DownloadVersionConfig {
   factory DownloadVersionConfig.fromSignature(
     String signature, {
     int mediaIndex = 0,
-    Future<int?> Function(PlexMetadata, List<PlexMediaVersion>)? onVersionMismatch,
+    Future<int?> Function(MediaMetadata, List<MediaVersion>)? onVersionMismatch,
   }) {
     return DownloadVersionConfig(
       mediaIndex: mediaIndex,
@@ -37,14 +37,15 @@ class DownloadVersionConfig {
 /// Returns null if the user cancels, or a config with the selection.
 Future<DownloadVersionConfig?> resolveDownloadVersion(
   BuildContext context,
-  PlexMetadata metadata,
-  PlexClient client, {
-  List<PlexMediaVersion>? fallbackVersions,
+  MediaMetadata metadata,
+  JellyfinClient client, {
+  List<MediaVersion>? fallbackVersions,
 }) async {
   final mediaType = metadata.mediaType;
 
-  if (mediaType == PlexMediaType.movie || mediaType == PlexMediaType.episode) {
-    final versions = metadata.mediaVersions ?? fallbackVersions;
+  if (mediaType == MediaType.movie || mediaType == MediaType.episode) {
+    // TODO: mediaVersions not available in Jellyfin model
+    final versions = fallbackVersions;
     if (versions != null && versions.length > 1) {
       final selectedIndex = await showVersionPickerDialog(context, versions, t.downloads.selectVersion);
       if (selectedIndex == null || !context.mounted) return null;
@@ -53,7 +54,7 @@ Future<DownloadVersionConfig?> resolveDownloadVersion(
     return DownloadVersionConfig();
   }
 
-  if (mediaType == PlexMediaType.show || mediaType == PlexMediaType.season) {
+  if (mediaType == MediaType.show || mediaType == MediaType.season) {
     final versions = await fetchRepresentativeVersions(client, metadata);
     if (versions != null && versions.length > 1) {
       if (!context.mounted) return null;
@@ -80,7 +81,7 @@ Future<DownloadVersionConfig?> resolveDownloadVersion(
 
 /// Show a dialog for selecting a media version.
 /// Returns the selected index, or null if cancelled.
-Future<int?> showVersionPickerDialog(BuildContext context, List<PlexMediaVersion> versions, String title) {
+Future<int?> showVersionPickerDialog(BuildContext context, List<MediaVersion> versions, String title) {
   return showOptionPickerDialog<int>(
     context,
     title: title,
@@ -93,33 +94,33 @@ Future<int?> showVersionPickerDialog(BuildContext context, List<PlexMediaVersion
 }
 
 /// Fetch media versions from a representative episode (first episode of first season).
-Future<List<PlexMediaVersion>?> fetchRepresentativeVersions(PlexClient client, PlexMetadata metadata) async {
+Future<List<MediaVersion>?> fetchRepresentativeVersions(JellyfinClient client, MediaMetadata metadata) async {
   try {
     String? episodeRatingKey;
 
-    if (metadata.mediaType == PlexMediaType.season) {
-      final episodes = await client.getChildren(metadata.ratingKey);
-      final firstEpisode = episodes.cast<PlexMetadata?>().firstWhere((e) => e?.type == 'episode', orElse: () => null);
-      episodeRatingKey = firstEpisode?.ratingKey;
-    } else if (metadata.mediaType == PlexMediaType.show) {
-      final seasons = await client.getChildren(metadata.ratingKey);
+    if (metadata.mediaType == MediaType.season) {
+      final episodes = await client.getChildren(metadata.itemId);
+      final firstEpisode = episodes.cast<MediaMetadata?>().firstWhere((e) => e?.type == 'episode', orElse: () => null);
+      episodeRatingKey = firstEpisode?.itemId;
+    } else if (metadata.mediaType == MediaType.show) {
+      final seasons = await client.getChildren(metadata.itemId);
       // Skip Season 0 (Specials) as it may have different encoding
-      final firstSeason = seasons.cast<PlexMetadata?>().firstWhere(
+      final firstSeason = seasons.cast<MediaMetadata?>().firstWhere(
             (s) => s?.type == 'season' && (s?.index ?? 0) > 0,
-            orElse: () => seasons.cast<PlexMetadata?>().firstWhere((s) => s?.type == 'season', orElse: () => null),
+            orElse: () => seasons.cast<MediaMetadata?>().firstWhere((s) => s?.type == 'season', orElse: () => null),
           );
       if (firstSeason != null) {
-        final episodes = await client.getChildren(firstSeason.ratingKey);
+        final episodes = await client.getChildren(firstSeason.itemId);
         final firstEpisode =
-            episodes.cast<PlexMetadata?>().firstWhere((e) => e?.type == 'episode', orElse: () => null);
-        episodeRatingKey = firstEpisode?.ratingKey;
+            episodes.cast<MediaMetadata?>().firstWhere((e) => e?.type == 'episode', orElse: () => null);
+        episodeRatingKey = firstEpisode?.itemId;
       }
     }
 
     if (episodeRatingKey == null) return null;
 
     final fullMetadata = await client.getMetadataWithImages(episodeRatingKey);
-    return fullMetadata?.mediaVersions;
+    return null; // TODO: mediaVersions not available in Jellyfin model
   } catch (e) {
     appLogger.w('Failed to fetch representative versions', error: e);
     return null;

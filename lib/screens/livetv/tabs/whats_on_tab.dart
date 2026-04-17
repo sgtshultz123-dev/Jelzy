@@ -11,21 +11,21 @@ import '../../../focus/locked_hub_controller.dart';
 import '../../../i18n/strings.g.dart';
 import '../../../models/livetv_channel.dart';
 import '../../../models/livetv_hub_result.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_metadata.dart';
 import '../../../providers/multi_server_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../utils/grid_size_calculator.dart';
 import '../../../theme/mono_tokens.dart';
 import '../../../utils/app_logger.dart';
 import '../../../utils/live_tv_player_navigation.dart';
-import '../../../utils/plex_image_helper.dart';
+import '../../../utils/media_image_helper.dart';
 import '../../../utils/provider_extensions.dart';
 import '../../../widgets/app_icon.dart';
 import '../../../widgets/focus_builders.dart';
 import '../../../widgets/overlay_sheet.dart';
 import '../../../utils/scroll_utils.dart';
 import '../../../widgets/horizontal_scroll_with_arrows.dart';
-import '../../../widgets/plex_optimized_image.dart';
+import '../../../widgets/optimized_image.dart';
 import '../live_tv_show_schedule_screen.dart';
 import '../program_details_sheet.dart';
 
@@ -168,7 +168,7 @@ class WhatsOnTabState extends State<WhatsOnTab> {
     if (entry.program.isCurrentlyAiring && channel != null) {
       // Live → play directly
       _tuneChannel(channel);
-    } else if (entry.metadata.mediaType == PlexMediaType.show) {
+    } else if (entry.metadata.mediaType == MediaType.show) {
       // Show with upcoming episodes → show full schedule
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -194,12 +194,12 @@ class WhatsOnTabState extends State<WhatsOnTab> {
     final posterImage = metadata.grandparentThumb ?? metadata.thumb;
     String? posterUrl;
     if (posterImage != null && client != null) {
-      posterUrl = PlexImageHelper.getOptimizedImageUrl(
+      posterUrl = MediaImageHelper.getOptimizedImageUrl(
         client: client,
         thumbPath: posterImage,
         maxWidth: 80,
         maxHeight: 120,
-        devicePixelRatio: PlexImageHelper.effectiveDevicePixelRatio(context),
+        devicePixelRatio: MediaImageHelper.effectiveDevicePixelRatio(context),
         imageType: ImageType.poster,
       );
     }
@@ -593,7 +593,7 @@ class _LiveTvPosterCard extends StatelessWidget {
                 height: posterHeight,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(tokens(context).radiusSm),
-                  child: PlexOptimizedImage.poster(
+                  child: OptimizedImage.poster(
                     client: context.getClientWithFallback(metadata.serverId),
                     imagePath: posterImage,
                     width: double.infinity,

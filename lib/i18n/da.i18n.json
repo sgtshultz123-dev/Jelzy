@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Log ind med Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Kræver Android 8.0 eller nyere",
       "iosVersion": "Kræver iOS 15.0 eller nyere",
-      "permissionDisabled": "Billede-i-billede-tilladelse er deaktiveret. Aktivér i Indstillinger > Apps > Plezy > Billede-i-billede",
+      "permissionDisabled": "Billede-i-billede-tilladelse er deaktiveret. Aktivér i Indstillinger > Apps > Jelzy > Billede-i-billede",
       "notSupported": "Enheden understøtter ikke billede-i-billede",
       "voSwitchFailed": "Kunne ikke skifte videooutput til billede-i-billede",
       "failed": "Billede-i-billede kunne ikke starte",
@@ -493,7 +493,14 @@
     "rating": "Bedømmelse",
     "movie": "Film",
     "tvShow": "TV-serie",
-    "minutesLeft": "${minutes} min tilbage"
+    "minutesLeft": "${minutes} min tilbage",
+    "seasons": "Sæsoner",
+    "moreLikeThis": "Mere som dette",
+    "moviesAndShows": "Film og serier",
+    "noItemsFound": "Ingen elementer fundet",
+    "categories": "Kategorier",
+    "episodeCount(count)": "${count} afsnit",
+    "watchedProgress(watched, total)": "${watched} / ${total} set"
   },
   "errors": {
     "searchFailed": "Søgning mislykkedes: ${error}",
@@ -545,11 +552,18 @@
     "noCollections": "Ingen samlinger i dette bibliotek",
     "noFoldersFound": "Ingen mapper fundet",
     "folders": "mapper",
+    "noFavorites": "Ingen favoritter endnu",
+    "noGenres": "Ingen genrer fundet",
     "tabs": {
       "recommended": "Anbefalet",
       "browse": "Gennemse",
       "collections": "Samlinger",
-      "playlists": "Playlister"
+      "playlists": "Playlister",
+      "favorites": "Favoritter",
+      "genres": "Genrer",
+      "movies": "Film",
+      "shows": "Serier",
+      "suggestions": "Forslag"
     },
     "groupings": {
       "title": "Gruppering",
@@ -798,19 +812,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Opret forbindelse til computer",
-      "discoveryDescription": "Enheder på dit netværk, der kører Plezy med den samme Plex-konto, vises automatisk",
+      "discoveryDescription": "Enheder på dit netværk, der kører Jelzy med den samme Plex-konto, vises automatisk",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Opretter forbindelse...",
       "searchingForDevices": "Søger efter enheder...",
       "noDevicesFound": "Ingen enheder fundet på dit netværk",
-      "noDevicesHint": "Sørg for, at Plezy er åben på din computer, og at begge enheder er på det samme WiFi-netværk",
+      "noDevicesHint": "Sørg for, at Jelzy er åben på din computer, og at begge enheder er på det samme WiFi-netværk",
       "availableDevices": "Tilgængelige enheder",
       "manualConnection": "Manuel forbindelse",
       "cryptoInitFailed": "Kunne ikke initialisere sikker forbindelse. Sørg for, at du er logget ind på en Plex-konto.",
       "validationHostRequired": "Angiv venligst værtsadresse",
       "validationHostFormat": "Format skal være IP:port (f.eks. 192.168.1.100:48632)",
       "connectionTimedOut": "Forbindelsen udløb. Sørg for, at begge enheder er på det samme netværk.",
-      "sessionNotFound": "Kunne ikke finde enheden. Sørg for, at Plezy kører på værten.",
+      "sessionNotFound": "Kunne ikke finde enheden. Sørg for, at Jelzy kører på værten.",
       "authFailed": "Godkendelse mislykkedes. Sørg for, at begge enheder bruger den samme Plex-konto.",
       "failedToConnect": "Kunne ikke oprette forbindelse: ${error}"
     },

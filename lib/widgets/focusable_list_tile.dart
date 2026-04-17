@@ -217,6 +217,12 @@ class FocusableRadioListTile<T> extends StatefulWidget {
   /// Visual density for the list tile.
   final VisualDensity? visualDensity;
 
+  /// The currently selected value in the group (used to determine if this tile is selected).
+  final T? groupValue;
+
+  /// Called when the user selects this radio tile.
+  final ValueChanged<T?>? onChanged;
+
   const FocusableRadioListTile({
     super.key,
     this.title,
@@ -228,6 +234,8 @@ class FocusableRadioListTile<T> extends StatefulWidget {
     this.autofocus = false,
     this.enabled,
     this.visualDensity = const VisualDensity(vertical: -3),
+    this.groupValue,
+    this.onChanged,
   });
 
   @override

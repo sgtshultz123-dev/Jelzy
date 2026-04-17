@@ -131,6 +131,11 @@ class FocusBuilders {
     VoidCallback? onTap,
     VoidCallback? onLongPress,
     double borderRadius = FocusTheme.defaultBorderRadius,
+    // Extra visual-hint params from Finzy port — accepted but ignored
+    bool useListTileStyle = false,
+    bool circular = false,
+    bool alwaysShowFocus = false,
+    bool scaleOnFocus = true,
     required Widget child,
   }) {
     return buildFocusableCard(
@@ -140,7 +145,7 @@ class FocusBuilders {
       onKeyEvent: null,
       onTap: onTap,
       onLongPress: onLongPress,
-      borderRadius: borderRadius,
+      borderRadius: circular ? 999 : borderRadius,
       child: child,
     );
   }

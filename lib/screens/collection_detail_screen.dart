@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../focus/focusable_action_bar.dart';
-import '../models/plex_metadata.dart';
+import '../models/media_metadata.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../i18n/strings.g.dart';
 import '../utils/dialogs.dart';
@@ -14,7 +14,7 @@ import '../focus/key_event_utils.dart';
 
 /// Screen to display the contents of a collection
 class CollectionDetailScreen extends StatefulWidget {
-  final PlexMetadata collection;
+  final MediaMetadata collection;
 
   const CollectionDetailScreen({super.key, required this.collection});
 
@@ -28,7 +28,7 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
         GridFocusNodeMixin<CollectionDetailScreen>,
         FocusableDetailScreenMixin<CollectionDetailScreen> {
   @override
-  PlexMetadata get mediaItem => widget.collection;
+  MediaMetadata get mediaItem => widget.collection;
 
   @override
   String get title => widget.collection.title!;
@@ -46,7 +46,7 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
   }
 
   @override
-  Future<List<PlexMetadata>> fetchItems() async {
+  Future<List<MediaMetadata>> fetchItems() async {
     return await client.getCollectionItems(widget.collection.ratingKey);
   }
 
@@ -78,18 +78,6 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
   }
 
   Future<void> _deleteCollection() async {
-    int? sectionId = widget.collection.librarySectionID;
-    if (sectionId == null && items.isNotEmpty) {
-      sectionId = items.first.librarySectionID;
-    }
-
-    if (sectionId == null) {
-      if (mounted) {
-        showErrorSnackBar(context, t.collections.unknownLibrarySection);
-      }
-      return;
-    }
-
     final confirmed = await showDeleteConfirmation(
       context,
       title: t.collections.deleteCollection,
@@ -100,7 +88,7 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
     if (!mounted) return;
 
     try {
-      final success = await client.deleteCollection(sectionId.toString(), widget.collection.ratingKey);
+      final success = await client.deleteCollection(widget.collection.ratingKey);
 
       if (!mounted) return;
 

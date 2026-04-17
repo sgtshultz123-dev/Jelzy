@@ -2,12 +2,12 @@ import 'dart:async';
 
 import '../mpv/mpv.dart';
 
-import '../models/plex_media_info.dart';
-import '../models/plex_metadata.dart';
-import '../services/plex_client.dart';
+import '../models/media_info.dart' hide TrackLabelBuilder;
+import '../models/media_metadata.dart';
+import '../services/jellyfin_client.dart';
 import '../services/settings_service.dart';
 import '../services/track_selection_service.dart';
-import '../models/plex_user_profile.dart';
+import '../models/user_profile_preferences.dart';
 import '../utils/app_logger.dart';
 import '../utils/content_utils.dart';
 import '../utils/language_codes.dart';
@@ -26,10 +26,10 @@ class TrackManager {
   final bool Function() isActive;
 
   /// Resolves the Plex API client for the current server.
-  final PlexClient Function() getClient;
+  final JellyfinClient Function() getClient;
 
   /// Resolves the user's profile settings (may be null during loading).
-  final PlexUserProfile? Function() getProfileSettings;
+  final UserProfilePreferences? Function() getProfileSettings;
 
   /// Waits until profile settings are available (offline path).
   final Future<void> Function() waitForProfileSettings;
@@ -39,8 +39,8 @@ class TrackManager {
 
   // ── Mutable configuration (updated on episode navigation) ──────────
 
-  PlexMetadata metadata;
-  PlexMediaInfo? mediaInfo;
+  MediaMetadata metadata;
+  MediaInfo? mediaInfo;
   AudioTrack? preferredAudioTrack;
   SubtitleTrack? preferredSubtitleTrack;
   SubtitleTrack? preferredSecondarySubtitleTrack;
@@ -339,12 +339,12 @@ class TrackManager {
   /// Rating key used for series/movie level language preferences.
   String get _preferenceRatingKey {
     return metadata.isEpisode
-        ? (metadata.grandparentRatingKey ?? metadata.ratingKey)
-        : metadata.ratingKey;
+        ? (metadata.seriesId ?? metadata.itemId)
+        : metadata.itemId;
   }
 
   /// Common guard checks for track change handlers.
-  Future<int?> _guardTrackChange(PlexMediaInfo? info) async {
+  Future<int?> _guardTrackChange(MediaInfo? info) async {
     final settings = await SettingsService.getInstance();
     if (!settings.getRememberTrackSelections()) return null;
 
@@ -360,40 +360,23 @@ class TrackManager {
     return partId;
   }
 
-  /// Save language preference and stream selection to the server.
+  /// Persist track preferences. In Jellyfin there is no per-item preference API
+  /// comparable to Plex's setMetadataPreferences/selectStreams: the server instead
+  /// receives the chosen audio/subtitle stream indices via ReportPlaybackProgress
+  /// and remembers them as DefaultAudio/SubtitleStreamIndex on the item. Keeping
+  /// this as a log-only hook preserves the call sites and lets us add a true
+  /// per-series preference layer later without touching the callers.
   Future<void> _saveTrackPreferences({
     required int partId,
     required String trackType,
     String? languageCode,
     int? streamID,
   }) async {
-    try {
-      if (!isActive()) return;
-      final client = getClient();
-      final ratingKey = _preferenceRatingKey;
-
-      final futures = <Future>[];
-
-      if (languageCode != null && (trackType == 'subtitle' || languageCode.isNotEmpty)) {
-        futures.add(
-          trackType == 'audio'
-              ? client.setMetadataPreferences(ratingKey, audioLanguage: languageCode)
-              : client.setMetadataPreferences(ratingKey, subtitleLanguage: languageCode),
-        );
-      }
-      if (streamID != null) {
-        futures.add(
-          trackType == 'audio'
-              ? client.selectStreams(partId, audioStreamID: streamID, allParts: true)
-              : client.selectStreams(partId, subtitleStreamID: streamID, allParts: true),
-        );
-      }
-
-      await Future.wait(futures);
-      appLogger.d('Successfully saved $trackType preferences (language + stream)');
-    } catch (e) {
-      appLogger.e('Failed to save $trackType preferences', error: e);
-    }
+    if (!isActive()) return;
+    appLogger.d(
+      'Track preference changed (not persisted, Jellyfin handles via PlaybackProgress): '
+      'type=$trackType lang=$languageCode streamID=$streamID ratingKey=$_preferenceRatingKey',
+    );
   }
 
   /// Match an mpv track against Plex tracks by language and title.

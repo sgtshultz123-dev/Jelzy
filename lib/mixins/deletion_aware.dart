@@ -11,7 +11,7 @@ import 'event_aware.dart';
 /// Example usage:
 /// ```dart
 /// class _MyScreenState extends State<MyScreen> with DeletionAware {
-///   List<PlexMetadata> _items = [];
+///   List<MediaMetadata> _items = [];
 ///
 ///   @override
 ///   Set<String>? get deletionRatingKeys =>
@@ -39,7 +39,7 @@ mixin DeletionAware<T extends StatefulWidget> on State<T> {
   /// Return null to fall back to [deletionRatingKeys] matching.
   Set<String>? get deletionGlobalKeys => null;
 
-  /// Override to specify which ratingKeys this screen cares about.
+  /// Override to specify which ratingKeys (or itemIds) this screen cares about.
   ///
   /// Return null to receive ALL events (not recommended for performance).
   /// Return an empty set to receive no events.
@@ -47,7 +47,13 @@ mixin DeletionAware<T extends StatefulWidget> on State<T> {
   /// The set should include:
   /// - Direct items displayed (e.g., episode ratingKeys in a season view)
   /// - Parent items that affect display (e.g., show ratingKey for seasons)
-  Set<String>? get deletionRatingKeys;
+  ///
+  /// If you implement [deletionItemIds] instead, it will be used as a fallback.
+  Set<String>? get deletionRatingKeys => deletionItemIds;
+
+  /// Alias for [deletionRatingKeys] for compatibility with Jellyfin item ID naming.
+  /// Override either this or [deletionRatingKeys].
+  Set<String>? get deletionItemIds => null;
 
   /// Called when a relevant deletion event occurs.
   ///

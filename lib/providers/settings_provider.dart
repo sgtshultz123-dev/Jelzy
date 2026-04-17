@@ -172,4 +172,21 @@ class SettingsProvider extends ChangeNotifier {
         return t.settings.episodeThumbnail;
     }
   }
+
+  // ─── Finzy-compatibility stubs ─────────────────────────────────────────────
+  /// Whether animations are disabled (always false in jelzy).
+  bool get disableAnimations => false;
+
+  /// Grid preload cache extent in pixels (fixed reasonable default).
+  double get gridPreloadCacheExtent => 250.0;
+
+  /// Image quality profile (always medium in jelzy).
+  PerformanceProfile get imageQuality => PerformanceProfile.medium;
+
+  /// Whether the Downloads section is visible in the UI.
+  bool get showDownloads => true;
+
+  /// Whether to show Jellyfin recommendations in library.
+  bool get showJellyfinRecommendations => true;
+  // ──────────────────────────────────────────────────────────────────────────
 }

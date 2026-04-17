@@ -1,7 +1,7 @@
 import 'base_notifier.dart';
 
 /// Types of library refresh events
-enum LibraryRefreshType { collections, playlists }
+enum LibraryRefreshType { collections, playlists, recommendations }
 
 /// Notifier for triggering refreshes of library tabs.
 ///
@@ -19,6 +19,9 @@ class LibraryRefreshNotifier extends BaseNotifier<LibraryRefreshType> {
 
   /// Stream for playlists tab (backward compatible)
   Stream<void> get playlistsStream => stream.where((t) => t == LibraryRefreshType.playlists).cast<void>();
+
+  /// Stream for recommendations tab
+  Stream<void> get recommendationsStream => stream.where((t) => t == LibraryRefreshType.recommendations).cast<void>();
 
   /// Notify that collections have changed
   void notifyCollectionsChanged() {

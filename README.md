@@ -1,100 +1,71 @@
 <h1>
-  <img src="assets/plezy.png" alt="Plezy Logo" height="24" style="vertical-align: middle;" />
-  Plezy
+  <img src="assets/jelzy.png" alt="Jelzy Logo" height="24" style="vertical-align: middle;" />
+  Jelzy
 </h1>
 
-A modern Plex client for desktop and mobile. Built with Flutter for native performance and a clean interface.
+A modern Jellyfin client for desktop, mobile, and Android TV. Built with Flutter for native performance and a clean interface, with full HDR / Dolby Vision support.
 
-<p align="center">
-  <img src="assets/screenshots/macos-home.png" alt="Plezy macOS Home Screen" width="800" />
-</p>
+> **Fork notice**: Jelzy is a fork of [edde746/plezy](https://github.com/edde746/plezy) — an excellent Plex client — adapted to talk to [Jellyfin](https://jellyfin.org) servers instead of Plex. All credit for the UI, player pipeline, and architecture belongs to the Plezy authors. Changes upstream will be merged in where applicable.
 
-*More screenshots in the [screenshots folder](assets/screenshots/#readme)*
+## Why a new fork?
 
-## Download
-
-<a href='https://apps.apple.com/us/app/id6754315964'><img height='60' alt='Download on the App Store' src='./assets/app-store-badge.png'/></a>
-<a href='https://play.google.com/store/apps/details?id=com.edde746.plezy'><img height='60' alt='Get it on Google Play' src='./assets/play-store-badge.png'/></a>
-<a href='https://www.amazon.com/gp/product/B0GK65CVS1'><img height='60' alt='Available at the Amazon App Store' src='./assets/amazon-badge.png'/></a>
-
-- [Windows (x64, arm64)](https://github.com/edde746/plezy/releases/latest/download/plezy-windows-installer.exe)
-- [macOS (x64, arm64)](https://github.com/edde746/plezy/releases/latest/download/plezy-macos.dmg)
-- [Linux (x64, arm64)](https://github.com/edde746/plezy/releases/latest) - .deb, .rpm, .pkg.tar.zst, and portable tar.gz available
-- [Nix](https://search.nixos.org/packages?channel=unstable&query=plezy) - Community package by [@mio-19](https://github.com/mio-19) and [@MiniHarinn](https://github.com/MiniHarinn)
-- **Homebrew** (macOS):
-  ```bash
-  brew tap edde746/plezy https://github.com/edde746/plezy
-  brew install --cask plezy
-  ```
-- [AUR](https://aur.archlinux.org/packages/plezy-bin) (Arch Linux) - Community maintained by [@jianglai](https://github.com/jianglai):
-  ```bash
-  yay -S plezy-bin
-  ```
-- **WinGet** (Windows):
-  ```bash
-  winget install edde746.plezy
-  ```
+There is already [finzy](https://github.com/dkmcgowan/finzy), which is the canonical Jellyfin fork of Plezy. Jelzy exists because finzy does not (yet) support HDR / Dolby Vision on Android TV, while Plezy does — so Jelzy started as a minimal-delta fork that keeps Plezy's HDR pipeline and only swaps the Plex API layer for Jellyfin's. If you don't care about HDR on Android TV, use finzy.
 
 ## Features
 
-### 🔐 Authentication
-- Sign in with Plex
-- Automatic server discovery and smart connection selection
-- Persistent sessions with auto-login
+### Authentication
+- Sign in with Jellyfin username / password against any Jellyfin server
+- Multi-server support
 
-### 📚 Media Browsing
-- Browse libraries with rich metadata
-- Advanced search across all media
-- Collections and playlists
+### Media Browsing
+- Libraries with rich metadata, collections, playlists
+- Advanced search, Live TV + DVR, Watch Next integration on Android TV
 
-### 🎬 Playback
-- Wide codec support (HEVC, AV1, VP9, and more)
-- HDR and Dolby Vision (not Linux)
-- Full ASS/SSA subtitle support
-- Audio and subtitle preferences synced with Plex profile
-- Progress sync and resume
+### Playback
+- mpv on desktop / iOS, ExoPlayer on Android (and Android TV)
+- HDR10 + Dolby Vision passthrough where the device supports it
+- Wide codec support (HEVC, AV1, VP9, …) with transcode fallback
+- Full ASS/SSA subtitle rendering via libass
+- Progress sync via Jellyfin's `PlaybackProgress` reports
 - Auto-play next episode
 
-### 📺 Live TV & DVR
-- EPG guide grid
-- Channel tuning
-- DVR recording rules and scheduled recordings
-- Multi-server DVR support
+### Downloads
+- Offline playback with background download queue
 
-### 📥 Downloads
-- Download media for offline viewing
-- Background downloads with queue management
-
-### 👥 Watch Together
-- Synchronized playback with friends
-- Real-time play/pause and seek sync
-
-## Building from Source
+## Building from source
 
 ### Prerequisites
-- Flutter SDK 3.8.1+
-- A Plex account with server access
+- Flutter SDK ≥ 3.8.1
+- A reachable Jellyfin server
 
 ### Setup
 
 ```bash
-git clone https://github.com/edde746/plezy.git
-cd plezy
+git clone https://github.com/fampla/jelzy.git
+cd jelzy
 flutter pub get
-dart run build_runner build
+dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-### Code Generation
-
-After modifying model classes:
+### Android TV
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+# Build debug APK
+flutter build apk --debug
+# Install on a running Android TV emulator / device
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+adb shell am start -n com.jelzy.app/.MainActivity
 ```
 
 ## Acknowledgments
 
-- Built with [Flutter](https://flutter.dev)
-- Designed for [Plex Media Server](https://www.plex.tv)
-- Playback powered by [mpv](https://mpv.io) via [MPVKit](https://github.com/mpvkit/MPVKit) and [libmpv-android](https://github.com/jarnedemeulemeester/libmpv-android)
+- **[Plezy](https://github.com/edde746/plezy)** by [@edde746](https://github.com/edde746) — the upstream client this fork is based on.
+- **[finzy](https://github.com/dkmcgowan/finzy)** by [@dkmcgowan](https://github.com/dkmcgowan) — prior Jellyfin port of Plezy; inspiration and several dependency forks (`os_media_controls`, `wakelock_plus`).
+- Built with [Flutter](https://flutter.dev).
+- Playback powered by [mpv](https://mpv.io) via [MPVKit](https://github.com/mpvkit/MPVKit) and [libmpv-android](https://github.com/jarnedemeulemeester/libmpv-android), plus [AndroidX Media3 / ExoPlayer](https://developer.android.com/media/media3).
+- Designed for [Jellyfin](https://jellyfin.org).
+
+## License
+
+Same as upstream Plezy. See [LICENSE](LICENSE).

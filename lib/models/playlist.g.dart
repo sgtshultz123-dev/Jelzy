@@ -1,0 +1,47 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'playlist.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+Playlist _$PlaylistFromJson(Map<String, dynamic> json) => Playlist(
+  itemId: json['itemId'] as String,
+  key: json['key'] as String,
+  type: json['type'] as String,
+  title: json['title'] as String,
+  summary: json['summary'] as String?,
+  smart: json['smart'] as bool,
+  playlistType: json['playlistType'] as String,
+  duration: (json['duration'] as num?)?.toInt(),
+  leafCount: (json['leafCount'] as num?)?.toInt(),
+  composite: json['composite'] as String?,
+  addedAt: (json['addedAt'] as num?)?.toInt(),
+  updatedAt: (json['updatedAt'] as num?)?.toInt(),
+  lastPlayedAt: (json['lastPlayedAt'] as num?)?.toInt(),
+  playCount: (json['playCount'] as num?)?.toInt(),
+  content: json['content'] as String?,
+  guid: json['guid'] as String?,
+  thumb: json['thumb'] as String?,
+);
+
+Map<String, dynamic> _$PlaylistToJson(Playlist instance) => <String, dynamic>{
+  'itemId': instance.itemId,
+  'key': instance.key,
+  'type': instance.type,
+  'title': instance.title,
+  'summary': instance.summary,
+  'smart': instance.smart,
+  'playlistType': instance.playlistType,
+  'duration': instance.duration,
+  'leafCount': instance.leafCount,
+  'composite': instance.composite,
+  'addedAt': instance.addedAt,
+  'updatedAt': instance.updatedAt,
+  'lastPlayedAt': instance.lastPlayedAt,
+  'playCount': instance.playCount,
+  'content': instance.content,
+  'guid': instance.guid,
+  'thumb': instance.thumb,
+};

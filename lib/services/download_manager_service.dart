@@ -3,36 +3,36 @@ import 'dart:io';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:path/path.dart' as path;
-import 'package:plezy/utils/content_utils.dart';
-import 'package:plezy/utils/plex_http_client.dart';
+import 'package:jelzy/utils/content_utils.dart';
+import 'package:jelzy/utils/plex_http_client.dart';
 import '../database/app_database.dart';
 import '../database/download_operations.dart';
 import 'settings_service.dart';
 import 'saf_storage_service.dart';
 import '../models/download_models.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_media_info.dart';
-import '../services/plex_client.dart';
+import '../models/media_metadata.dart';
+import '../models/media_info.dart';
+import '../services/jellyfin_client.dart';
 import '../services/download_storage_service.dart';
-import '../services/plex_api_cache.dart';
+import '../services/api_cache.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
 import '../utils/codec_utils.dart';
 import '../utils/global_key_utils.dart';
-import '../utils/plex_cache_parser.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import '../utils/cache_parser.dart';
+// sentry_flutter removed
 
 /// Context for a download that's been enqueued with background_downloader.
 /// Carries metadata needed between enqueue and completion callback.
 class _DownloadContext {
-  final PlexMetadata metadata;
+  final MediaMetadata metadata;
   final DownloadQueueItem queueItem;
   final String filePath; // Absolute path (normal) or SAF dir URI (SAF mode)
   final String extension;
-  final PlexClient client;
+  final JellyfinClient client;
   final int? showYear;
   final bool isSafMode;
-  final PlexMediaInfo? mediaInfo;
+  final MediaInfo? mediaInfo;
 
   _DownloadContext({
     required this.metadata,
@@ -49,7 +49,7 @@ class _DownloadContext {
 class DownloadManagerService {
   final AppDatabase _database;
   final DownloadStorageService _storageService;
-  final PlexApiCache _apiCache = PlexApiCache.instance;
+  final ApiCache _apiCache = ApiCache.instance;
   final PlexHttpClient _http;
 
   // Stream controller for download progress updates
@@ -66,10 +66,10 @@ class DownloadManagerService {
   // Items recovered with video complete but supplementary downloads missing
   final Set<String> _pendingSupplementaryDownloads = {};
 
-  // Resolve the correct PlexClient for a given serverId (set via setClientResolver).
+  // Resolve the correct JellyfinClient for a given serverId (set via setClientResolver).
   // Falls back to _fallbackClient when the resolver is unavailable or returns null.
-  PlexClient? Function(String serverId)? _clientResolver;
-  PlexClient? _fallbackClient;
+  JellyfinClient? Function(String serverId)? _clientResolver;
+  JellyfinClient? _fallbackClient;
 
   // background_downloader state
   bool _fileDownloaderInitialized = false;
@@ -131,14 +131,14 @@ class DownloadManagerService {
       _storageService = storageService,
       _http = http ?? httpClient;
 
-  /// Register a callback to resolve the correct PlexClient for a given serverId.
-  void setClientResolver(PlexClient? Function(String serverId) resolver) {
+  /// Register a callback to resolve the correct JellyfinClient for a given serverId.
+  void setClientResolver(JellyfinClient? Function(String serverId) resolver) {
     _clientResolver = resolver;
   }
 
   /// Look up the correct client for [serverId].
   /// Returns null if the server is offline — callers should skip/defer the work.
-  PlexClient? _getClient(String? serverId) {
+  JellyfinClient? _getClient(String? serverId) {
     if (serverId != null && _clientResolver != null) {
       return _clientResolver!(serverId);
     }
@@ -180,11 +180,11 @@ class DownloadManagerService {
   /// then scans drift for orphaned items.
   Future<void> recoverInterruptedDownloads() async {
     try {
-      Sentry.addBreadcrumb(Breadcrumb(message: 'Initializing FileDownloader', category: 'downloads'));
+      // Sentry.addBreadcrumb(Breadcrumb(message: 'Initializing FileDownloader', category: 'downloads'));
       await _initializeFileDownloader();
 
       // Let background_downloader re-enqueue tasks killed by the OS
-      Sentry.addBreadcrumb(Breadcrumb(message: 'Rescheduling killed tasks', category: 'downloads'));
+      // Sentry.addBreadcrumb(Breadcrumb(message: 'Rescheduling killed tasks', category: 'downloads'));
       final (rescheduled, _) = await FileDownloader().rescheduleKilledTasks();
       if (rescheduled.isNotEmpty) {
         appLogger.i('Rescheduled ${rescheduled.length} killed download task(s)');
@@ -230,7 +230,7 @@ class DownloadManagerService {
       }
 
       // Scan drift for orphaned items stuck in 'downloading'
-      Sentry.addBreadcrumb(Breadcrumb(message: 'Scanning for orphaned downloads', category: 'downloads'));
+      // Sentry.addBreadcrumb(Breadcrumb(message: 'Scanning for orphaned downloads', category: 'downloads'));
       final allDownloads = await _database.select(_database.downloadedMedia).get();
       for (final item in allDownloads) {
         if (item.status == DownloadStatus.downloading.index) {
@@ -272,8 +272,8 @@ class DownloadManagerService {
   }
 
   /// Resume queued downloads that have no active processing.
-  /// Call after a PlexClient becomes available (e.g. after server connect on launch).
-  void resumeQueuedDownloads(PlexClient client) {
+  /// Call after a JellyfinClient becomes available (e.g. after server connect on launch).
+  void resumeQueuedDownloads(JellyfinClient client) {
     _fallbackClient = client;
 
     // Attempt deferred supplementary downloads for recovered items
@@ -289,7 +289,7 @@ class DownloadManagerService {
 
   /// Attempt supplementary downloads (artwork, subtitles) for items that were
   /// recovered with a completed video but missed post-processing.
-  Future<void> _processPendingSupplementaryDownloads(PlexClient client) async {
+  Future<void> _processPendingSupplementaryDownloads(JellyfinClient client) async {
     if (_pendingSupplementaryDownloads.isEmpty) return;
 
     final keys = Set<String>.from(_pendingSupplementaryDownloads);
@@ -314,18 +314,18 @@ class DownloadManagerService {
 
         // Look up show year for episodes
         int? showYear;
-        if (metadata.type == 'episode' && metadata.grandparentRatingKey != null) {
+        if (metadata.type == 'episode' && metadata.seriesId != null) {
           if (parsed != null) {
-            showYear = await _fetchShowYear(parsed.serverId, metadata.grandparentRatingKey);
+            showYear = await _fetchShowYear(parsed.serverId, metadata.seriesId);
           }
         }
 
         await _downloadArtwork(globalKey, metadata, itemClient);
-        await _downloadChapterThumbnails(metadata.serverId!, metadata.ratingKey, itemClient);
+        await _downloadChapterThumbnails(metadata.serverId!, metadata.itemId, itemClient);
 
         // Attempt subtitles
         try {
-          final playbackData = await itemClient.getVideoPlaybackData(metadata.ratingKey);
+          final playbackData = await itemClient.getVideoPlaybackData(metadata.itemId);
           if (playbackData.mediaInfo != null) {
             await _downloadSubtitles(globalKey, metadata, playbackData.mediaInfo!, itemClient, showYear: showYear);
           }
@@ -353,8 +353,8 @@ class DownloadManagerService {
 
   /// Queue a download for a media item
   Future<void> queueDownload({
-    required PlexMetadata metadata,
-    required PlexClient client,
+    required MediaMetadata metadata,
+    required JellyfinClient client,
     int priority = 0,
     bool downloadSubtitles = true,
     bool downloadArtwork = true,
@@ -373,11 +373,11 @@ class DownloadManagerService {
     // Insert into database
     await _database.insertDownload(
       serverId: metadata.serverId!,
-      ratingKey: metadata.ratingKey,
+      ratingKey: metadata.itemId,
       globalKey: globalKey,
-      type: metadata.type ?? '',
-      parentRatingKey: metadata.parentRatingKey,
-      grandparentRatingKey: metadata.grandparentRatingKey,
+      type: metadata.type,
+      parentRatingKey: metadata.seasonId,
+      grandparentRatingKey: metadata.seriesId,
       status: DownloadStatus.queued.index,
       mediaIndex: mediaIndex,
     );
@@ -385,11 +385,11 @@ class DownloadManagerService {
     // Ensure metadata is in cache before pinning.
     // Normally getMetadataWithImages already cached the full API response (with chapters/markers),
     // but if the network failed during the provider's fetch, the cache entry may not exist.
-    final cached = await _apiCache.get(metadata.serverId!, '/library/metadata/${metadata.ratingKey}');
+    final cached = await _apiCache.get(metadata.serverId!, '/library/metadata/${metadata.itemId}');
     if (cached == null) {
-      await _cacheMetadataForOffline(metadata.serverId!, metadata.ratingKey, metadata);
+      await _cacheMetadataForOffline(metadata.serverId!, metadata.itemId, metadata);
     } else {
-      await _apiCache.pinForOffline(metadata.serverId!, metadata.ratingKey);
+      await _apiCache.pinForOffline(metadata.serverId!, metadata.itemId);
     }
 
     // Add to queue
@@ -408,7 +408,7 @@ class DownloadManagerService {
 
   /// Process the download queue — prepares and enqueues items with background_downloader.
   /// Non-blocking: returns after all queued items are enqueued (downloads run natively).
-  Future<void> _processQueue(PlexClient client) async {
+  Future<void> _processQueue(JellyfinClient client) async {
     if (_isProcessingQueue) return;
     _isProcessingQueue = true;
     _fallbackClient = client;
@@ -457,7 +457,7 @@ class DownloadManagerService {
 
   /// Resolve metadata, video URL, and file path, then enqueue a background download task.
   /// Returns true if successfully enqueued, false if it failed immediately.
-  Future<bool> _prepareAndEnqueueDownload(String globalKey, PlexClient client, DownloadQueueItem queueItem) async {
+  Future<bool> _prepareAndEnqueueDownload(String globalKey, JellyfinClient client, DownloadQueueItem queueItem) async {
     try {
       // Guard: don't re-enqueue an item that's already completed or was deleted
       final existing = await _database.getDownloadedMedia(globalKey);
@@ -492,14 +492,14 @@ class DownloadManagerService {
       }
 
       final selectedMediaIndex = existing.mediaIndex;
-      var playbackData = await client.getVideoPlaybackData(metadata.ratingKey, mediaIndex: selectedMediaIndex);
+      var playbackData = await client.getVideoPlaybackData(metadata.itemId, mediaIndex: selectedMediaIndex);
       if (playbackData.videoUrl == null) {
         // Cache may contain a synthetic entry (from _cacheMetadataForOffline) without
         // Media/Part data. Force a fresh network fetch to populate the cache properly.
         appLogger.w('No video URL from cache for $globalKey, retrying via network');
         final fetched = await client.getMetadataWithImages(ratingKey);
         if (fetched != null) metadata = fetched.copyWith(serverId: serverId);
-        playbackData = await client.getVideoPlaybackData(metadata.ratingKey, mediaIndex: selectedMediaIndex);
+        playbackData = await client.getVideoPlaybackData(metadata.itemId, mediaIndex: selectedMediaIndex);
         if (playbackData.videoUrl == null) throw Exception('Could not get video URL for $globalKey');
       }
 
@@ -507,7 +507,7 @@ class DownloadManagerService {
 
       // Look up show year for episodes
       final showYear = metadata.type == 'episode'
-          ? await _fetchShowYear(serverId, metadata.grandparentRatingKey)
+          ? await _fetchShowYear(serverId, metadata.seriesId)
           : null;
 
       // Build display name for notifications
@@ -530,7 +530,7 @@ class DownloadManagerService {
           pathComponents = _storageService.getEpisodeSafPathComponents(metadata, showYear: showYear);
           safFileName = _storageService.getEpisodeSafFileName(metadata, ext);
         } else {
-          pathComponents = [serverId, metadata.ratingKey];
+          pathComponents = [serverId, metadata.itemId];
           safFileName = 'video.$ext';
         }
 
@@ -576,7 +576,7 @@ class DownloadManagerService {
         } else if (metadata.type == 'episode') {
           downloadFilePath = await _storageService.getEpisodeVideoPath(metadata, ext, showYear: showYear);
         } else {
-          downloadFilePath = await _storageService.getVideoFilePath(serverId, metadata.ratingKey, ext);
+          downloadFilePath = await _storageService.getVideoFilePath(serverId, metadata.itemId, ext);
         }
 
         // Clean up partial files from previous attempts to prevent
@@ -907,13 +907,13 @@ class DownloadManagerService {
         if (metadata != null && client != null) {
           if (downloadArtwork) {
             await _downloadArtwork(globalKey, metadata, client);
-            await _downloadChapterThumbnails(metadata.serverId!, metadata.ratingKey, client);
+            await _downloadChapterThumbnails(metadata.serverId!, metadata.itemId, client);
           }
           if (downloadSubtitles) {
-            PlexMediaInfo? mediaInfo = ctx?.mediaInfo;
+            MediaInfo? mediaInfo = ctx?.mediaInfo;
             if (mediaInfo == null) {
               try {
-                final playbackData = await client.getVideoPlaybackData(metadata.ratingKey);
+                final playbackData = await client.getVideoPlaybackData(metadata.itemId);
                 mediaInfo = playbackData.mediaInfo;
               } catch (e) {
                 appLogger.w('Could not re-fetch playback data for subtitles', error: e);
@@ -945,7 +945,7 @@ class DownloadManagerService {
   }
 
   /// Resolve metadata from cache using a globalKey
-  Future<PlexMetadata?> _resolveMetadata(String globalKey) async {
+  Future<MediaMetadata?> _resolveMetadata(String globalKey) async {
     final parsed = parseGlobalKey(globalKey);
     if (parsed == null) return null;
     return _apiCache.getMetadata(parsed.serverId, parsed.ratingKey);
@@ -955,13 +955,13 @@ class DownloadManagerService {
   Future<int?> _fetchShowYear(String serverId, String? grandparentRatingKey) async {
     if (grandparentRatingKey == null) return null;
     final showCached = await _apiCache.get(serverId, '/library/metadata/$grandparentRatingKey');
-    final showJson = PlexCacheParser.extractFirstMetadata(showCached);
-    if (showJson != null) return PlexMetadata.fromJson(showJson).year;
+    final showJson = CacheParser.extractFirstMetadata(showCached);
+    if (showJson != null) return MediaMetadata.fromJson(showJson).year;
     return null;
   }
 
   /// Re-derive the SAF file URI from metadata (for recovery when context is lost)
-  Future<String?> _resolveSafStoredPath(PlexMetadata metadata, String ext, int? showYear) async {
+  Future<String?> _resolveSafStoredPath(MediaMetadata metadata, String ext, int? showYear) async {
     final safBaseUri = _storageService.safBaseUri;
     if (safBaseUri == null) return null;
 
@@ -974,7 +974,7 @@ class DownloadManagerService {
       pathComponents = _storageService.getEpisodeSafPathComponents(metadata, showYear: showYear);
       safFileName = _storageService.getEpisodeSafFileName(metadata, ext);
     } else {
-      pathComponents = [metadata.serverId!, metadata.ratingKey];
+      pathComponents = [metadata.serverId!, metadata.itemId];
       safFileName = 'video.$ext';
     }
 
@@ -987,7 +987,7 @@ class DownloadManagerService {
 
   /// Download artwork for a media item using hash-based storage
   /// Downloads all artwork types: thumb/poster, clearLogo, and background art
-  Future<void> _downloadArtwork(String globalKey, PlexMetadata metadata, PlexClient client) async {
+  Future<void> _downloadArtwork(String globalKey, MediaMetadata metadata, JellyfinClient client) async {
     if (metadata.serverId == null) return;
 
     try {
@@ -1027,7 +1027,7 @@ class DownloadManagerService {
   }
 
   /// Download a single artwork file if it doesn't already exist
-  Future<void> _downloadSingleArtwork(String serverId, String artworkPath, PlexClient client) async {
+  Future<void> _downloadSingleArtwork(String serverId, String artworkPath, JellyfinClient client) async {
     try {
       // Check if already downloaded (deduplication)
       if (await _storageService.artworkExists(serverId, artworkPath)) {
@@ -1058,7 +1058,7 @@ class DownloadManagerService {
 
   /// Download all artwork for a metadata item (public method for parent metadata)
   /// Downloads thumb/poster, clearLogo, and background art
-  Future<void> downloadArtworkForMetadata(PlexMetadata metadata, PlexClient client) async {
+  Future<void> downloadArtworkForMetadata(MediaMetadata metadata, JellyfinClient client) async {
     if (metadata.serverId == null) return;
     final serverId = metadata.serverId!;
 
@@ -1084,7 +1084,7 @@ class DownloadManagerService {
   }
 
   /// Download chapter thumbnail images for a media item
-  Future<void> _downloadChapterThumbnails(String serverId, String ratingKey, PlexClient client) async {
+  Future<void> _downloadChapterThumbnails(String serverId, String ratingKey, JellyfinClient client) async {
     try {
       // Get chapters from the cached API response
       final extras = await client.getPlaybackExtras(ratingKey);
@@ -1107,9 +1107,9 @@ class DownloadManagerService {
   /// [showYear]: For episodes, pass the show's premiere year (not the episode's year)
   Future<void> _downloadSubtitles(
     String globalKey,
-    PlexMetadata metadata,
-    PlexMediaInfo mediaInfo,
-    PlexClient client, {
+    MediaMetadata metadata,
+    MediaInfo mediaInfo,
+    JellyfinClient client, {
     int? showYear,
   }) async {
     try {
@@ -1144,7 +1144,7 @@ class DownloadManagerService {
           // Fallback to old structure
           subtitlePath = await _storageService.getSubtitlePath(
             metadata.serverId!,
-            metadata.ratingKey,
+            metadata.itemId,
             subtitle.id,
             extension,
           );
@@ -1254,7 +1254,7 @@ class DownloadManagerService {
   }
 
   /// Resume a paused download
-  Future<void> resumeDownload(String globalKey, PlexClient client) async {
+  Future<void> resumeDownload(String globalKey, JellyfinClient client) async {
     final bgTaskId = await _database.getBgTaskId(globalKey);
 
     // Try native resume first (only works for normal-mode DownloadTask that was paused)
@@ -1281,7 +1281,7 @@ class DownloadManagerService {
   }
 
   /// Retry a failed download
-  Future<void> retryDownload(String globalKey, PlexClient client) async {
+  Future<void> retryDownload(String globalKey, JellyfinClient client) async {
     _autoRetryTimers.remove(globalKey)?.cancel();
     await _database.clearDownloadError(globalKey);
     await _database.updateBgTaskId(globalKey, null);
@@ -1368,16 +1368,16 @@ class DownloadManagerService {
   }
 
   /// Calculate total items to delete (for progress tracking)
-  Future<int> _getTotalItemsToDelete(PlexMetadata metadata, String _) async {
+  Future<int> _getTotalItemsToDelete(MediaMetadata metadata, String _) async {
     switch (metadata.mediaType) {
-      case PlexMediaType.episode:
-      case PlexMediaType.movie:
+      case MediaType.episode:
+      case MediaType.movie:
         return 1;
-      case PlexMediaType.season:
-        final episodes = await _database.getEpisodesBySeason(metadata.ratingKey);
+      case MediaType.season:
+        final episodes = await _database.getEpisodesBySeason(metadata.itemId);
         return episodes.length;
-      case PlexMediaType.show:
-        final episodes = await _database.getEpisodesByShow(metadata.ratingKey);
+      case MediaType.show:
+        final episodes = await _database.getEpisodesByShow(metadata.itemId);
         return episodes.length;
       default:
         return 1;
@@ -1404,16 +1404,16 @@ class DownloadManagerService {
 
       // Delete based on type
       switch (metadata.mediaType) {
-        case PlexMediaType.episode:
+        case MediaType.episode:
           await _deleteEpisodeFiles(metadata, serverId);
           break;
-        case PlexMediaType.season:
+        case MediaType.season:
           await _deleteSeasonFiles(metadata, serverId);
           break;
-        case PlexMediaType.show:
+        case MediaType.show:
           await _deleteShowFiles(metadata, serverId);
           break;
-        case PlexMediaType.movie:
+        case MediaType.movie:
           await _deleteMovieFiles(metadata, serverId);
           break;
         default:
@@ -1428,7 +1428,7 @@ class DownloadManagerService {
   Future<List<String>> _getChapterThumbPaths(String serverId, String ratingKey) async {
     try {
       final cachedData = await _apiCache.get(serverId, '/library/metadata/$ratingKey');
-      final chapters = PlexCacheParser.extractChapters(cachedData);
+      final chapters = CacheParser.extractChapters(cachedData);
       if (chapters == null) return [];
 
       return chapters
@@ -1460,8 +1460,8 @@ class DownloadManagerService {
       final otherItems = await _database.getDownloadsByServerId(serverId);
       final inUseThumbPaths = <String>{};
       for (final item in otherItems) {
-        if (item.ratingKey == ratingKey) continue;
-        final itemChapterPaths = await _getChapterThumbPaths(serverId, item.ratingKey);
+        if (item.itemId == ratingKey) continue;
+        final itemChapterPaths = await _getChapterThumbPaths(serverId, item.itemId);
         inUseThumbPaths.addAll(itemChapterPaths);
       }
 
@@ -1495,10 +1495,10 @@ class DownloadManagerService {
   }
 
   /// Delete episode files
-  Future<void> _deleteEpisodeFiles(PlexMetadata episode, String serverId) async {
+  Future<void> _deleteEpisodeFiles(MediaMetadata episode, String serverId) async {
     try {
-      final parentMetadata = episode.grandparentRatingKey != null
-          ? await _apiCache.getMetadata(serverId, episode.grandparentRatingKey!)
+      final parentMetadata = episode.seriesId != null
+          ? await _apiCache.getMetadata(serverId, episode.seriesId!)
           : null;
       final showYear = parentMetadata?.year;
 
@@ -1524,34 +1524,34 @@ class DownloadManagerService {
       }
 
       // Delete chapter thumbnails (with reference counting)
-      await _deleteChapterThumbnails(serverId, episode.ratingKey);
+      await _deleteChapterThumbnails(serverId, episode.itemId);
 
       // Clean up parent directories if empty
       await _cleanupEmptyDirectories(episode, showYear);
 
       // Safety net: verify the actual DB-recorded file is gone
-      await _ensureDbFileDeleted(serverId, episode.ratingKey);
+      await _ensureDbFileDeleted(serverId, episode.itemId);
     } catch (e, stack) {
       appLogger.e('Error deleting episode files', error: e, stackTrace: stack);
     }
   }
 
   /// Delete season files
-  Future<void> _deleteSeasonFiles(PlexMetadata season, String serverId) async {
+  Future<void> _deleteSeasonFiles(MediaMetadata season, String serverId) async {
     try {
-      final parentMetadata = season.parentRatingKey != null
-          ? await _apiCache.getMetadata(serverId, season.parentRatingKey!)
+      final parentMetadata = season.seasonId != null
+          ? await _apiCache.getMetadata(serverId, season.seasonId!)
           : null;
       final showYear = parentMetadata?.year;
 
       // Get all episodes in this season
-      final episodesInSeason = await _database.getEpisodesBySeason(season.ratingKey);
+      final episodesInSeason = await _database.getEpisodesBySeason(season.itemId);
 
-      appLogger.d('Deleting ${episodesInSeason.length} episodes in season ${season.ratingKey}');
+      appLogger.d('Deleting ${episodesInSeason.length} episodes in season ${season.itemId}');
       await _deleteEpisodesInCollection(
         episodes: episodesInSeason,
         serverId: serverId,
-        parentKey: season.ratingKey,
+        parentKey: season.itemId,
         parentTitle: season.displayTitle,
       );
 
@@ -1577,7 +1577,7 @@ class DownloadManagerService {
   }) async {
     for (int i = 0; i < episodes.length; i++) {
       final episode = episodes[i];
-      final episodeGlobalKey = buildGlobalKey(serverId, episode.ratingKey);
+      final episodeGlobalKey = buildGlobalKey(serverId, episode.itemId);
 
       // Emit progress update
       _emitDeletionProgress(
@@ -1591,13 +1591,13 @@ class DownloadManagerService {
       );
 
       // Delete chapter thumbnails
-      await _deleteChapterThumbnails(serverId, episode.ratingKey);
+      await _deleteChapterThumbnails(serverId, episode.itemId);
 
       // Delete episode files (video, subtitles)
       await _deleteByFilePath(episode);
 
       // Delete episode from API cache
-      await _apiCache.deleteForItem(serverId, episode.ratingKey);
+      await _apiCache.deleteForItem(serverId, episode.itemId);
 
       // Delete episode DB entry
       await _database.deleteDownload(episodeGlobalKey);
@@ -1605,16 +1605,16 @@ class DownloadManagerService {
   }
 
   /// Delete show files
-  Future<void> _deleteShowFiles(PlexMetadata show, String serverId) async {
+  Future<void> _deleteShowFiles(MediaMetadata show, String serverId) async {
     try {
       // Get all episodes in this show
-      final episodesInShow = await _database.getEpisodesByShow(show.ratingKey);
+      final episodesInShow = await _database.getEpisodesByShow(show.itemId);
 
-      appLogger.d('Deleting ${episodesInShow.length} episodes in show ${show.ratingKey}');
+      appLogger.d('Deleting ${episodesInShow.length} episodes in show ${show.itemId}');
       await _deleteEpisodesInCollection(
         episodes: episodesInShow,
         serverId: serverId,
-        parentKey: show.ratingKey,
+        parentKey: show.itemId,
         parentTitle: show.displayTitle,
       );
 
@@ -1629,7 +1629,7 @@ class DownloadManagerService {
   }
 
   /// Delete movie files
-  Future<void> _deleteMovieFiles(PlexMetadata movie, String serverId) async {
+  Future<void> _deleteMovieFiles(MediaMetadata movie, String serverId) async {
     try {
       final movieDir = await _storageService.getMovieDirectory(movie);
       if (await movieDir.exists()) {
@@ -1638,10 +1638,10 @@ class DownloadManagerService {
       }
 
       // Delete chapter thumbnails (with reference counting)
-      await _deleteChapterThumbnails(serverId, movie.ratingKey);
+      await _deleteChapterThumbnails(serverId, movie.itemId);
 
       // Safety net: verify the actual DB-recorded file is gone
-      await _ensureDbFileDeleted(serverId, movie.ratingKey);
+      await _ensureDbFileDeleted(serverId, movie.itemId);
     } catch (e, stack) {
       appLogger.e('Error deleting movie files', error: e, stackTrace: stack);
     }
@@ -1698,7 +1698,7 @@ class DownloadManagerService {
   }
 
   /// Clean up empty directories after deleting episode
-  Future<void> _cleanupEmptyDirectories(PlexMetadata episode, int? showYear) async {
+  Future<void> _cleanupEmptyDirectories(MediaMetadata episode, int? showYear) async {
     final seasonDir = await _storageService.getSeasonDirectory(episode, showYear: showYear);
 
     if (await seasonDir.exists()) {
@@ -1720,7 +1720,7 @@ class DownloadManagerService {
   }
 
   /// Clean up show directory if empty
-  Future<void> _cleanupShowDirectory(PlexMetadata metadata, int? showYear) async {
+  Future<void> _cleanupShowDirectory(MediaMetadata metadata, int? showYear) async {
     final showDir = await _storageService.getShowDirectory(metadata, showYear: showYear);
 
     if (await showDir.exists()) {
@@ -1737,8 +1737,8 @@ class DownloadManagerService {
   }
 
   /// Check if season artwork is in use
-  Future<bool> _isSeasonArtworkInUse(PlexMetadata episode, int? _) async {
-    final seasonKey = episode.parentRatingKey;
+  Future<bool> _isSeasonArtworkInUse(MediaMetadata episode, int? _) async {
+    final seasonKey = episode.seasonId;
     if (seasonKey == null) return false;
 
     final otherEpisodes = await _database.getEpisodesBySeason(seasonKey);
@@ -1748,8 +1748,8 @@ class DownloadManagerService {
   }
 
   /// Check if show artwork is in use
-  Future<bool> _isShowArtworkInUse(PlexMetadata metadata, int? _) async {
-    final showKey = metadata.grandparentRatingKey ?? metadata.parentRatingKey ?? metadata.ratingKey;
+  Future<bool> _isShowArtworkInUse(MediaMetadata metadata, int? _) async {
+    final showKey = metadata.seriesId ?? metadata.seasonId ?? metadata.itemId;
 
     // Use targeted query instead of full table scan
     final showEpisodes = await _database.getEpisodesByShow(showKey);
@@ -1834,25 +1834,25 @@ class DownloadManagerService {
 
   /// Save metadata for a media item (show, season, movie, or episode)
   /// Used to persist parent metadata (shows/seasons) for offline display
-  Future<void> saveMetadata(PlexMetadata metadata) async {
+  Future<void> saveMetadata(MediaMetadata metadata) async {
     if (metadata.serverId == null) {
       appLogger.w('Cannot save metadata without serverId');
       return;
     }
 
     // Cache to API cache for offline use
-    await _cacheMetadataForOffline(metadata.serverId!, metadata.ratingKey, metadata);
+    await _cacheMetadataForOffline(metadata.serverId!, metadata.itemId, metadata);
   }
 
   /// Cache metadata in the API response format for offline access
-  /// This simulates what PlexClient would receive from the server
+  /// This simulates what JellyfinClient would receive from the server
   /// Merges with existing cache to preserve Chapter/Marker/Media arrays
-  Future<void> _cacheMetadataForOffline(String serverId, String ratingKey, PlexMetadata metadata) async {
+  Future<void> _cacheMetadataForOffline(String serverId, String ratingKey, MediaMetadata metadata) async {
     final endpoint = '/library/metadata/$ratingKey';
 
-    // Check for existing cache entry to preserve fields not in PlexMetadata
+    // Check for existing cache entry to preserve fields not in MediaMetadata
     final existing = await _apiCache.get(serverId, endpoint);
-    final existingMeta = PlexCacheParser.extractFirstMetadata(existing);
+    final existingMeta = CacheParser.extractFirstMetadata(existing);
 
     Map<String, dynamic> merged;
     if (existingMeta != null) {
@@ -1880,7 +1880,7 @@ class DownloadManagerService {
   }
 
   /// Cache children (seasons or episodes) in the API response format
-  Future<void> cacheChildrenForOffline(String serverId, String parentRatingKey, List<PlexMetadata> children) async {
+  Future<void> cacheChildrenForOffline(String serverId, String parentRatingKey, List<MediaMetadata> children) async {
     final endpoint = '/library/metadata/$parentRatingKey/children';
 
     // Build a response structure that matches the Plex API format

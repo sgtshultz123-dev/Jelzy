@@ -5,12 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'package:plezy/utils/platform_detector.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/utils/platform_detector.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../widgets/collapsible_text.dart';
-import '../widgets/rating_bottom_sheet.dart';
 
 import '../focus/dpad_navigator.dart';
 import '../focus/focusable_wrapper.dart';
@@ -19,113 +18,98 @@ import '../focus/input_mode_tracker.dart';
 import '../widgets/focus_builders.dart';
 import '../widgets/media_card.dart';
 import '../i18n/strings.g.dart';
-import '../widgets/plex_optimized_image.dart';
-import '../utils/plex_image_helper.dart';
-import '../../services/plex_client.dart';
-import '../services/plex_api_cache.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_role.dart';
-import '../models/plex_video_playback_data.dart';
+import '../widgets/optimized_image.dart';
+import '../utils/media_image_helper.dart';
+import '../../services/jellyfin_client.dart';
+import '../services/api_cache.dart';
+import '../services/storage_service.dart';
+import '../models/media_metadata.dart';
 import '../utils/content_utils.dart';
 import '../utils/rating_utils.dart';
 import '../models/download_models.dart';
-import '../services/download_storage_service.dart';
-import '../utils/download_version_utils.dart';
-import '../utils/download_utils.dart';
-import '../providers/playback_state_provider.dart';
-import '../providers/settings_provider.dart';
-import '../utils/grid_size_calculator.dart';
 import '../providers/download_provider.dart';
 import '../providers/offline_watch_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/mono_tokens.dart';
 import '../utils/app_logger.dart';
+import '../utils/error_message_utils.dart';
 import '../utils/formatters.dart';
 import '../utils/scroll_utils.dart';
+import '../utils/provider_extensions.dart';
 import '../utils/dialogs.dart';
 import '../utils/snackbar_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../utils/video_player_navigation.dart';
 import '../widgets/app_bar_back_button.dart';
-import '../utils/desktop_window_padding.dart';
+import 'person_detail_screen.dart';
 import '../widgets/horizontal_scroll_with_arrows.dart';
 import '../widgets/media_context_menu.dart';
-import '../widgets/overlay_sheet.dart';
 import '../widgets/placeholder_container.dart';
 import '../mixins/watch_state_aware.dart';
 import '../mixins/deletion_aware.dart';
-import '../mixins/mounted_set_state_mixin.dart';
-import '../mixins/server_bound_media_mixin.dart';
 import '../utils/watch_state_notifier.dart';
 import '../utils/deletion_notifier.dart';
-import '../widgets/episode_card.dart';
-import 'actor_media_screen.dart';
-import '../widgets/focusable_tab_chip.dart';
-import '../widgets/hub_section.dart';
-import '../models/plex_hub.dart';
+import 'season_detail_screen.dart';
 
 class MediaDetailScreen extends StatefulWidget {
-  final PlexMetadata metadata;
+  final MediaMetadata metadata;
   final bool isOffline;
 
-  /// If provided, auto-selects this season index when the screen loads.
-  /// Used when navigating to a show from a season context.
-  final int? initialSeasonIndex;
+  /// Called once when the screen has been built (for external-restore flow).
+  final VoidCallback? onFirstBuild;
 
-  const MediaDetailScreen({super.key, required this.metadata, this.isOffline = false, this.initialSeasonIndex});
+  const MediaDetailScreen({
+    super.key,
+    required this.metadata,
+    this.isOffline = false,
+    this.onFirstBuild,
+  });
 
   @override
   State<MediaDetailScreen> createState() => _MediaDetailScreenState();
 }
 
-class _MediaDetailScreenState extends State<MediaDetailScreen>
-    with WatchStateAware, DeletionAware, MountedSetStateMixin, ServerBoundMediaMixin {
-  List<PlexMetadata> _seasons = [];
+class _MediaDetailScreenState extends State<MediaDetailScreen> with WatchStateAware, DeletionAware {
+  List<MediaMetadata> _seasons = [];
   bool _isLoadingSeasons = false;
-  Completer<void>? _seasonsCompleter;
-  List<PlexMetadata> _episodes = [];
-  bool _isLoadingEpisodes = false;
-  bool _showEpisodesDirectly = false;
-  PlexMetadata? _fullMetadata;
-  PlexMetadata? _onDeckEpisode;
-  PlexVideoPlaybackData? _playbackData;
+  MediaMetadata? _fullMetadata;
+  MediaMetadata? _nextEpisode;
   bool _isLoadingMetadata = true;
-  List<PlexMetadata>? _extras;
-  List<PlexHub> _relatedHubs = [];
-  List<GlobalKey<HubSectionState>> _relatedHubKeys = [];
+  List<MediaMetadata>? _extras;
   late final ScrollController _scrollController;
+  final ScrollController _seasonsScrollController = ScrollController();
   final ScrollController _extrasScrollController = ScrollController();
   bool _watchStateChanged = false;
-  final ValueNotifier<double> _scrollOffset = ValueNotifier<double>(0);
+  double _scrollOffset = 0;
 
-  // Inline season tabs
-  int _selectedSeasonIndex = 0;
-  final Map<String, List<PlexMetadata>> _episodeCache = {};
-  bool _isLoadingSeasonEpisodes = false;
-  List<FocusNode> _seasonTabFocusNodes = [];
-  final Map<int, GlobalKey<MediaContextMenuState>> _seasonContextMenuKeys = {};
-  final ScrollController _seasonTabsScrollController = ScrollController();
-  final FocusNode _firstEpisodeFocusNode = FocusNode(debugLabel: 'first_episode');
-  final FocusNode _lastEpisodeFocusNode = FocusNode(debugLabel: 'last_episode');
-
+  // Locked focus pattern for seasons
+  int _focusedSeasonIndex = 0;
+  late final FocusNode _seasonsFocusNode;
   late final FocusNode _playButtonFocusNode;
   late final FocusNode _ratingChipFocusNode;
+  late final FocusNode _backButtonFocusNode;
   Timer? _selectKeyTimer;
   bool _isSelectKeyDown = false;
   bool _longPressTriggered = false;
   static const _longPressDuration = Duration(milliseconds: 500);
 
-  // Context menu key for the three-dots button
-  final _contextMenuKey = GlobalKey<MediaContextMenuState>();
-
+  // GlobalKeys for season cards to access their context menu
+  final Map<int, GlobalKey<MediaCardState>> _seasonCardKeys = {};
 
   // Locked focus pattern for extras
-  int _focusedExtraIndex = 0;
   late final FocusNode _extrasFocusNode;
-  final Map<int, GlobalKey<MediaCardState>> _extraCardKeys = {};
-  final _extrasSectionKey = GlobalKey();
 
-  // Locked focus pattern for overview
-  late final FocusNode _overviewFocusNode;
+  // Similar items ("More Like This")
+  List<MediaMetadata>? _similarItems;
+  int _focusedSimilarIndex = 0;
+  late final FocusNode _similarItemsFocusNode;
+  final ScrollController _similarItemsScrollController = ScrollController();
+  final Map<int, GlobalKey<MediaCardState>> _similarCardKeys = {};
+  final _similarSectionKey = GlobalKey();
+
   final _overviewSectionKey = GlobalKey();
+  late final FocusNode _overviewFocusNode;
 
   // Locked focus pattern for cast
   int _focusedCastIndex = 0;
@@ -134,108 +118,72 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   final _castSectionKey = GlobalKey();
   final _seasonsSectionKey = GlobalKey();
 
-  @override
-  PlexMetadata get serverBoundMetadata => widget.metadata;
+  String _toGlobalKey(String itemId, {String? serverId}) =>
+      '${serverId ?? widget.metadata.serverId ?? ''}:$itemId';
 
+  // WatchStateAware: watch the show/movie and all season itemIds
   @override
-  bool get isServerBoundOffline => widget.isOffline;
-
-  // WatchStateAware: watch the show/movie and all season/episode ratingKeys
-  @override
-  Set<String>? get watchedRatingKeys {
-    final keys = <String>{widget.metadata.ratingKey};
+  Set<String>? get watchedItemIds {
+    final keys = <String>{widget.metadata.itemId};
     for (final season in _seasons) {
-      keys.add(season.ratingKey);
-    }
-    for (final ep in _episodes) {
-      keys.add(ep.ratingKey);
+      keys.add(season.itemId);
     }
     return keys;
   }
 
   @override
-  String? get watchStateServerId => serverBoundServerId;
+  String? get watchStateServerId => widget.metadata.serverId;
 
   @override
   Set<String>? get watchedGlobalKeys {
-    final serverId = serverBoundServerId;
+    final serverId = widget.metadata.serverId;
     if (serverId == null) return null;
 
-    final keys = <String>{toServerBoundGlobalKey(widget.metadata.ratingKey, serverId: serverId)};
+    final keys = <String>{_toGlobalKey(widget.metadata.itemId, serverId: serverId)};
     for (final season in _seasons) {
-      keys.add(toServerBoundGlobalKey(season.ratingKey, serverId: season.serverId ?? serverId));
-    }
-    for (final ep in _episodes) {
-      keys.add(toServerBoundGlobalKey(ep.ratingKey, serverId: ep.serverId ?? serverId));
+      keys.add(_toGlobalKey(season.itemId, serverId: season.serverId ?? serverId));
     }
     return keys;
   }
 
   @override
   void onWatchStateChanged(WatchStateEvent event) {
+    // Lightweight refresh - no loader, preserves scroll position
     if (!widget.isOffline) {
-      // If the event matches an episode currently shown, update it directly
-      final epIndex = _episodes.indexWhere((e) => e.ratingKey == event.ratingKey);
-      if (epIndex != -1) {
-        _updateEpisodeWatchState(event.ratingKey);
-      } else {
-        _refreshWatchState();
-      }
+      _refreshWatchState();
     }
   }
 
   @override
-  Set<String>? get deletionRatingKeys {
-    final keys = <String>{widget.metadata.ratingKey};
+  Set<String>? get deletionItemIds {
+    final keys = <String>{widget.metadata.itemId};
     for (final season in _seasons) {
-      keys.add(season.ratingKey);
-    }
-    for (final ep in _episodes) {
-      keys.add(ep.ratingKey);
+      keys.add(season.itemId);
     }
     return keys;
   }
 
   @override
-  String? get deletionServerId => serverBoundServerId;
+  String? get deletionServerId => widget.metadata.serverId;
 
   @override
   Set<String>? get deletionGlobalKeys {
-    final serverId = serverBoundServerId;
+    final serverId = widget.metadata.serverId;
     if (serverId == null) return null;
 
-    final keys = <String>{toServerBoundGlobalKey(widget.metadata.ratingKey, serverId: serverId)};
+    final keys = <String>{_toGlobalKey(widget.metadata.itemId, serverId: serverId)};
     for (final season in _seasons) {
-      keys.add(toServerBoundGlobalKey(season.ratingKey, serverId: season.serverId ?? serverId));
-    }
-    for (final ep in _episodes) {
-      keys.add(toServerBoundGlobalKey(ep.ratingKey, serverId: ep.serverId ?? serverId));
+      keys.add(_toGlobalKey(season.itemId, serverId: season.serverId ?? serverId));
     }
     return keys;
   }
 
   @override
   void onDeletionEvent(DeletionEvent event) {
-    // Download-only deletions should only remove items when viewing offline content
-    if (event.isDownloadOnly && !widget.isOffline) return;
-    if (!event.isDownloadOnly && widget.isOffline) return;
+    if (widget.isOffline) return;
 
-    // When showing episodes directly (season view or flattened), handle episode deletion
-    if (_showEpisodesDirectly) {
-      final epIndex = _episodes.indexWhere((e) => e.ratingKey == event.ratingKey);
-      if (epIndex != -1) {
-        setState(() {
-          _episodes.removeAt(epIndex);
-        });
-        if (_episodes.isEmpty && (widget.metadata.isSeason || widget.metadata.isShow) && mounted) {
-          Navigator.of(context).pop();
-        }
-        return;
-      }
-    }
-
-    // If we have a season that matches the rating key exactly, then remove it from our list
-    final seasonIndex = _seasons.indexWhere((s) => s.ratingKey == event.ratingKey);
+    // If we have a season that matches the item ID exactly, then remove it from our list
+    final seasonIndex = _seasons.indexWhere((s) => s.itemId == event.itemId);
     if (seasonIndex != -1) {
       setState(() {
         _seasons.removeAt(seasonIndex);
@@ -254,7 +202,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     // If all children were deleted, remove our item.
     // Otherwise, just update the counts.
     for (final parentKey in event.parentChain) {
-      final idx = _seasons.indexWhere((s) => s.ratingKey == parentKey);
+      final idx = _seasons.indexWhere((s) => s.itemId == parentKey);
       if (idx != -1) {
         final season = _seasons[idx];
         final newLeafCount = (season.leafCount ?? 1) - 1;
@@ -287,15 +235,15 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     if (client == null) return;
 
     try {
-      // Fetch updated metadata + on-deck without showing loader
-      final result = await client.getMetadataWithImagesAndOnDeck(widget.metadata.ratingKey);
-      final metadata = result['metadata'] as PlexMetadata?;
-      final onDeckEpisode = result['onDeckEpisode'] as PlexMetadata?;
+      // Fetch updated metadata + next episode without showing loader
+      final result = await client.getMetadataWithNextEpisode(widget.metadata.itemId);
+      final metadata = result['metadata'] as MediaMetadata?;
+      final nextEpisode = result['nextEpisode'] as MediaMetadata?;
 
-      if (metadata != null) {
-        setStateIfMounted(() {
+      if (metadata != null && mounted) {
+        setState(() {
           _fullMetadata = metadata.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName);
-          _onDeckEpisode = onDeckEpisode?.copyWith(
+          _nextEpisode = nextEpisode?.copyWith(
             serverId: widget.metadata.serverId,
             serverName: widget.metadata.serverName,
           );
@@ -304,43 +252,17 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
       // Refresh seasons for updated watched counts (also without loader)
       if (widget.metadata.isShow) {
-        final seasons = await client.getChildren(widget.metadata.ratingKey);
-        // Clear episode cache so stale watch state data isn't reused
-        _episodeCache.clear();
-        setStateIfMounted(() {
-          _seasons = seasons
-              .map((s) => s.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
-              .toList();
-        });
-        // Re-fetch episodes for the currently selected season
-        if (!_showEpisodesDirectly && _seasons.isNotEmpty) {
-          _fetchSeasonEpisodes(_selectedSeasonIndex);
+        final seasons = await client.getChildren(widget.metadata.itemId);
+        if (mounted) {
+          setState(() {
+            _seasons = seasons
+                .map((s) => s.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
+                .toList();
+          });
         }
-      } else if (widget.metadata.isSeason) {
-        await _fetchAllEpisodes();
       }
     } catch (e) {
       // Silently fail - data will refresh on next navigation
-    }
-  }
-
-  /// Update a single episode's watch state without refetching everything
-  Future<void> _updateEpisodeWatchState(String ratingKey) async {
-    final client = _getClientForMetadata(context);
-    if (client == null) return;
-    try {
-      final refreshed = await client.getMetadataWithImages(ratingKey);
-      if (refreshed != null) {
-        setStateIfMounted(() {
-          final i = _episodes.indexWhere((e) => e.ratingKey == ratingKey);
-          if (i != -1) {
-            _episodes[i] = refreshed;
-            _syncEpisodeToCache(i, refreshed);
-          }
-        });
-      }
-    } catch (_) {
-      // Silently fail
     }
   }
 
@@ -349,36 +271,44 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
+    _seasonsFocusNode = FocusNode(debugLabel: 'seasons_row');
     _extrasFocusNode = FocusNode(debugLabel: 'extras_row');
     _playButtonFocusNode = FocusNode(debugLabel: 'play_button');
     _ratingChipFocusNode = FocusNode(debugLabel: 'rating_chip');
-    _overviewFocusNode = FocusNode(debugLabel: 'overview');
+    _backButtonFocusNode = FocusNode(debugLabel: 'detail_back');
     _castFocusNode = FocusNode(debugLabel: 'cast_row');
+    _similarItemsFocusNode = FocusNode(debugLabel: 'similar_items_row');
+    _overviewFocusNode = FocusNode(debugLabel: 'overview_section');
     _loadFullMetadata();
+    if (widget.onFirstBuild != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onFirstBuild?.call();
+      });
+    }
   }
 
   void _onScroll() {
-    _scrollOffset.value = _scrollController.offset;
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _scrollOffset.dispose();
+    _seasonsScrollController.dispose();
     _extrasScrollController.dispose();
+    _seasonsFocusNode.dispose();
     _extrasFocusNode.dispose();
     _playButtonFocusNode.dispose();
     _ratingChipFocusNode.dispose();
-    _overviewFocusNode.dispose();
+    _backButtonFocusNode.dispose();
     _castFocusNode.dispose();
     _castScrollController.dispose();
+    _similarItemsFocusNode.dispose();
+    _similarItemsScrollController.dispose();
+    _overviewFocusNode.dispose();
     _selectKeyTimer?.cancel();
-    for (final node in _seasonTabFocusNodes) {
-      node.dispose();
-    }
-    _seasonTabsScrollController.dispose();
-    _firstEpisodeFocusNode.dispose();
-    _lastEpisodeFocusNode.dispose();
     super.dispose();
   }
 
@@ -426,37 +356,25 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     );
   }
 
-  /// Build action buttons row (play, shuffle, download, mark watched)
-  Widget _buildActionButtons(PlexMetadata metadata) {
+  /// Build action buttons row (play, download, mark watched)
+  Widget _buildActionButtons(MediaMetadata metadata) {
     final playButtonLabel = _getPlayButtonLabel(metadata);
     final playButtonIcon = AppIcon(_getPlayButtonIcon(metadata), fill: 1, size: 20);
 
     Future<void> onPlayPressed() async {
-      // For TV shows, play the OnDeck episode if available
+      // For TV shows, play the next episode if available
       // Otherwise, play the first episode of the first season
       if (metadata.isShow) {
-        if (_onDeckEpisode != null) {
-          appLogger.d('Playing on deck episode: ${_onDeckEpisode!.title}');
+        if (_nextEpisode != null) {
+          appLogger.d('Playing next episode: ${_nextEpisode!.title}');
           await navigateToVideoPlayerWithRefresh(
             context,
-            metadata: _onDeckEpisode!,
+            metadata: _nextEpisode!,
             isOffline: widget.isOffline,
             onRefresh: _loadFullMetadata,
           );
         } else {
-          // No on deck episode, fetch first episode of first season
-          await _playFirstEpisode();
-        }
-      } else if (metadata.isSeason) {
-        // For seasons, play the first episode
-        if (_episodes.isNotEmpty) {
-          await navigateToVideoPlayerWithRefresh(
-            context,
-            metadata: _episodes.first,
-            isOffline: widget.isOffline,
-            onRefresh: _loadFullMetadata,
-          );
-        } else {
+          // No next episode, fetch first episode of first season
           await _playFirstEpisode();
         }
       } else {
@@ -467,111 +385,97 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
           metadata: metadata,
           isOffline: widget.isOffline,
           onRefresh: _loadFullMetadata,
-          playbackData: _playbackData,
         );
       }
     }
 
     final primaryTrailer = _getPrimaryTrailer();
 
-    final isKeyboardMode = InputModeTracker.isKeyboardMode(context);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    // In keyboard/d-pad mode, focused buttons get a prominent style.
-    // overlayColor is set to transparent to prevent the Material focus
-    // overlay from dimming the background color we set.
-    final focusBg = colorScheme.inverseSurface;
-    final focusFg = colorScheme.onInverseSurface;
-    final tonalBg = colorScheme.secondaryContainer;
-    final tonalFg = colorScheme.onSecondaryContainer;
-    final noOverlay = WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.focused)) return Colors.transparent;
-      return null; // default for other states
-    });
-
-    ButtonStyle actionButtonStyle({Color? foregroundColor, EdgeInsetsGeometry? padding}) {
-      if (!isKeyboardMode) {
-        if (padding != null) {
-          return FilledButton.styleFrom(padding: padding);
-        }
-        return IconButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          maximumSize: const Size(48, 48),
-          foregroundColor: foregroundColor,
-        );
-      }
-      return ButtonStyle(
-        padding: padding != null ? WidgetStatePropertyAll(padding) : null,
-        minimumSize: padding == null ? const WidgetStatePropertyAll(Size(48, 48)) : null,
-        maximumSize: padding == null ? const WidgetStatePropertyAll(Size(48, 48)) : null,
-        overlayColor: noOverlay,
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.focused)) return focusBg;
-          return tonalBg;
-        }),
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.focused)) return focusFg;
-          return foregroundColor ?? tonalFg;
-        }),
-      );
-    }
-
     return Focus(
       skipTraversal: true,
       onKeyEvent: _handlePlayButtonKeyEvent,
       child: Row(
         children: [
-          SizedBox(
-            height: 48,
-            child: FilledButton(
+          Semantics(
+            label: playButtonLabel.isNotEmpty ? playButtonLabel : null,
+            button: true,
+            excludeSemantics: true,
+            child: IconButton.filledTonal(
               focusNode: _playButtonFocusNode,
-              autofocus: isKeyboardMode,
+              autofocus: InputModeTracker.isKeyboardMode(context),
               onPressed: onPlayPressed,
-              style: actionButtonStyle(padding: const EdgeInsets.symmetric(horizontal: 16)),
-              child: playButtonLabel.isNotEmpty
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        playButtonIcon,
-                        const SizedBox(width: 8),
-                        Text(playButtonLabel, style: const TextStyle(fontSize: 16)),
-                      ],
-                    )
-                  : playButtonIcon,
+              icon: playButtonIcon,
+              tooltip: null,
+              iconSize: 20,
+              style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
             ),
           ),
           const SizedBox(width: 12),
+          // Restart / Play from start (when play would resume — hide if play already starts from 0)
+          if (!widget.isOffline &&
+              (metadata.isMovie || metadata.isEpisode) &&
+              metadata.hasActiveProgress) ...[
+            Semantics(
+              label: t.tooltips.playFromStart,
+              button: true,
+              excludeSemantics: true,
+              child: IconButton.filledTonal(
+                onPressed: () async {
+                  final fromStart = metadata.copyWith(resumePositionMs: 0);
+                  await navigateToVideoPlayerWithRefresh(
+                    context,
+                    metadata: fromStart,
+                    isOffline: widget.isOffline,
+                    onRefresh: _loadFullMetadata,
+                  );
+                },
+                icon: const AppIcon(Symbols.replay_rounded, fill: 1),
+                tooltip: null,
+                iconSize: 20,
+                style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           // Trailer button (only if trailer is available)
           if (primaryTrailer != null) ...[
-            IconButton.filledTonal(
-              onPressed: () async {
-                await navigateToVideoPlayer(context, metadata: primaryTrailer);
-              },
-              icon: const AppIcon(Symbols.theaters_rounded, fill: 1),
-              tooltip: t.tooltips.playTrailer,
-              iconSize: 20,
-              style: actionButtonStyle(),
+            Semantics(
+              label: t.tooltips.playTrailer,
+              button: true,
+              excludeSemantics: true,
+              child: IconButton.filledTonal(
+                onPressed: () async {
+                  final key = primaryTrailer.itemId;
+                  if (key.startsWith('http://') || key.startsWith('https://')) {
+                    final uri = Uri.parse(key);
+                    if (await canLaunchUrl(uri)) {
+                      // Save return context before launching external app (Android TV may kill process)
+                      final storage = await StorageService.getInstance();
+                      await storage.savePendingExternalReturn(
+                        itemId: widget.metadata.itemId,
+                        serverId: widget.metadata.serverId,
+                      );
+                      if (mounted) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  } else {
+                    await navigateToVideoPlayer(context, metadata: primaryTrailer);
+                  }
+                },
+                icon: const AppIcon(Symbols.theaters_rounded, fill: 1),
+                tooltip: null,
+                iconSize: 20,
+                style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+              ),
             ),
             const SizedBox(width: 12),
           ],
-          // Shuffle button (only for shows and seasons)
-          if (metadata.isShow || metadata.isSeason) ...[
-            IconButton.filledTonal(
-              onPressed: () async {
-                await _handleShufflePlayWithQueue(context, metadata);
-              },
-              icon: const AppIcon(Symbols.shuffle_rounded, fill: 1),
-              tooltip: t.tooltips.shufflePlay,
-              iconSize: 20,
-              style: actionButtonStyle(),
-            ),
-            const SizedBox(width: 12),
-          ],
-          // Download button (hide in offline mode - already downloaded)
-          if (!widget.isOffline)
+          // Download button (hide in offline mode or when downloads disabled)
+          if (!widget.isOffline && context.watch<SettingsProvider>().showDownloads)
             Consumer<DownloadProvider>(
               builder: (context, downloadProvider, _) {
-                final globalKey = metadata.globalKey;
+                final globalKey = '${metadata.serverId}:${metadata.itemId}';
                 final progress = downloadProvider.getProgress(globalKey);
                 final isQueueing = downloadProvider.isQueueing(globalKey);
 
@@ -588,119 +492,95 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                     onPressed: null,
                     icon: const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
                     iconSize: 20,
-                    style: actionButtonStyle(),
+                    style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
                   );
                 }
 
                 // State 2: Queued (waiting to download)
                 if (progress?.status == DownloadStatus.queued) {
                   final currentFile = progress?.currentFile;
-                  final tooltip = currentFile != null && currentFile.contains('episodes')
+                  final label = currentFile != null && currentFile.contains('episodes')
                       ? 'Queued $currentFile'
                       : 'Queued';
 
-                  return IconButton.filledTonal(
-                    onPressed: null,
-                    tooltip: tooltip,
-                    icon: const AppIcon(Symbols.schedule_rounded, fill: 1),
-                    iconSize: 20,
-                    style: actionButtonStyle(),
+                  return Semantics(
+                    label: label,
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: null,
+                      tooltip: null,
+                      icon: const AppIcon(Symbols.schedule_rounded, fill: 1),
+                      iconSize: 20,
+                      style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+                    ),
                   );
                 }
 
                 // State 3: Downloading (active download)
                 if (progress?.status == DownloadStatus.downloading) {
-                  // Show episode count in tooltip for shows/seasons
                   final currentFile = progress?.currentFile;
-                  final tooltip = currentFile != null && currentFile.contains('episodes')
+                  final label = currentFile != null && currentFile.contains('episodes')
                       ? 'Downloading $currentFile'
                       : 'Downloading...';
 
-                  return IconButton.filledTonal(
-                    onPressed: null,
-                    tooltip: tooltip,
-                    icon: _buildRadialProgress(progress?.progressPercent),
-                    iconSize: 20,
-                    style: actionButtonStyle(),
+                  return Semantics(
+                    label: label,
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: null,
+                      tooltip: null,
+                      icon: _buildRadialProgress(progress?.progressPercent),
+                      iconSize: 20,
+                      style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+                    ),
                   );
                 }
 
                 // State 4: Paused (can resume)
                 if (progress?.status == DownloadStatus.paused) {
-                  return IconButton.filledTonal(
-                    onPressed: () async {
-                      final client = _getClientForMetadata(context);
-                      if (client == null) return;
-                      await downloadProvider.resumeDownload(globalKey, client);
-                      if (context.mounted) {
-                        showAppSnackBar(context, 'Download resumed');
-                      }
-                    },
-                    icon: const AppIcon(Symbols.pause_circle_outline_rounded, fill: 1),
-                    tooltip: 'Resume download',
-                    iconSize: 20,
-                    style: actionButtonStyle(foregroundColor: Colors.amber),
+                  return Semantics(
+                    label: 'Resume download',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: () async {
+                        final client = _getClientForMetadata(context);
+                        if (client == null) return;
+                        await downloadProvider.resumeDownload(globalKey, client);
+                        if (context.mounted) {
+                          showAppSnackBar(context, 'Download resumed');
+                        }
+                      },
+                      icon: const AppIcon(Symbols.pause_circle_outline_rounded, fill: 1),
+                      tooltip: null,
+                      iconSize: 20,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                        foregroundColor: Colors.amber,
+                      ),
+                    ),
                   );
                 }
 
                 // State 5: Failed (can retry)
                 if (progress?.status == DownloadStatus.failed) {
-                  return IconButton.filledTonal(
-                    onPressed: () async {
-                      final client = _getClientForMetadata(context);
-                      if (client == null) return;
-
-                      final versionConfig = await _resolveDownloadVersion(context, metadata, client);
-                      if (versionConfig == null || !context.mounted) return;
-
-                      await downloadProvider.deleteDownload(globalKey);
-                      try {
-                        await downloadProvider.queueDownload(metadata, client, versionConfig: versionConfig);
-
-                        if (context.mounted) {
-                          showSuccessSnackBar(context, t.downloads.downloadQueued);
-                        }
-                      } on CellularDownloadBlockedException {
-                        if (context.mounted) {
-                          showErrorSnackBar(context, t.settings.cellularDownloadBlocked);
-                        }
-                      }
-                    },
-                    icon: const AppIcon(Symbols.error_outline_rounded, fill: 1),
-                    tooltip: 'Retry download',
-                    iconSize: 20,
-                    style: actionButtonStyle(foregroundColor: Colors.red),
-                  );
-                }
-
-                // State 6: Cancelled (can delete or retry)
-                if (progress?.status == DownloadStatus.cancelled) {
-                  return IconButton.filledTonal(
-                    onPressed: () async {
-                      // Show options: Delete or Retry
-                      final retry = await showConfirmDialog(
-                        context,
-                        title: 'Cancelled Download',
-                        message: 'This download was cancelled. What would you like to do?',
-                        cancelText: t.common.delete,
-                        confirmText: 'Retry',
-                      );
-
-                      if (!retry && context.mounted) {
-                        await downloadProvider.deleteDownload(globalKey);
-                        if (context.mounted) {
-                          showSuccessSnackBar(context, t.downloads.downloadDeleted);
-                        }
-                      } else if (retry && context.mounted) {
+                  return Semantics(
+                    label: 'Retry download',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: () async {
                         final client = _getClientForMetadata(context);
                         if (client == null) return;
 
-                        final versionConfig = await _resolveDownloadVersion(context, metadata, client);
-                        if (versionConfig == null || !context.mounted) return;
-
+                        // Delete failed download and retry
                         await downloadProvider.deleteDownload(globalKey);
                         try {
-                          await downloadProvider.queueDownload(metadata, client, versionConfig: versionConfig);
+                          await downloadProvider.queueDownload(metadata, client);
+
                           if (context.mounted) {
                             showSuccessSnackBar(context, t.downloads.downloadQueued);
                           }
@@ -709,128 +589,189 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                             showErrorSnackBar(context, t.settings.cellularDownloadBlocked);
                           }
                         }
-                      }
-                    },
-                    icon: const AppIcon(Symbols.cancel_rounded, fill: 1),
-                    tooltip: 'Cancelled download',
-                    iconSize: 20,
-                    style: actionButtonStyle(foregroundColor: Colors.grey),
+                      },
+                      icon: const AppIcon(Symbols.error_outline_rounded, fill: 1),
+                      tooltip: null,
+                      iconSize: 20,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                        foregroundColor: Colors.red,
+                      ),
+                    ),
+                  );
+                }
+
+                // State 6: Cancelled (can delete or retry)
+                if (progress?.status == DownloadStatus.cancelled) {
+                  return Semantics(
+                    label: 'Cancelled download',
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: () async {
+                        // Show options: Delete or Retry
+                        final retry = await showConfirmDialog(
+                          context,
+                          title: 'Cancelled Download',
+                          message: 'This download was cancelled. What would you like to do?',
+                          cancelText: t.common.delete,
+                          confirmText: 'Retry',
+                        );
+
+                        if (!retry && context.mounted) {
+                          await downloadProvider.deleteDownload(globalKey);
+                          if (context.mounted) {
+                            showSuccessSnackBar(context, t.downloads.downloadDeleted);
+                          }
+                        } else if (retry && context.mounted) {
+                          final client = _getClientForMetadata(context);
+                          if (client == null) return;
+                          await downloadProvider.deleteDownload(globalKey);
+                          try {
+                            await downloadProvider.queueDownload(metadata, client);
+                            if (context.mounted) {
+                              showSuccessSnackBar(context, t.downloads.downloadQueued);
+                            }
+                          } on CellularDownloadBlockedException {
+                            if (context.mounted) {
+                              showErrorSnackBar(context, t.settings.cellularDownloadBlocked);
+                            }
+                          }
+                        }
+                      },
+                      icon: const AppIcon(Symbols.cancel_rounded, fill: 1),
+                      tooltip: null,
+                      iconSize: 20,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                        foregroundColor: Colors.grey,
+                      ),
+                    ),
                   );
                 }
 
                 // State 7: Partial Download (some episodes downloaded, not all)
                 if (progress?.status == DownloadStatus.partial) {
                   final currentFile = progress?.currentFile;
-                  final tooltip = currentFile != null
+                  final label = currentFile != null
                       ? 'Downloaded $currentFile - Click to complete'
                       : 'Partially downloaded - Click to complete';
 
-                  return IconButton.filledTonal(
-                    onPressed: () async {
-                      final client = _getClientForMetadata(context);
-                      if (client == null) return;
+                  return Semantics(
+                    label: label,
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: () async {
+                        final client = _getClientForMetadata(context);
+                        if (client == null) return;
 
-                      final versionConfig = await _resolveDownloadVersion(context, metadata, client);
-                      if (versionConfig == null || !context.mounted) return;
+                        // Queue only the missing episodes
+                        final count = await downloadProvider.queueMissingEpisodes(metadata, client);
 
-                      final count = await downloadProvider.queueMissingEpisodes(
-                        metadata,
-                        client,
-                        versionConfig: versionConfig,
-                      );
-
-                      if (context.mounted) {
-                        final message = count > 0
-                            ? t.downloads.episodesQueued(count: count)
-                            : 'All episodes already downloaded';
-                        showAppSnackBar(context, message);
-                      }
-                    },
-                    tooltip: tooltip,
-                    icon: const AppIcon(Symbols.downloading_rounded, fill: 1),
-                    iconSize: 20,
-                    style: actionButtonStyle(foregroundColor: Colors.orange),
+                        if (context.mounted) {
+                          final message = count > 0
+                              ? t.downloads.episodesQueued(count: count)
+                              : 'All episodes already downloaded';
+                          showAppSnackBar(context, message);
+                        }
+                      },
+                      tooltip: null,
+                      icon: const AppIcon(Symbols.downloading_rounded, fill: 1),
+                      iconSize: 20,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                        foregroundColor: Colors.orange,
+                      ),
+                    ),
                   );
                 }
 
                 // State 8: Downloaded/Completed (can delete)
                 if (downloadProvider.isDownloaded(globalKey)) {
-                  return IconButton.filledTonal(
-                    onPressed: () async {
-                      // Show delete download confirmation
-                      final confirmed = await showDeleteConfirmation(
-                        context,
-                        title: t.downloads.deleteDownload,
-                        message: t.downloads.deleteConfirm(title: metadata.displayTitle),
-                      );
+                  return Semantics(
+                    label: t.downloads.deleteDownload,
+                    button: true,
+                    excludeSemantics: true,
+                    child: IconButton.filledTonal(
+                      onPressed: () async {
+                        // Show delete download confirmation
+                        final confirmed = await showDeleteConfirmation(
+                          context,
+                          title: t.downloads.deleteDownload,
+                          message: t.downloads.deleteConfirm(title: metadata.title),
+                        );
 
-                      if (confirmed && context.mounted) {
-                        await downloadProvider.deleteDownload(globalKey);
-                        if (context.mounted) {
-                          showSuccessSnackBar(context, t.downloads.downloadDeleted);
+                        if (confirmed && context.mounted) {
+                          await downloadProvider.deleteDownload(globalKey);
+                          if (context.mounted) {
+                            showSuccessSnackBar(context, t.downloads.downloadDeleted);
+                          }
                         }
-                      }
-                    },
-                    icon: const AppIcon(Symbols.file_download_done_rounded, fill: 1),
-                    tooltip: t.downloads.deleteDownload,
-                    iconSize: 20,
-                    style: actionButtonStyle(foregroundColor: Colors.green),
+                      },
+                      icon: const AppIcon(Symbols.file_download_done_rounded, fill: 1),
+                      tooltip: null,
+                      iconSize: 20,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        maximumSize: const Size(48, 48),
+                        foregroundColor: Colors.green,
+                      ),
+                    ),
                   );
                 }
 
                 // State 9: Not downloaded (default - can download)
-                return IconButton.filledTonal(
-                  onPressed: () async {
-                    final client = _getClientForMetadata(context);
-                    if (client == null) return;
-
-                    try {
-                      final count = await showDownloadOptionsAndQueue(
-                        context,
-                        metadata: metadata,
-                        client: client,
-                        downloadProvider: downloadProvider,
-                      );
-                      if (count == null || !context.mounted) return;
-
-                      final message = count > 1
-                          ? t.downloads.episodesQueued(count: count)
-                          : t.downloads.downloadQueued;
-                      showSuccessSnackBar(context, message);
-                    } on CellularDownloadBlockedException {
+                return Semantics(
+                  label: t.downloads.downloadNow,
+                  button: true,
+                  excludeSemantics: true,
+                  child: IconButton.filledTonal(
+                    onPressed: () async {
+                      final client = _getClientForMetadata(context);
+                      if (client == null) return;
+                      final count = await downloadProvider.queueDownload(metadata, client);
                       if (context.mounted) {
-                        showErrorSnackBar(context, t.settings.cellularDownloadBlocked);
+                        final message = count > 1 ? t.downloads.episodesQueued(count: count) : t.downloads.downloadQueued;
+                        showSuccessSnackBar(context, message);
                       }
-                    }
-                  },
-                  icon: const AppIcon(Symbols.download_rounded, fill: 1),
-                  tooltip: t.downloads.downloadNow,
-                  iconSize: 20,
-                  style: actionButtonStyle(),
+                    },
+                    icon: const AppIcon(Symbols.download_rounded, fill: 1),
+                    tooltip: null,
+                    iconSize: 20,
+                    style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+                  ),
                 );
               },
             ),
           const SizedBox(width: 12),
           // Mark as watched/unwatched toggle (works offline too)
-          IconButton.filledTonal(
-            onPressed: () async {
-              try {
+          Semantics(
+            label: metadata.isWatched ? t.tooltips.markAsUnwatched : t.tooltips.markAsWatched,
+            button: true,
+            excludeSemantics: true,
+            child: IconButton.filledTonal(
+              onPressed: () async {
+                try {
                 final isWatched = metadata.isWatched;
                 if (widget.isOffline) {
                   // Offline mode: queue action for later sync
                   final offlineWatch = context.read<OfflineWatchProvider>();
                   if (isWatched) {
-                    await offlineWatch.markAsUnwatched(serverId: metadata.serverId!, ratingKey: metadata.ratingKey);
+                    await offlineWatch.markAsUnwatched(serverId: metadata.serverId!, itemId: metadata.itemId);
                   } else {
-                    await offlineWatch.markAsWatched(serverId: metadata.serverId!, ratingKey: metadata.ratingKey);
+                    await offlineWatch.markAsWatched(serverId: metadata.serverId!, itemId: metadata.itemId);
                   }
                   if (mounted) {
                     showAppSnackBar(
                       context,
                       isWatched ? t.messages.markedAsUnwatchedOffline : t.messages.markedAsWatchedOffline,
                     );
-                    // Refresh offline OnDeck
-                    _loadOfflineOnDeckEpisode();
+                    // Refresh offline next episode
+                    _loadOfflineNextEpisode();
                   }
                 } else {
                   // Online mode: send to server
@@ -838,9 +779,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                   if (client == null) return;
 
                   if (isWatched) {
-                    await client.markAsUnwatched(metadata.ratingKey);
+                    await client.markAsUnwatched(metadata.itemId);
                   } else {
-                    await client.markAsWatched(metadata.ratingKey);
+                    await client.markAsWatched(metadata.itemId);
                   }
                   if (mounted) {
                     _watchStateChanged = true;
@@ -849,39 +790,68 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                     _updateWatchState();
                   }
                 }
-              } catch (e) {
-                if (mounted) {
-                  showErrorSnackBar(context, t.messages.errorLoading(error: e.toString()));
+                } catch (e, st) {
+                  if (mounted) {
+                    showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
+                  }
+                  logErrorWithStackTrace('Failed to update watch state', e, st);
                 }
-              }
-            },
+              },
             icon: AppIcon(metadata.isWatched ? Symbols.remove_done_rounded : Symbols.check_rounded, fill: 1),
-            tooltip: metadata.isWatched ? t.tooltips.markAsUnwatched : t.tooltips.markAsWatched,
+            tooltip: null,
             iconSize: 20,
-            style: actionButtonStyle(),
+            style: IconButton.styleFrom(minimumSize: const Size(48, 48), maximumSize: const Size(48, 48)),
+            ),
           ),
-          // Three-dots menu button (hidden in offline mode)
+          // Favorite button
           if (!widget.isOffline) ...[
             const SizedBox(width: 12),
-            MediaContextMenu(
-              key: _contextMenuKey,
-              item: metadata,
-              onRefresh: (_) => _loadFullMetadata(),
-              child: Builder(
-                builder: (buttonContext) => IconButton.filledTonal(
-                  onPressed: () {
-                    final renderBox = buttonContext.findRenderObject() as RenderBox?;
-                    if (renderBox != null) {
-                      final position = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
-                      _contextMenuKey.currentState?.showContextMenu(buttonContext, position: position);
-                    }
-                  },
-                  icon: const AppIcon(Symbols.more_vert_rounded, fill: 1),
-                  iconSize: 20,
-                  style: actionButtonStyle(),
-                ),
+            Semantics(
+              label: metadata.isFavorite == true ? 'Remove from favorites' : 'Add to favorites',
+              button: true,
+              excludeSemantics: true,
+              child: IconButton.filledTonal(
+                onPressed: () async {
+                  final client = _getClientForMetadata(context);
+                  if (client == null) return;
+                final metadata = _fullMetadata ?? widget.metadata;
+                try {
+                  final newState = await client.toggleFavorite(
+                    metadata.itemId,
+                    isCurrentlyFavorite: metadata.isFavorite == true,
+                  );
+                  if (mounted && newState != null) {
+                    setState(() {
+                      _fullMetadata = metadata.copyWith(isFavorite: newState);
+                      _watchStateChanged = true; // so back triggers list refresh
+                    });
+                    showSuccessSnackBar(
+                      context,
+                      newState ? 'Added to favorites' : 'Removed from favorites',
+                    );
+                  } else if (mounted) {
+                    await _loadFullMetadata();
+                  }
+                } catch (e, st) {
+                  if (mounted) {
+                    showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
+                  }
+                  logErrorWithStackTrace('Failed to toggle favorite', e, st);
+                }
+                },
+                icon: AppIcon(
+                metadata.isFavorite == true ? Symbols.favorite_rounded : Symbols.favorite_border_rounded,
+                fill: metadata.isFavorite == true ? 1 : 0,
+              ),
+              tooltip: null,
+              iconSize: 20,
+              style: IconButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                maximumSize: const Size(48, 48),
+                foregroundColor: metadata.isFavorite == true ? Colors.red : null,
               ),
             ),
+          ),
           ],
         ],
       ),
@@ -923,20 +893,21 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     );
   }
 
-  /// Build a rating chip that shows a source icon when available,
-  /// falling back to a generic Material icon.
-  Widget _buildRatingChip(String? imageUri, double value, IconData fallbackIcon) {
+  /// Format is determined by ratingImage (e.g. TMDB = 6.5, RT = 65%); unknown = percent.
+  /// [useReadableLabel] avoids dark SVG logos (TMDB/IMDB) and uses the fallback icon + value only.
+  Widget _buildRatingChip(String? imageUri, double value, IconData fallbackIcon, {bool useReadableLabel = false}) {
     final info = parseRatingImage(imageUri, value);
-    if (info != null) {
+    if (info != null && !useReadableLabel) {
       return _buildMetadataChip(info.formattedValue, leading: SvgPicture.asset(info.assetPath, width: 16, height: 16));
     }
-    return _buildMetadataChip('${(value * 10).toStringAsFixed(0)}%', icon: fallbackIcon);
+    final formatted = info?.formattedValue ?? value.toStringAsFixed(1);
+    return _buildMetadataChip(formatted, icon: fallbackIcon);
   }
 
   /// Build all rating chips for the metadata.
   /// When both critic and audience ratings are from Rotten Tomatoes,
   /// they are combined into a single badge.
-  List<Widget> _buildRatingChips(PlexMetadata metadata) {
+  List<Widget> _buildRatingChips(MediaMetadata metadata) {
     final chips = <Widget>[];
     final bothRT =
         metadata.rating != null &&
@@ -950,105 +921,26 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       chips.add(_buildCombinedRtChip(critic, audience));
     } else {
       if (metadata.rating != null) {
-        chips.add(_buildRatingChip(metadata.ratingImage, metadata.rating!, Symbols.star_rounded));
+        chips.add(_buildRatingChip(
+          metadata.ratingImage,
+          metadata.rating!,
+          Symbols.star_rounded,
+          useReadableLabel: !isRottenTomatoes(metadata.ratingImage),
+        ));
       }
       if (metadata.audienceRating != null) {
-        chips.add(_buildRatingChip(metadata.audienceRatingImage, metadata.audienceRating!, Symbols.people_rounded));
+        chips.add(_buildRatingChip(
+          metadata.audienceRatingImage,
+          metadata.audienceRating!,
+          Symbols.star_rounded,
+          useReadableLabel: true,
+        ));
       }
     }
 
-    // User rating chip (tappable)
-    if (!widget.isOffline) {
-      chips.add(_buildUserRatingChip(metadata));
-    }
+    // User rating chip not shown (server handles ratings)
 
     return chips;
-  }
-
-  Widget _buildUserRatingChip(PlexMetadata metadata) {
-    final hasRating = metadata.userRating != null && metadata.userRating! > 0;
-    final starValue = hasRating ? metadata.userRating! / 2.0 : 0.0;
-    final colorScheme = Theme.of(context).colorScheme;
-    final isKeyboardMode = InputModeTracker.isKeyboardMode(context);
-    final showFocus = _ratingChipFocusNode.hasFocus && isKeyboardMode;
-
-    final bgColor = showFocus ? colorScheme.inverseSurface : colorScheme.secondaryContainer.withValues(alpha: 0.8);
-    final fgColor = showFocus ? colorScheme.onInverseSurface : colorScheme.onSecondaryContainer;
-
-    return FocusableWrapper(
-      focusNode: _ratingChipFocusNode,
-      onSelect: () => _showRatingDialog(metadata, starValue),
-      borderRadius: 100,
-      disableScale: true,
-      focusColor: Colors.transparent,
-      onFocusChange: (_) => setState(() {}),
-      onKeyEvent: (_, event) {
-        if (!event.isActionable) return KeyEventResult.ignored;
-        final key = event.logicalKey;
-        if (key.isDownKey) {
-          _playButtonFocusNode.requestFocus();
-          return KeyEventResult.handled;
-        }
-        if (key.isUpKey) {
-          return KeyEventResult.handled; // consume — nothing above
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: () => _showRatingDialog(metadata, starValue),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.all(Radius.circular(100)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon(
-                Symbols.star_rounded,
-                fill: hasRating ? 1 : 0,
-                color: showFocus ? fgColor : (hasRating ? Colors.amber : fgColor),
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                hasRating ? formatRating(starValue) : t.mediaMenu.rate,
-                style: TextStyle(
-                  color: fgColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showRatingDialog(PlexMetadata metadata, double currentStarValue) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => RatingBottomSheet(
-        currentRating: currentStarValue,
-        onRate: (stars) async {
-          final client = _getClientForMetadata(this.context);
-          if (client == null) return;
-          final plexRating = stars * 2.0; // Convert 0-5 stars to 0-10 scale
-          final success = await client.rateItem(metadata.ratingKey, plexRating);
-          if (success) _updateWatchState();
-        },
-        onClear: () async {
-          final client = _getClientForMetadata(this.context);
-          if (client == null) return;
-          final success = await client.rateItem(metadata.ratingKey, -1);
-          if (success) _updateWatchState();
-        },
-      ),
-    );
   }
 
   /// Build a combined RT chip showing critic + audience side by side.
@@ -1080,43 +972,13 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     );
   }
 
-  /// Get the correct PlexClient for this metadata's server
+  /// Get the correct JellyfinClient for this metadata's server
   /// Returns null in offline mode or if serverId is null
-  PlexClient? _getClientForMetadata(BuildContext context) {
-    return getServerBoundClient(context);
-  }
-
-  void _navigateToActorMedia(PlexRole actor) {
-    final personId = actor.id?.toString() ?? actor.tagKey;
-    if (personId == null || widget.metadata.serverId == null) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ActorMediaScreen(
-          actorName: actor.tag,
-          personId: personId,
-          actorThumb: actor.thumb,
-          characterName: actor.role,
-          serverId: widget.metadata.serverId!,
-          serverName: widget.metadata.serverName,
-        ),
-      ),
-    );
-  }
-
-  /// Resolve version selection for download using shared utility.
-  Future<DownloadVersionConfig?> _resolveDownloadVersion(
-    BuildContext context,
-    PlexMetadata metadata,
-    PlexClient client,
-  ) {
-    return resolveDownloadVersion(
-      context,
-      metadata,
-      client,
-      fallbackVersions: _fullMetadata?.mediaVersions,
-    );
+  JellyfinClient? _getClientForMetadata(BuildContext context) {
+    if (widget.isOffline || widget.metadata.serverId == null) {
+      return null;
+    }
+    return context.getClientForServer(widget.metadata.serverId!);
   }
 
   Future<void> _loadFullMetadata() async {
@@ -1126,9 +988,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
     // Offline mode: try to load full metadata from cache (has clearLogo, summary, etc.)
     if (widget.isOffline) {
-      final cachedMetadata = await PlexApiCache.instance.getMetadata(
+      final cachedMetadata = await ApiCache.instance.getMetadata(
         widget.metadata.serverId ?? '',
-        widget.metadata.ratingKey,
+        widget.metadata.itemId,
       );
       if (!mounted) return;
       setState(() {
@@ -1138,12 +1000,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
       if (widget.metadata.isShow) {
         _loadSeasonsFromDownloads();
-        // Get offline OnDeck episode
-        _loadOfflineOnDeckEpisode();
-      } else if (widget.metadata.isSeason) {
-        _seasons = [widget.metadata];
-        _showEpisodesDirectly = true;
-        _loadEpisodesFromDownloads();
+        // Get offline next episode
+        _loadOfflineNextEpisode();
       }
       return;
     }
@@ -1160,11 +1018,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         return;
       }
 
-      // Fetch full metadata with clearLogo and OnDeck episode
-      final result = await client.getMetadataWithImagesAndOnDeck(widget.metadata.ratingKey);
-      final metadata = result['metadata'] as PlexMetadata?;
-      final onDeckEpisode = result['onDeckEpisode'] as PlexMetadata?;
-      final playbackData = result['playbackData'] as PlexVideoPlaybackData?;
+      // Fetch full metadata with clearLogo and next episode
+      final result = await client.getMetadataWithNextEpisode(widget.metadata.itemId);
+      final metadata = result['metadata'] as MediaMetadata?;
+      final nextEpisode = result['nextEpisode'] as MediaMetadata?;
 
       if (!mounted) return;
 
@@ -1174,30 +1031,27 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
           serverId: widget.metadata.serverId,
           serverName: widget.metadata.serverName,
         );
-        final onDeckWithServerId = onDeckEpisode?.copyWith(
+        final nextEpisodeWithServerId = nextEpisode?.copyWith(
           serverId: widget.metadata.serverId,
           serverName: widget.metadata.serverName,
         );
 
         setState(() {
           _fullMetadata = metadataWithServerId;
-          _onDeckEpisode = onDeckWithServerId;
-          _playbackData = playbackData;
+          _nextEpisode = nextEpisodeWithServerId;
           _isLoadingMetadata = false;
         });
 
         // Load seasons if it's a show
         if (metadata.isShow) {
           _loadSeasons();
-        } else if (metadata.isSeason) {
-          _seasons = [widget.metadata];
-          _showEpisodesDirectly = true;
-          _fetchAllEpisodes();
         }
 
         // Load extras (trailers, behind-the-scenes, etc.)
         _loadExtras();
-        _loadRelatedHubs();
+
+        // Load similar items ("More Like This")
+        _loadSimilarItems();
 
         return;
       }
@@ -1210,10 +1064,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
       if (widget.metadata.isShow) {
         _loadSeasons();
-      } else if (widget.metadata.isSeason) {
-        _seasons = [widget.metadata];
-        _showEpisodesDirectly = true;
-        _fetchAllEpisodes();
       }
     } catch (e) {
       // Fallback to passed metadata on error
@@ -1225,16 +1075,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
       if (widget.metadata.isShow) {
         _loadSeasons();
-      } else if (widget.metadata.isSeason) {
-        _seasons = [widget.metadata];
-        _showEpisodesDirectly = true;
-        _fetchAllEpisodes();
       }
     }
   }
 
   Future<void> _loadSeasons() async {
-    _seasonsCompleter = Completer<void>();
     setState(() {
       _isLoadingSeasons = true;
     });
@@ -1243,73 +1088,35 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       // Use server-specific client for this metadata
       final client = _getClientForMetadata(context);
 
-      // Fetch seasons and library prefs in parallel
-      final sectionId = (_fullMetadata ?? widget.metadata).librarySectionID?.toString();
-      final seasonsFuture = client?.getChildren(widget.metadata.ratingKey) ?? Future.value(<PlexMetadata>[]);
-      final prefsFuture = (sectionId != null && client != null)
-          ? client.getLibrarySectionPrefs(sectionId)
-          : Future.value(<String, dynamic>{});
-
-      final results = await Future.wait([seasonsFuture, prefsFuture]);
-      final seasons = results[0] as List<PlexMetadata>;
-      final prefs = results[1] as Map<String, dynamic>;
-
+      final seasons = await client?.getChildren(widget.metadata.itemId) ?? [];
       // Preserve serverId for each season
       final seasonsWithServerId = seasons
           .map((season) => season.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
           .toList();
-
-      // Check the server setting the season display mode
-      const flattenSeasonsAlways = 1;
-      const flattenSeasonsSingleSeason = 2;
-      final flattenSeasons = int.tryParse(prefs['flattenSeasons']?.toString() ?? '');
-      final isAlways = flattenSeasons == flattenSeasonsAlways;
-      final isSingleSeason = flattenSeasons == flattenSeasonsSingleSeason;
-      final shouldShowEpisodesDirectly =
-          isAlways || seasonsWithServerId.isEmpty || (isSingleSeason && seasonsWithServerId.length == 1);
-
-      // Create focus nodes for season tabs
-      _updateSeasonTabFocusNodes(seasonsWithServerId.length);
-
-      // Auto-select the on-deck season
-      final onDeckSeasonIndex = _findOnDeckSeasonIndex(seasonsWithServerId);
-
-      setStateIfMounted(() {
+      if (!mounted) return;
+      setState(() {
         _seasons = seasonsWithServerId;
         _isLoadingSeasons = false;
-        _showEpisodesDirectly = shouldShowEpisodesDirectly;
-        _selectedSeasonIndex = onDeckSeasonIndex;
       });
-
-      if (shouldShowEpisodesDirectly) {
-        await _fetchAllEpisodes();
-      } else if (seasonsWithServerId.isNotEmpty) {
-        // Fetch episodes for the auto-selected season
-        _fetchSeasonEpisodes(onDeckSeasonIndex);
-      }
     } catch (e) {
-      setStateIfMounted(() {
+      if (!mounted) return;
+      setState(() {
         _isLoadingSeasons = false;
       });
-    } finally {
-      if (!(_seasonsCompleter?.isCompleted ?? true)) {
-        _seasonsCompleter?.complete();
-      }
     }
   }
 
   /// Load seasons from downloaded episodes (offline mode)
   void _loadSeasonsFromDownloads() {
-    _seasonsCompleter = Completer<void>();
     setState(() {
       _isLoadingSeasons = true;
     });
 
     final downloadProvider = context.read<DownloadProvider>();
-    final episodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.ratingKey);
+    final episodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.itemId);
 
     // Group episodes by season
-    final Map<int, List<PlexMetadata>> seasonMap = {};
+    final Map<int, List<MediaMetadata>> seasonMap = {};
     for (final episode in episodes) {
       final seasonNum = episode.parentIndex ?? 0;
       seasonMap.putIfAbsent(seasonNum, () => []).add(episode);
@@ -1318,138 +1125,23 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     // Create season metadata from episodes
     final seasons = seasonMap.entries.map((entry) {
       final firstEp = entry.value.first;
-      return PlexMetadata(
-        ratingKey: firstEp.parentRatingKey ?? '',
-        key: '/library/metadata/${firstEp.parentRatingKey}',
+      return MediaMetadata(
+        itemId: firstEp.seasonId ?? '',
+        key: '${ApiCache.itemPrefix}${firstEp.seasonId}',
         type: 'season',
-        title: firstEp.parentTitle ?? 'Season ${entry.key}',
+        title: firstEp.seasonTitle ?? 'Season ${entry.key}',
         index: entry.key,
-        leafCount: entry.value.length,
-        thumb: firstEp.parentThumb,
-        parentRatingKey: firstEp.grandparentRatingKey,
+        thumb: firstEp.seasonImageId,
+        seasonId: firstEp.seriesId,
         serverId: widget.metadata.serverId,
         serverName: widget.metadata.serverName,
       );
     }).toList()..sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
 
-    // Create focus nodes for season tabs and cache episodes per season
-    _updateSeasonTabFocusNodes(seasons.length);
-    for (final entry in seasonMap.entries) {
-      final seasonRatingKey = entry.value.first.parentRatingKey ?? '';
-      _episodeCache[seasonRatingKey] = entry.value..sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
-    }
-
-    final onDeckSeasonIndex = _findOnDeckSeasonIndex(seasons);
-
     setState(() {
       _seasons = seasons;
       _isLoadingSeasons = false;
-      _selectedSeasonIndex = onDeckSeasonIndex;
     });
-
-    // Load episodes for the selected season from cache
-    if (seasons.isNotEmpty) {
-      _fetchSeasonEpisodes(onDeckSeasonIndex);
-    }
-
-    if (!(_seasonsCompleter?.isCompleted ?? true)) {
-      _seasonsCompleter?.complete();
-    }
-  }
-
-  /// Load episodes from downloaded content for a season
-  void _loadEpisodesFromDownloads() {
-    final downloadProvider = context.read<DownloadProvider>();
-    final allEpisodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.parentRatingKey ?? '');
-    final seasonEpisodes = allEpisodes.where((ep) => ep.parentIndex == widget.metadata.index).toList()
-      ..sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
-
-    setState(() {
-      _episodes = seasonEpisodes;
-      _isLoadingEpisodes = false;
-    });
-  }
-
-  /// Create or update focus nodes for season tab chips
-  void _updateSeasonTabFocusNodes(int count) {
-    if (_seasonTabFocusNodes.length != count) {
-      for (final node in _seasonTabFocusNodes) {
-        node.dispose();
-      }
-      _seasonTabFocusNodes = List.generate(
-        count,
-        (i) => FocusNode(debugLabel: 'season_tab_$i'),
-      );
-      _seasonContextMenuKeys.clear();
-    }
-  }
-
-  /// Find the season index matching the initial selection or on-deck episode, or fall back to 0
-  int _findOnDeckSeasonIndex(List<PlexMetadata> seasons) {
-    // Prefer explicit initial season (from navigation)
-    if (widget.initialSeasonIndex != null && seasons.isNotEmpty) {
-      final idx = seasons.indexWhere((s) => s.index == widget.initialSeasonIndex);
-      if (idx != -1) return idx;
-    }
-    // Fall back to on-deck episode's season
-    if (_onDeckEpisode != null && seasons.isNotEmpty) {
-      final onDeckParentIndex = _onDeckEpisode!.parentIndex;
-      if (onDeckParentIndex != null) {
-        final idx = seasons.indexWhere((s) => s.index == onDeckParentIndex);
-        if (idx != -1) return idx;
-      }
-    }
-    return 0;
-  }
-
-  /// Fetch episodes for a specific season by index, using cache when available
-  Future<void> _fetchSeasonEpisodes(int seasonIndex) async {
-    if (seasonIndex < 0 || seasonIndex >= _seasons.length) return;
-    final season = _seasons[seasonIndex];
-
-    // Check cache first
-    final cached = _episodeCache[season.ratingKey];
-    if (cached != null) {
-      setStateIfMounted(() {
-        _episodes = List.of(cached);
-        _isLoadingSeasonEpisodes = false;
-      });
-      return;
-    }
-
-    setStateIfMounted(() => _isLoadingSeasonEpisodes = true);
-
-    try {
-      if (widget.isOffline) {
-        // Offline: load from downloads
-        final downloadProvider = context.read<DownloadProvider>();
-        final allEpisodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.ratingKey);
-        final seasonEpisodes = allEpisodes.where((ep) => ep.parentIndex == season.index).toList()
-          ..sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
-        _episodeCache[season.ratingKey] = seasonEpisodes;
-        setStateIfMounted(() {
-          _episodes = List.of(seasonEpisodes);
-          _isLoadingSeasonEpisodes = false;
-        });
-      } else {
-        final client = _getClientForMetadata(context);
-        if (client == null) {
-          setStateIfMounted(() => _isLoadingSeasonEpisodes = false);
-          return;
-        }
-        final episodes = await client.getChildren(season.ratingKey);
-        final episodesWithServerId = episodes
-            .map((e) => e.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
-            .toList();
-        _episodeCache[season.ratingKey] = episodesWithServerId;
-        setStateIfMounted(() {
-          _episodes = List.of(episodesWithServerId);
-          _isLoadingSeasonEpisodes = false;
-        });
-      }
-    } catch (e) {
-      setStateIfMounted(() => _isLoadingSeasonEpisodes = false);
-    }
   }
 
   /// Load extras (trailers, behind-the-scenes, etc.)
@@ -1470,76 +1162,99 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         return;
       }
 
-      final extras = await client.getExtras(widget.metadata.ratingKey);
+      final extras = await client.getExtras(widget.metadata.itemId);
 
       // Preserve serverId for each extra (needed for multi-server setups)
       final extrasWithServerId = extras
           .map((extra) => extra.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
           .toList();
 
-      setStateIfMounted(() {
-        _extras = extrasWithServerId;
-      });
+      if (mounted) {
+        setState(() {
+          _extras = extrasWithServerId;
+        });
+      }
     } catch (e) {
       // Silently fail - extras section won't appear if fetch fails
     }
   }
 
-  /// Load related hubs (collections, similar, "more from" director/actor)
-  Future<void> _loadRelatedHubs() async {
-    if (!widget.metadata.isMovie && !widget.metadata.isShow) {
-      return;
-    }
-
-    if (widget.isOffline) {
-      return;
-    }
+  /// Load similar items for "More Like This" section
+  Future<void> _loadSimilarItems() async {
+    if (!widget.metadata.isMovie && !widget.metadata.isShow) return;
+    if (widget.isOffline) return;
 
     try {
       final client = _getClientForMetadata(context);
       if (client == null) return;
 
-      final hubs = await client.getRelatedHubs(widget.metadata.ratingKey);
+      final items = await client.getSimilarItems(widget.metadata.itemId);
 
-      setStateIfMounted(() {
-        _relatedHubs = hubs;
-        _relatedHubKeys = List.generate(hubs.length, (_) => GlobalKey<HubSectionState>());
-      });
+      final itemsWithServerId = items
+          .map((item) => item.copyWith(serverId: widget.metadata.serverId, serverName: widget.metadata.serverName))
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _similarItems = itemsWithServerId;
+        });
+      }
     } catch (e) {
-      // Silently fail - related sections won't appear if fetch fails
+      // Silently fail - section won't appear
     }
   }
 
-  /// Focus the first visible section above cast: season tabs → overview → play button.
-  /// Shared by cast UP, extras UP, and related hub UP handlers.
-  void _focusSectionAboveCast() {
-    final metadata = _fullMetadata ?? widget.metadata;
-    if (metadata.isShow && !_showEpisodesDirectly && _seasons.isNotEmpty && _seasonTabFocusNodes.isNotEmpty) {
-      _seasonTabFocusNodes[_selectedSeasonIndex].requestFocus();
-      _scrollSectionIntoView(_seasonsSectionKey);
-    } else if (metadata.summary != null && metadata.summary!.isNotEmpty) {
-      _overviewFocusNode.requestFocus();
-      _scrollSectionIntoView(_overviewSectionKey);
-    } else {
-      _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-      _playButtonFocusNode.requestFocus();
+  /// Navigate to a season detail screen
+  Future<void> _navigateToSeason(MediaMetadata season) async {
+    final watchStateChanged = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SeasonDetailScreen(season: season, isOffline: widget.isOffline),
+      ),
+    );
+    if (watchStateChanged == true) {
+      _watchStateChanged = true;
+      _updateWatchState();
     }
   }
 
-  /// Focus the first visible section above extras: cast → season tabs → overview → play button.
-  void _focusSectionAboveExtras() {
-    final metadata = _fullMetadata ?? widget.metadata;
-    if (metadata.role != null && metadata.role!.isNotEmpty) {
-      _castFocusNode.requestFocus();
-      _scrollSectionIntoView(_castSectionKey);
-    } else {
-      _focusSectionAboveCast();
-    }
-  }
-
-  /// Scroll the main scroll view so the section with the given key is centered
+  /// Scroll the main CustomScrollView so the section with the given key is visible
   void _scrollSectionIntoView(GlobalKey key) {
-    scrollContextToCenter(key.currentContext);
+    final disableAnimations = context.read<SettingsProvider>().disableAnimations;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = key.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  /// Handle key events for the back button
+  KeyEventResult _handleBackButtonKeyEvent(FocusNode _, KeyEvent event) {
+    final key = event.logicalKey;
+    if (!event.isActionable) return KeyEventResult.ignored;
+
+    if (key.isUpKey || key.isRightKey) {
+      return KeyEventResult.handled;
+    }
+    if (key.isLeftKey) {
+      if (event is KeyUpEvent) {
+        Navigator.pop(context, _watchStateChanged);
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (key.isDownKey) {
+      _playButtonFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (key.isSelectKey) {
+      Navigator.pop(context, _watchStateChanged);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   /// Intercept DOWN from the play button row to focus the first available section
@@ -1547,12 +1262,13 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final key = event.logicalKey;
     if (!event.isActionable) return KeyEventResult.ignored;
 
-    // UP: focus the rating chip if available
     if (key.isUpKey) {
-      if (!widget.isOffline) {
-        _ratingChipFocusNode.requestFocus();
-        return KeyEventResult.handled;
+      if (context.read<SettingsProvider>().disableAnimations) {
+        _scrollController.jumpTo(0);
+      } else {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
       }
+      _backButtonFocusNode.requestFocus();
       return KeyEventResult.handled;
     }
 
@@ -1560,204 +1276,90 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
     final metadata = _fullMetadata ?? widget.metadata;
 
-    // DOWN order: overview → seasons → cast → extras
-    if (metadata.summary != null && metadata.summary!.isNotEmpty) {
+    // DOWN order: overview → seasons → cast → similar
+    if (metadata.summary != null || metadata.studio != null || metadata.contentRating != null) {
       _overviewFocusNode.requestFocus();
       _scrollSectionIntoView(_overviewSectionKey);
       return KeyEventResult.handled;
     }
 
-    if (metadata.isShow && !_showEpisodesDirectly && _seasons.isNotEmpty && _seasonTabFocusNodes.isNotEmpty) {
-      // Focus the selected season tab chip
-      _seasonTabFocusNodes[_selectedSeasonIndex].requestFocus();
+    if (metadata.isShow && _seasons.isNotEmpty) {
+      _seasonsFocusNode.requestFocus();
       _scrollSectionIntoView(_seasonsSectionKey);
       return KeyEventResult.handled;
     }
 
-    if (_episodes.isNotEmpty) {
-      _firstEpisodeFocusNode.requestFocus();
-      _scrollSectionIntoView(_seasonsSectionKey);
-      return KeyEventResult.handled;
-    }
-
-    if (metadata.role != null && metadata.role!.isNotEmpty) {
+    if (!widget.isOffline && metadata.role != null && metadata.role!.isNotEmpty) {
       _castFocusNode.requestFocus();
       _scrollSectionIntoView(_castSectionKey);
       return KeyEventResult.handled;
     }
 
-    if (_extras != null && _extras!.isNotEmpty) {
-      _extrasFocusNode.requestFocus();
-      _scrollSectionIntoView(_extrasSectionKey);
+    if (_similarItems != null && _similarItems!.isNotEmpty) {
+      _similarItemsFocusNode.requestFocus();
+      _scrollSectionIntoView(_similarSectionKey);
       return KeyEventResult.handled;
     }
 
-    if (_relatedHubs.isNotEmpty) {
-      _relatedHubKeys.first.currentState?.requestFocusFromMemory();
-      return KeyEventResult.handled;
-    }
-
-    return KeyEventResult.handled; // consume to prevent unwanted traversal
+    return KeyEventResult.handled;
   }
 
-  /// Get the responsive card width used by seasons/extras/cast rows.
-  /// Uses the shared grid size calculator for consistency with library grids.
-  double _getResponsiveCardWidth() {
-    final density = context.read<SettingsProvider>().libraryDensity;
-    final availableWidth = MediaQuery.of(context).size.width;
-    return GridSizeCalculator.getCellWidth(availableWidth, context, density);
-  }
-
-  /// Handle key events for the overview section
+  /// Handle key events for the overview/summary section
   KeyEventResult _handleOverviewKeyEvent(FocusNode _, KeyEvent event) {
     final key = event.logicalKey;
-    if (key.isBackKey) return KeyEventResult.ignored;
     if (!event.isActionable) return KeyEventResult.ignored;
 
-    final metadata = _fullMetadata ?? widget.metadata;
-
-    // UP: always play button (overview is directly below play)
     if (key.isUpKey) {
-      _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      if (context.read<SettingsProvider>().disableAnimations) {
+        _scrollController.jumpTo(0);
+      } else {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
       _playButtonFocusNode.requestFocus();
       return KeyEventResult.handled;
     }
 
     if (key.isDownKey) {
-      if (metadata.isShow && !_showEpisodesDirectly && _seasons.isNotEmpty && _seasonTabFocusNodes.isNotEmpty) {
-        _seasonTabFocusNodes[_selectedSeasonIndex].requestFocus();
+      final metadata = _fullMetadata ?? widget.metadata;
+      if (metadata.isShow && _seasons.isNotEmpty) {
+        _seasonsFocusNode.requestFocus();
         _scrollSectionIntoView(_seasonsSectionKey);
-      } else if (_episodes.isNotEmpty) {
-        _firstEpisodeFocusNode.requestFocus();
-        _scrollSectionIntoView(_seasonsSectionKey);
-      } else if (metadata.role != null && metadata.role!.isNotEmpty) {
+      } else if (!widget.isOffline && metadata.role != null && metadata.role!.isNotEmpty) {
         _castFocusNode.requestFocus();
         _scrollSectionIntoView(_castSectionKey);
-      } else if (_extras != null && _extras!.isNotEmpty) {
-        _extrasFocusNode.requestFocus();
-        _scrollSectionIntoView(_extrasSectionKey);
-      } else if (_relatedHubs.isNotEmpty) {
-        _relatedHubKeys.first.currentState?.requestFocusFromMemory();
+      } else if (_similarItems != null && _similarItems!.isNotEmpty) {
+        _similarItemsFocusNode.requestFocus();
+        _scrollSectionIntoView(_similarSectionKey);
       }
-      return KeyEventResult.handled;
-    }
-
-    // LEFT/RIGHT/SELECT: consume to prevent unwanted traversal
-    if (key.isLeftKey || key.isRightKey || key.isSelectKey) {
       return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
   }
 
-  /// Show context menu for a season tab
-  void _showSeasonTabContextMenu(int index, {Offset? position}) {
-    final key = _seasonContextMenuKeys.putIfAbsent(index, () => GlobalKey<MediaContextMenuState>());
-    key.currentState?.showContextMenu(context, position: position);
+  /// Get the responsive card width used by seasons/extras/cast rows
+  double _getResponsiveCardWidth() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth >= 1400) return 220.0;
+    if (screenWidth >= 900) return 200.0;
+    if (screenWidth >= 700) return 190.0;
+    return 160.0;
   }
 
-  /// Focus the currently selected season tab
-  void _focusSelectedSeasonTab() {
-    if (_seasonTabFocusNodes.length > _selectedSeasonIndex) {
-      _seasonTabFocusNodes[_selectedSeasonIndex].requestFocus();
-    }
-  }
-
-  /// Scroll a season tab into view within the horizontal scroll
-  void _scrollSeasonTabIntoView(int index) {
-    if (index < 0 || index >= _seasonTabFocusNodes.length) return;
-    scrollContextToCenter(_seasonTabFocusNodes[index].context);
-  }
-
-  /// Build inline season tab chips with LEFT/RIGHT/DOWN focus navigation
-  Widget _buildSeasonTabs() {
-    return HorizontalScrollWithArrows(
-      controller: _seasonTabsScrollController,
-      builder: (scrollController) => SingleChildScrollView(
-        controller: scrollController,
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(_seasons.length, (index) {
-            final season = _seasons[index];
-            final contextMenuKey = _seasonContextMenuKeys.putIfAbsent(
-              index,
-              () => GlobalKey<MediaContextMenuState>(),
-            );
-            Offset? tapPosition;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: MediaContextMenu(
-                key: contextMenuKey,
-                item: season,
-                onRefresh: (_) {
-                  _watchStateChanged = true;
-                  _updateWatchState();
-                },
-                onListRefresh: () {
-                  if (widget.isOffline) {
-                    _loadSeasonsFromDownloads();
-                  } else {
-                    _loadSeasons();
-                  }
-                },
-                child: GestureDetector(
-                  onTapDown: (details) => tapPosition = details.globalPosition,
-                  onLongPress: () => _showSeasonTabContextMenu(index, position: tapPosition),
-                  onSecondaryTapDown: (details) => tapPosition = details.globalPosition,
-                  onSecondaryTap: () => _showSeasonTabContextMenu(index, position: tapPosition),
-                  child: FocusableTabChip(
-                    label: season.title!,
-                    isSelected: index == _selectedSeasonIndex,
-                    focusNode: _seasonTabFocusNodes.length > index ? _seasonTabFocusNodes[index] : null,
-                    onSelect: () {
-                      if (index == _selectedSeasonIndex) return;
-                      setState(() => _selectedSeasonIndex = index);
-                      _fetchSeasonEpisodes(index);
-                    },
-                    onNavigateLeft: index > 0
-                        ? () {
-                            final newIndex = index - 1;
-                            setState(() => _selectedSeasonIndex = newIndex);
-                            _seasonTabFocusNodes[newIndex].requestFocus();
-                            _scrollSeasonTabIntoView(newIndex);
-                            _fetchSeasonEpisodes(newIndex);
-                          }
-                        : null,
-                    onNavigateRight: index < _seasons.length - 1
-                        ? () {
-                            final newIndex = index + 1;
-                            setState(() => _selectedSeasonIndex = newIndex);
-                            _seasonTabFocusNodes[newIndex].requestFocus();
-                            _scrollSeasonTabIntoView(newIndex);
-                            _fetchSeasonEpisodes(newIndex);
-                          }
-                        : null,
-                    onNavigateDown: () {
-                      _firstEpisodeFocusNode.requestFocus();
-                    },
-                    onLongPress: () => _showSeasonTabContextMenu(index),
-                    onBack: () {
-                      Navigator.of(context).maybePop();
-                    },
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-
-  /// Handle key events for the extras row (locked focus pattern)
-  KeyEventResult _handleExtrasKeyEvent(FocusNode _, KeyEvent event) {
+  /// Handle key events for the seasons row (locked focus pattern)
+  KeyEventResult _handleSeasonsKeyEvent(FocusNode _, KeyEvent event) {
     final key = event.logicalKey;
 
-    if (key.isBackKey) return KeyEventResult.ignored;
+    // Let back key propagate to parent Focus handler
+    if (key.isBackKey) {
+      return KeyEventResult.ignored;
+    }
 
     // Handle SELECT with long-press detection
     if (key.isSelectKey) {
       if (event is KeyDownEvent) {
+        // Always reset state on KeyDown to handle cases where KeyUp was
+        // consumed by a modal (e.g., context menu) and we didn't see it
         _selectKeyTimer?.cancel();
         _isSelectKeyDown = true;
         _longPressTriggered = false;
@@ -1766,7 +1368,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
           if (_isSelectKeyDown) {
             _longPressTriggered = true;
             SelectKeyUpSuppressor.suppressSelectUntilKeyUp();
-            _extraCardKeys[_focusedExtraIndex]?.currentState?.showContextMenu();
+            // Long-press: show context menu for the focused season
+            _seasonCardKeys[_focusedSeasonIndex]?.currentState?.showContextMenu();
           }
         });
         return KeyEventResult.handled;
@@ -1776,8 +1379,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         final timerWasActive = _selectKeyTimer?.isActive ?? false;
         _selectKeyTimer?.cancel();
         if (!_longPressTriggered && timerWasActive && _isSelectKeyDown) {
-          if (_focusedExtraIndex < _extras!.length) {
-            navigateToVideoPlayer(context, metadata: _extras![_focusedExtraIndex]);
+          // Short tap: navigate to season
+          if (_focusedSeasonIndex < _seasons.length) {
+            _navigateToSeason(_seasons[_focusedSeasonIndex]);
           }
         }
         _isSelectKeyDown = false;
@@ -1787,41 +1391,126 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     }
 
     if (!event.isActionable) return KeyEventResult.ignored;
-    if (_extras == null || _extras!.isEmpty) return KeyEventResult.ignored;
+    if (_seasons.isEmpty) return KeyEventResult.ignored;
 
-    // LEFT: previous extra
+    final disableAnims = context.read<SettingsProvider>().disableAnimations;
+
+    // LEFT: previous season
     if (key.isLeftKey) {
-      if (_focusedExtraIndex > 0) {
-        setState(() => _focusedExtraIndex--);
-        scrollListToIndex(_extrasScrollController, _focusedExtraIndex, itemExtent: _getResponsiveCardWidth() + 4, leadingPadding: 0);
+      if (_focusedSeasonIndex > 0) {
+        setState(() {
+          _focusedSeasonIndex--;
+        });
+        scrollListToIndex(_seasonsScrollController, _focusedSeasonIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
       }
       return KeyEventResult.handled;
     }
 
-    // RIGHT: next extra
+    // RIGHT: next season
     if (key.isRightKey) {
-      if (_focusedExtraIndex < _extras!.length - 1) {
-        setState(() => _focusedExtraIndex++);
-        scrollListToIndex(_extrasScrollController, _focusedExtraIndex, itemExtent: _getResponsiveCardWidth() + 4, leadingPadding: 0);
+      if (_focusedSeasonIndex < _seasons.length - 1) {
+        setState(() {
+          _focusedSeasonIndex++;
+        });
+        scrollListToIndex(_seasonsScrollController, _focusedSeasonIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
       }
       return KeyEventResult.handled;
     }
 
+    // UP: overview → play button
     if (key.isUpKey) {
-      _focusSectionAboveExtras();
+      final metadata = _fullMetadata ?? widget.metadata;
+      if (metadata.summary != null || metadata.studio != null || metadata.contentRating != null) {
+        _overviewFocusNode.requestFocus();
+        _scrollSectionIntoView(_overviewSectionKey);
+      } else {
+        if (disableAnims) {
+          _scrollController.jumpTo(0);
+        } else {
+          _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        }
+        _playButtonFocusNode.requestFocus();
+      }
       return KeyEventResult.handled;
     }
 
-    // DOWN: related hubs → consume
+    // DOWN: cast → similar (skip cast when offline)
     if (key.isDownKey) {
-      if (_relatedHubs.isNotEmpty) {
-        _relatedHubKeys.first.currentState?.requestFocusFromMemory();
+      final metadata = _fullMetadata ?? widget.metadata;
+      if (!widget.isOffline && metadata.role != null && metadata.role!.isNotEmpty) {
+        _castFocusNode.requestFocus();
+        _scrollSectionIntoView(_castSectionKey);
+      } else if (_similarItems != null && _similarItems!.isNotEmpty) {
+        _similarItemsFocusNode.requestFocus();
+        _scrollSectionIntoView(_similarSectionKey);
       }
       return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
   }
+
+  /// Build horizontal seasons list for larger screens (>=600px)
+  /// Uses locked focus pattern for D-pad centered scrolling
+  Widget _buildHorizontalSeasons() {
+    final cardWidth = _getResponsiveCardWidth();
+    final posterHeight = (cardWidth - 16) * 1.5;
+    final containerHeight = posterHeight + 66;
+
+    final hasFocus = _seasonsFocusNode.hasFocus;
+
+    return Focus(
+      focusNode: _seasonsFocusNode,
+      onKeyEvent: _handleSeasonsKeyEvent,
+      child: SizedBox(
+        height: containerHeight,
+        child: HorizontalScrollWithArrows(
+          controller: _seasonsScrollController,
+          builder: (scrollController) => ListView.builder(
+            controller: scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+            itemCount: _seasons.length,
+            itemBuilder: (context, index) {
+              final season = _seasons[index];
+              final isFocused = hasFocus && index == _focusedSeasonIndex;
+              // Get or create a GlobalKey for this season card
+              final cardKey = _seasonCardKeys.putIfAbsent(index, () => GlobalKey<MediaCardState>());
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: FocusBuilders.buildLockedFocusWrapper(
+                  context: context,
+                  isFocused: isFocused,
+                  onTap: () => _navigateToSeason(season),
+                  child: MediaCard(
+                    key: cardKey,
+                    item: season,
+                    width: cardWidth,
+                    height: posterHeight,
+                    forceGridMode: true,
+                    isOffline: widget.isOffline,
+                    onRefresh: (_) {
+                      _watchStateChanged = true;
+                      _updateWatchState();
+                    },
+                    onListRefresh: () {
+                      if (widget.isOffline) {
+                        _loadSeasonsFromDownloads();
+                      } else {
+                        _loadSeasons();
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
 
   /// Handle key events for the cast row (locked focus pattern)
   KeyEventResult _handleCastKeyEvent(FocusNode _, KeyEvent event) {
@@ -1831,12 +1520,13 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
     final metadata = _fullMetadata ?? widget.metadata;
     final roleCount = metadata.role?.length ?? 0;
+    final disableAnims = context.read<SettingsProvider>().disableAnimations;
 
     // LEFT: previous cast member
     if (key.isLeftKey) {
       if (_focusedCastIndex > 0) {
         setState(() => _focusedCastIndex--);
-        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: _getResponsiveCardWidth() + 6 + 4, leadingPadding: 0);
+        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: 120.0 + 4, disableAnimations: disableAnims);
       }
       return KeyEventResult.handled;
     }
@@ -1845,38 +1535,56 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     if (key.isRightKey) {
       if (_focusedCastIndex < roleCount - 1) {
         setState(() => _focusedCastIndex++);
-        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: _getResponsiveCardWidth() + 6 + 4, leadingPadding: 0);
+        scrollListToIndex(_castScrollController, _focusedCastIndex, itemExtent: 120.0 + 4, disableAnimations: disableAnims);
       }
       return KeyEventResult.handled;
     }
 
+    // UP: seasons → overview → play button
     if (key.isUpKey) {
-      // If episodes are visible, focus the last episode (cast is right below episodes)
-      if (_episodes.isNotEmpty) {
-        final target = _episodes.length == 1 ? _firstEpisodeFocusNode : _lastEpisodeFocusNode;
-        target.requestFocus();
+      if (metadata.isShow && _seasons.isNotEmpty) {
+        _seasonsFocusNode.requestFocus();
+        _scrollSectionIntoView(_seasonsSectionKey);
+      } else if (metadata.summary != null || metadata.studio != null || metadata.contentRating != null) {
+        _overviewFocusNode.requestFocus();
+        _scrollSectionIntoView(_overviewSectionKey);
       } else {
-        _focusSectionAboveCast();
+        if (disableAnims) {
+          _scrollController.jumpTo(0);
+        } else {
+          _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        }
+        _playButtonFocusNode.requestFocus();
       }
       return KeyEventResult.handled;
     }
 
-    // DOWN: extras → related hubs → consume
+    // DOWN: similar items (if available) → consume
     if (key.isDownKey) {
-      if (_extras != null && _extras!.isNotEmpty) {
-        _extrasFocusNode.requestFocus();
-        _scrollSectionIntoView(_extrasSectionKey);
-      } else if (_relatedHubs.isNotEmpty) {
-        _relatedHubKeys.first.currentState?.requestFocusFromMemory();
+      if (_similarItems != null && _similarItems!.isNotEmpty) {
+        _similarItemsFocusNode.requestFocus();
+        _scrollSectionIntoView(_similarSectionKey);
       }
       return KeyEventResult.handled;
     }
 
-    // SELECT: navigate to actor media
+    // SELECT: navigate to person detail (TV/remote)
     if (key.isSelectKey) {
-      final metadata = _fullMetadata ?? widget.metadata;
-      if (_focusedCastIndex < (metadata.role?.length ?? 0)) {
-        _navigateToActorMedia(metadata.role![_focusedCastIndex]);
+      if (event is KeyDownEvent && _focusedCastIndex < roleCount) {
+        final actor = metadata.role![_focusedCastIndex];
+        final client = _getClientForMetadata(context);
+        if (client != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PersonDetailScreen(
+                actor: actor,
+                client: client,
+                serverId: widget.metadata.serverId ?? '',
+              ),
+            ),
+          );
+        }
       }
       return KeyEventResult.handled;
     }
@@ -1884,165 +1592,119 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     return KeyEventResult.ignored;
   }
 
-  /// Handle vertical navigation between related hub sections
-  bool _handleRelatedHubNavigation(int hubIndex, bool isUp) {
-    if (_relatedHubKeys.isEmpty) return false;
+  /// Handle key events for the similar items row (locked focus pattern)
+  KeyEventResult _handleSimilarItemsKeyEvent(FocusNode _, KeyEvent event) {
+    final key = event.logicalKey;
+    if (key.isBackKey) return KeyEventResult.ignored;
+    if (!event.isActionable) return KeyEventResult.ignored;
+    if (_similarItems == null || _similarItems!.isEmpty) return KeyEventResult.ignored;
 
-    if (isUp && hubIndex == 0) {
-      if (_extras != null && _extras!.isNotEmpty) {
-        _extrasFocusNode.requestFocus();
-        _scrollSectionIntoView(_extrasSectionKey);
-      } else {
-        _focusSectionAboveExtras();
+    final disableAnims = context.read<SettingsProvider>().disableAnimations;
+
+    // LEFT
+    if (key.isLeftKey) {
+      if (_focusedSimilarIndex > 0) {
+        setState(() => _focusedSimilarIndex--);
+        scrollListToIndex(_similarItemsScrollController, _focusedSimilarIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
       }
-      return true;
+      return KeyEventResult.handled;
     }
 
-    final targetIndex = isUp ? hubIndex - 1 : hubIndex + 1;
-    if (targetIndex < 0 || targetIndex >= _relatedHubKeys.length) {
-      return true; // at boundary, consume
+    // RIGHT
+    if (key.isRightKey) {
+      if (_focusedSimilarIndex < _similarItems!.length - 1) {
+        setState(() => _focusedSimilarIndex++);
+        scrollListToIndex(_similarItemsScrollController, _focusedSimilarIndex, itemExtent: _getResponsiveCardWidth() + 4, disableAnimations: disableAnims);
+      }
+      return KeyEventResult.handled;
     }
 
-    _relatedHubKeys[targetIndex].currentState?.requestFocusFromMemory();
-    return true;
+    // UP: cast → seasons → overview → play button (skip cast when offline)
+    if (key.isUpKey) {
+      final metadata = _fullMetadata ?? widget.metadata;
+      if (!widget.isOffline && metadata.role != null && metadata.role!.isNotEmpty) {
+        _castFocusNode.requestFocus();
+        _scrollSectionIntoView(_castSectionKey);
+      } else if (metadata.isShow && _seasons.isNotEmpty) {
+        _seasonsFocusNode.requestFocus();
+        _scrollSectionIntoView(_seasonsSectionKey);
+      } else if (metadata.summary != null || metadata.studio != null || metadata.contentRating != null) {
+        _overviewFocusNode.requestFocus();
+        _scrollSectionIntoView(_overviewSectionKey);
+      } else {
+        if (disableAnims) {
+          _scrollController.jumpTo(0);
+        } else {
+          _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        }
+        _playButtonFocusNode.requestFocus();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // DOWN: consume (nothing below similar items)
+    if (key.isDownKey) {
+      return KeyEventResult.handled;
+    }
+
+    // SELECT: open the focused similar item
+    if (key.isSelectKey) {
+      if (event is KeyDownEvent) {
+        _similarCardKeys[_focusedSimilarIndex]?.currentState?.handleTap();
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
-  IconData _getRelatedHubIcon(PlexHub hub) {
-    final lower = hub.title.toLowerCase();
-    if (lower.contains('collection')) return Symbols.video_library_rounded;
-    if (lower.contains('similar')) return Symbols.auto_awesome_rounded;
-    if (lower.contains('more from') || lower.contains('more with')) return Symbols.person_rounded;
-    if (lower.contains('genre') || lower.contains('director')) return Symbols.movie_rounded;
-    return Symbols.recommend_rounded;
-  }
-
-  /// Build episode list directly when the library hides seasons for single-season shows
-  Widget _buildEpisodesList() {
-    final client = _getClientForMetadata(context);
-    return ListView.builder(
+  /// Build vertical seasons list for smaller screens (<600px)
+  Widget _buildVerticalSeasons() {
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
-      itemCount: _episodes.length,
+      itemCount: _seasons.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final episode = _episodes[index];
-        String? localPosterPath;
-        if (widget.isOffline && episode.serverId != null) {
-          final artworkRef = context.read<DownloadProvider>().getArtworkPaths(episode.globalKey);
-          localPosterPath = artworkRef?.getLocalPath(DownloadStorageService.instance, episode.serverId!);
+        final season = _seasons[index];
+        // Look up each season's artwork, not the show's
+        String? seasonPosterPath;
+        if (widget.isOffline && season.serverId != null) {
+          seasonPosterPath = context.read<DownloadProvider>().getArtworkLocalPath(season.serverId!, season.thumb);
         }
-        return EpisodeCard(
-          episode: episode,
-          client: client,
+        return _SeasonCard(
+          season: season,
+          client: _getClientForMetadata(context),
           isOffline: widget.isOffline,
-          autofocus: false,
-          focusNode: index == 0
-              ? _firstEpisodeFocusNode
-              : index == _episodes.length - 1 && _episodes.length > 1
-                  ? _lastEpisodeFocusNode
-                  : null,
-          onNavigateUp: index == 0
-              ? () {
-                  if (!_showEpisodesDirectly) {
-                    _focusSelectedSeasonTab();
-                  } else if ((_fullMetadata ?? widget.metadata).summary?.isNotEmpty == true) {
-                    _overviewFocusNode.requestFocus();
-                    _scrollSectionIntoView(_overviewSectionKey);
-                  } else {
-                    _scrollController.animateTo(0,
-                        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-                    _playButtonFocusNode.requestFocus();
-                  }
-                }
-              : null,
-          localPosterPath: localPosterPath,
-          onTap: () async {
-            await navigateToVideoPlayerWithRefresh(
-              context,
-              metadata: episode,
-              isOffline: widget.isOffline,
-              onRefresh: () async {
-                final refreshed = await client?.getMetadataWithImages(episode.ratingKey);
-                if (refreshed != null) {
-                  setStateIfMounted(() {
-                    _episodes[index] = refreshed;
-                    _syncEpisodeToCache(index, refreshed);
-                  });
-                }
-              },
-            );
+          localPosterPath: seasonPosterPath,
+          onTap: () => _navigateToSeason(season),
+          onRefresh: () {
+            _watchStateChanged = true;
+            _updateWatchState();
           },
-          onRefresh: widget.isOffline
-              ? null
-              : (ratingKey) async {
-                  final refreshed = await client?.getMetadataWithImages(ratingKey);
-                  if (refreshed != null) {
-                    setStateIfMounted(() {
-                      final i = _episodes.indexWhere((e) => e.ratingKey == ratingKey);
-                      if (i != -1) {
-                        _episodes[i] = refreshed;
-                        _syncEpisodeToCache(i, refreshed);
-                      }
-                    });
-                  }
-                },
-          onListRefresh: widget.isOffline ? null : _refreshCurrentEpisodes,
+          onListRefresh: () {
+            if (widget.isOffline) {
+              _loadSeasonsFromDownloads();
+            } else {
+              _loadSeasons();
+            }
+          },
         );
       },
     );
   }
 
-  /// Sync an updated episode back into the episode cache
-  void _syncEpisodeToCache(int episodeIndex, PlexMetadata updated) {
-    if (_showEpisodesDirectly || _seasons.isEmpty) return;
-    if (_selectedSeasonIndex >= _seasons.length) return;
-    final season = _seasons[_selectedSeasonIndex];
-    final cached = _episodeCache[season.ratingKey];
-    if (cached != null && episodeIndex < cached.length) {
-      cached[episodeIndex] = updated;
-    }
-  }
-
-  /// Refresh episodes for the current context (inline season or all flattened)
-  Future<void> _refreshCurrentEpisodes() async {
-    if (_showEpisodesDirectly) {
-      await _fetchAllEpisodes();
-    } else if (_seasons.isNotEmpty) {
-      // Clear cache for current season and re-fetch
-      final season = _seasons[_selectedSeasonIndex];
-      _episodeCache.remove(season.ratingKey);
-      await _fetchSeasonEpisodes(_selectedSeasonIndex);
-    }
-  }
-
-  Future<void> _fetchAllEpisodes() async {
-    if (_seasons.isEmpty) return;
-    final client = _getClientForMetadata(context);
-    if (client == null) return;
-    setStateIfMounted(() => _isLoadingEpisodes = true);
-    try {
-      final episodeLists = await Future.wait(
-        _seasons.map((season) => client.getChildren(season.ratingKey)),
-      );
-      setStateIfMounted(() {
-        _episodes = episodeLists.expand((e) => e).toList();
-        _isLoadingEpisodes = false;
-      });
-    } catch (_) {
-      setStateIfMounted(() => _isLoadingEpisodes = false);
-    }
-  }
-
-  /// Load the next unwatched episode for offline mode (offline OnDeck)
-  Future<void> _loadOfflineOnDeckEpisode() async {
+  /// Load the next unwatched episode for offline mode
+  Future<void> _loadOfflineNextEpisode() async {
     final offlineWatchProvider = context.read<OfflineWatchProvider>();
-    final nextEpisode = await offlineWatchProvider.getNextUnwatchedEpisode(widget.metadata.ratingKey);
+    final nextEpisode = await offlineWatchProvider.getNextUnwatchedEpisode(widget.metadata.itemId);
 
-    if (nextEpisode != null) {
-      setStateIfMounted(() {
-        _onDeckEpisode = nextEpisode;
+    if (nextEpisode != null && mounted) {
+      setState(() {
+        _nextEpisode = nextEpisode;
       });
-      appLogger.d('Offline OnDeck: S${nextEpisode.parentIndex}E${nextEpisode.index} - ${nextEpisode.title}');
+      appLogger.d('Offline next episode: S${nextEpisode.parentIndex}E${nextEpisode.index} - ${nextEpisode.title}');
     }
   }
 
@@ -2057,7 +1719,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       final client = _getClientForMetadata(context);
       if (client == null) return;
 
-      final metadata = await client.getMetadataWithImages(widget.metadata.ratingKey);
+      final metadata = await client.getMetadataWithImages(widget.metadata.itemId);
 
       if (metadata != null) {
         // Preserve serverId from original metadata
@@ -2067,9 +1729,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         );
 
         // For shows, also refetch seasons to update their watch counts
-        List<PlexMetadata>? updatedSeasons;
+        List<MediaMetadata>? updatedSeasons;
         if (metadata.isShow) {
-          final seasons = await client.getChildren(widget.metadata.ratingKey);
+          final seasons = await client.getChildren(widget.metadata.itemId);
           // Preserve serverId for each season
           updatedSeasons = seasons
               .map(
@@ -2079,7 +1741,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         }
 
         // Single setState to minimize rebuilds - scroll position is preserved by controller
-        setStateIfMounted(() {
+        if (!mounted) return;
+        setState(() {
           _fullMetadata = metadataWithServerId;
           if (updatedSeasons != null) {
             _seasons = updatedSeasons;
@@ -2104,8 +1767,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       }
 
       // Wait for seasons to finish loading if they're currently loading
-      if (_isLoadingSeasons && _seasonsCompleter != null) {
-        await _seasonsCompleter!.future.timeout(const Duration(seconds: 10), onTimeout: () {});
+      while (_isLoadingSeasons) {
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       if (!mounted) return;
@@ -2117,23 +1780,23 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         return;
       }
 
-      // Skip Season 0 (Specials) — prefer the first regular season
-      final firstSeason = _seasons.firstWhere((s) => (s.index ?? 0) > 0, orElse: () => _seasons.first);
+      // Get the first season (usually Season 1, but could be Season 0 for specials)
+      final firstSeason = _seasons.first;
 
       // Get episodes of the first season
-      List<PlexMetadata> episodes;
+      List<MediaMetadata> episodes;
       if (!mounted) return;
       if (widget.isOffline) {
         // In offline mode, get episodes from downloads
         final downloadProvider = context.read<DownloadProvider>();
-        final allEpisodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.ratingKey);
+        final allEpisodes = downloadProvider.getDownloadedEpisodesForShow(widget.metadata.itemId);
         // Filter to episodes of this season
         episodes = allEpisodes.where((ep) => ep.parentIndex == firstSeason.index).toList()
           ..sort((a, b) => (a.index ?? 0).compareTo(b.index ?? 0));
       } else {
         final client = _getClientForMetadata(context);
         if (client == null) return;
-        episodes = await client.getChildren(firstSeason.ratingKey);
+        episodes = await client.getChildren(firstSeason.itemId);
       }
 
       if (episodes.isEmpty) {
@@ -2159,95 +1822,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
           onRefresh: _loadFullMetadata,
         );
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: e.toString()));
+        showErrorSnackBar(context, t.messages.errorLoading(error: safeUserMessage(e)));
       }
-    }
-  }
-
-  /// Handle shuffle play using play queues
-  /// Note: Shuffle requires server connectivity (play queue API)
-  Future<void> _handleShufflePlayWithQueue(BuildContext context, PlexMetadata metadata) async {
-    // Shuffle requires server connectivity
-    if (widget.isOffline) {
-      if (context.mounted) {
-        showErrorSnackBar(context, 'Shuffle not available offline');
-      }
-      return;
-    }
-
-    final client = _getClientForMetadata(context);
-    if (client == null) return;
-
-    final playbackState = context.read<PlaybackStateProvider>();
-
-    try {
-      // Show loading indicator
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(child: CircularProgressIndicator()),
-        );
-      }
-
-      // Determine the rating key for the play queue
-      String showRatingKey;
-      if (metadata.isShow) {
-        showRatingKey = metadata.ratingKey;
-      } else if (metadata.isSeason) {
-        // For seasons, we need the show's rating key
-        // The season's parentRatingKey should point to the show
-        if (metadata.parentRatingKey == null) {
-          throw Exception('Season is missing parentRatingKey');
-        }
-        showRatingKey = metadata.parentRatingKey!;
-      } else {
-        throw Exception('Shuffle play only works for shows and seasons');
-      }
-
-      // Create a shuffled play queue for the show
-      final playQueue = await client.createShowPlayQueue(showRatingKey: showRatingKey, shuffle: 1);
-
-      // Close loading indicator
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-
-      if (playQueue == null || playQueue.items == null || playQueue.items!.isEmpty) {
-        if (context.mounted) {
-          showErrorSnackBar(context, t.messages.noEpisodesFound);
-        }
-        return;
-      }
-
-      // Initialize playback state with the play queue
-      await playbackState.setPlaybackFromPlayQueue(playQueue, showRatingKey);
-
-      // Set the client for the playback state provider
-      playbackState.setClient(client);
-
-      // Navigate to the first episode in the shuffled queue
-      final firstEpisode = playQueue.items!.first.copyWith(
-        serverId: metadata.serverId,
-        serverName: metadata.serverName,
-      );
-
-      if (context.mounted) {
-        await navigateToVideoPlayer(context, metadata: firstEpisode);
-        // Refresh metadata when returning from video player
-        _loadFullMetadata();
-      }
-    } catch (e) {
-      // Close loading indicator if it's still open
-      if (context.mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
-      if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: e.toString()));
-      }
+      logErrorWithStackTrace('Failed to navigate to video player', e, st);
     }
   }
 
@@ -2260,7 +1839,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final isTv = PlatformDetector.isTV();
 
     KeyEventResult handleBack(FocusNode _, KeyEvent event) =>
-        handleBackKeyNavigation(context, event, result: _watchStateChanged);
+        handleBackOrLeftKeyNavigation(context, event, result: _watchStateChanged);
 
     // Show loading state while fetching full metadata
     if (_isLoadingMetadata) {
@@ -2287,78 +1866,73 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final size = MediaQuery.of(context).size;
     final headerHeight = size.height * 0.6;
 
-    final content = OverlaySheetHost(
-      child: Focus(
-        onKeyEvent: handleBack,
-        child: Scaffold(
-          body: Stack(
-            children: [
-              CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  // Hero header with background art
-                  SliverToBoxAdapter(
-                    child: Stack(
-                      children: [
-                        // Background Art (fixed height, no parallax)
-                        SizedBox(
-                          height: headerHeight,
-                          width: double.infinity,
-                          child: (metadata.art != null || metadata.backgroundSquare != null)
-                              ? Builder(
-                                  builder: (context) {
-                                    final containerAspect = size.width / headerHeight;
-                                    final heroArtPath = metadata.heroArt(containerAspectRatio: containerAspect);
-
-                                    // Check for offline local file first
-                                    if (widget.isOffline && widget.metadata.serverId != null) {
-                                      final localPath = context.read<DownloadProvider>().getArtworkLocalPath(
-                                        widget.metadata.serverId!,
-                                        heroArtPath,
-                                      );
-                                      if (localPath != null && File(localPath).existsSync()) {
-                                        return Image.file(
-                                          File(localPath),
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => const PlaceholderContainer(),
-                                        );
-                                      }
-                                      // Offline but no local file - show placeholder
-                                      return const PlaceholderContainer();
-                                    }
-
-                                    // Online - use network image
-                                    final client = _getClientForMetadata(context);
-                                    final mediaQuery = MediaQuery.of(context);
-                                    final dpr = PlexImageHelper.effectiveDevicePixelRatio(context);
-                                    final imageUrl = PlexImageHelper.getOptimizedImageUrl(
-                                      client: client,
-                                      thumbPath: heroArtPath,
-                                      maxWidth: mediaQuery.size.width,
-                                      maxHeight: mediaQuery.size.height * 0.6,
-                                      devicePixelRatio: dpr,
-                                      imageType: ImageType.art,
+    final content = Focus(
+      onKeyEvent: handleBack,
+      child: Scaffold(
+        body: Stack(
+          children: [
+            CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Hero header with background art
+                SliverToBoxAdapter(
+                  child: Stack(
+                    children: [
+                      // Background Art (fixed height, no parallax)
+                      SizedBox(
+                        height: headerHeight,
+                        width: double.infinity,
+                        child: metadata.art != null
+                            ? Builder(
+                                builder: (context) {
+                                  // Check for offline local file first
+                                  if (widget.isOffline && widget.metadata.serverId != null) {
+                                    final localPath = context.read<DownloadProvider>().getArtworkLocalPath(
+                                      widget.metadata.serverId!,
+                                      metadata.art,
                                     );
-
-                                    return blurArtwork(
-                                      CachedNetworkImage(
-                                        imageUrl: imageUrl,
+                                    if (localPath != null && File(localPath).existsSync()) {
+                                      return Image.file(
+                                        File(localPath),
                                         fit: BoxFit.cover,
-                                        placeholder: (context, url) => const PlaceholderContainer(),
-                                        errorWidget: (context, url, error) => const PlaceholderContainer(),
-                                      ),
-                                    );
-                                  },
-                                )
-                              : const PlaceholderContainer(),
-                        ),
+                                        errorBuilder: (context, error, stackTrace) => const PlaceholderContainer(),
+                                      );
+                                    }
+                                    // Offline but no local file - show placeholder
+                                    return const PlaceholderContainer();
+                                  }
 
-                        // Gradient overlay
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: -1, // Extend 1px past to prevent subpixel gap
+                                  // Online - use network image
+                                  final client = _getClientForMetadata(context);
+                                  final mediaQuery = MediaQuery.of(context);
+                                  final dpr = MediaImageHelper.effectiveDevicePixelRatio(context);
+                                  final imageUrl = MediaImageHelper.getOptimizedImageUrl(
+                                    client: client,
+                                    thumbPath: metadata.art,
+                                    maxWidth: mediaQuery.size.width,
+                                    maxHeight: mediaQuery.size.height * 0.6,
+                                    devicePixelRatio: dpr,
+                                    imageType: ImageType.art,
+                                  );
+
+                                  return blurArtwork(CachedNetworkImage(
+                                    imageUrl: imageUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => const PlaceholderContainer(),
+                                    errorWidget: (context, url, error) => const PlaceholderContainer(),
+                                  ));
+                                },
+                              )
+                            : const PlaceholderContainer(),
+                      ),
+
+                      // Gradient overlay (IgnorePointer so back button receives taps)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: -1, // Extend 1px past to prevent subpixel gap
+                        child: IgnorePointer(
                           child: Builder(
                             builder: (context) {
                               final bgColor = Theme.of(context).scaffoldBackgroundColor;
@@ -2375,350 +1949,331 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                             },
                           ),
                         ),
+                      ),
 
-                        // Content at bottom
+                      if (isTv)
                         Positioned(
-                          bottom: 16,
+                          top: 0,
                           left: 0,
-                          right: 0,
                           child: SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Clear logo or title
-                                  if (metadata.clearLogo != null)
-                                    SizedBox(
-                                      height: 120,
-                                      width: 400,
-                                      child: Builder(
-                                        builder: (context) {
-                                          // Check for offline local file first
-                                          if (widget.isOffline && widget.metadata.serverId != null) {
-                                            final localPath = context.read<DownloadProvider>().getArtworkLocalPath(
-                                              widget.metadata.serverId!,
-                                              metadata.clearLogo,
-                                            );
-                                            if (localPath != null && File(localPath).existsSync()) {
-                                              return Image.file(
-                                                File(localPath),
-                                                fit: BoxFit.contain,
-                                                alignment: Alignment.centerLeft,
-                                                errorBuilder: (context, error, stackTrace) =>
-                                                    _buildTitleText(context, metadata.displayTitle),
-                                              );
-                                            }
-                                            // Offline but no local file - show title text
-                                            return _buildTitleText(context, metadata.displayTitle);
-                                          }
-
-                                          // Online - use network image
-                                          final client = _getClientForMetadata(context);
-                                          final dpr = PlexImageHelper.effectiveDevicePixelRatio(context);
-                                          final logoUrl = PlexImageHelper.getOptimizedImageUrl(
-                                            client: client,
-                                            thumbPath: metadata.clearLogo,
-                                            maxWidth: 400,
-                                            maxHeight: 120,
-                                            devicePixelRatio: dpr,
-                                            imageType: ImageType.logo,
-                                          );
-
-                                          return blurArtwork(
-                                            CachedNetworkImage(
-                                              imageUrl: logoUrl,
-                                              filterQuality: FilterQuality.medium,
-                                              fit: BoxFit.contain,
-                                              alignment: Alignment.centerLeft,
-                                              memCacheWidth: (400 * dpr).clamp(200, 800).round(),
-                                              placeholder: (context, url) => Align(
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                  metadata.displayTitle,
-                                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                                    color: Colors.white.withValues(alpha: 0.3),
-                                                    fontWeight: FontWeight.bold,
-                                                    shadows: [
-                                                      Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8),
-                                                    ],
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              errorWidget: (context, url, error) {
-                                                return _buildTitleText(context, metadata.displayTitle);
-                                              },
-                                            ),
-                                            sigma: 10,
-                                            clip: false,
-                                          );
-                                        },
-                                      ),
-                                    )
-                                  else
-                                    Text(
-                                      metadata.displayTitle,
-                                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        shadows: [Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8)],
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  const SizedBox(height: 12),
-
-                                  // Metadata chips
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      if (metadata.year != null) _buildMetadataChip('${metadata.year}'),
-                                      if (metadata.editionTitle != null) _buildMetadataChip(metadata.editionTitle!),
-                                      if (metadata.contentRating != null)
-                                        _buildMetadataChip(formatContentRating(metadata.contentRating!)),
-                                      if (metadata.duration != null)
-                                        _buildMetadataChip(formatDurationTextual(metadata.duration!)),
-                                      ..._buildRatingChips(metadata),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  // Action buttons
-                                  _buildActionButtons(metadata),
-                                ],
-                              ),
+                            bottom: false,
+                            child: FocusableAppBarBackButton(
+                              focusNode: _backButtonFocusNode,
+                              onKeyEvent: _handleBackButtonKeyEvent,
+                              onPressed: () => Navigator.pop(context, _watchStateChanged),
+                              useAdjustedLeading: true,
                             ),
                           ),
                         ),
+
+                      // Content at bottom
+                      Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Clear logo or title
+                                if (metadata.clearLogo != null)
+                                  SizedBox(
+                                    height: 120,
+                                    width: 400,
+                                    child: Builder(
+                                      builder: (context) {
+                                        // Check for offline local file first
+                                        if (widget.isOffline && widget.metadata.serverId != null) {
+                                          final localPath = context.read<DownloadProvider>().getArtworkLocalPath(
+                                            widget.metadata.serverId!,
+                                            metadata.clearLogo,
+                                          );
+                                          if (localPath != null && File(localPath).existsSync()) {
+                                            return Image.file(
+                                              File(localPath),
+                                              fit: BoxFit.contain,
+                                              alignment: Alignment.centerLeft,
+                                              errorBuilder: (context, error, stackTrace) =>
+                                                  _buildTitleText(context, metadata.title),
+                                            );
+                                          }
+                                          // Offline but no local file - show title text
+                                          return _buildTitleText(context, metadata.title);
+                                        }
+
+                                        // Online - use network image
+                                        final client = _getClientForMetadata(context);
+                                        final dpr = MediaImageHelper.effectiveDevicePixelRatio(context);
+                                        final logoUrl = MediaImageHelper.getOptimizedImageUrl(
+                                          client: client,
+                                          thumbPath: metadata.clearLogo,
+                                          maxWidth: 400,
+                                          maxHeight: 120,
+                                          devicePixelRatio: dpr,
+                                          imageType: ImageType.logo,
+                                        );
+
+                                        return blurArtwork(CachedNetworkImage(
+                                          imageUrl: logoUrl,
+                                          filterQuality: FilterQuality.medium,
+                                          fit: BoxFit.contain,
+                                          alignment: Alignment.centerLeft,
+                                          memCacheWidth: (400 * dpr).clamp(200, 800).round(),
+                                          placeholder: (context, url) => Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              metadata.title,
+                                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                                color: Colors.white.withValues(alpha: 0.3),
+                                                fontWeight: FontWeight.bold,
+                                                shadows: [
+                                                  Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8),
+                                                ],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          errorWidget: (context, url, error) {
+                                            return _buildTitleText(context, metadata.title);
+                                          },
+                                        ), sigma: 10, clip: false);
+                                      },
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    metadata.title,
+                                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      shadows: [Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8)],
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                const SizedBox(height: 12),
+
+                                // Metadata chips
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (metadata.year != null) _buildMetadataChip('${metadata.year}'),
+                                    if (metadata.contentRating != null)
+                                      _buildMetadataChip(formatContentRating(metadata.contentRating!)),
+                                    if (metadata.duration != null)
+                                      _buildMetadataChip(formatDurationTextual(metadata.duration!)),
+                                    if (isShow &&
+                                        metadata.effectiveUnwatchedCount != null &&
+                                        metadata.effectiveUnwatchedCount! > 0)
+                                      _buildMetadataChip(
+                                        '${metadata.effectiveUnwatchedCount!} ${t.accessibility.mediaCardUnwatched}',
+                                      ),
+                                    ..._buildRatingChips(metadata),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                // Action buttons
+                                _buildActionButtons(metadata),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    ],
+                  ),
+                ),
+
+                // Main content
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (metadata.summary != null || metadata.studio != null || metadata.contentRating != null) ...[
+                          Focus(
+                            focusNode: _overviewFocusNode,
+                            onKeyEvent: _handleOverviewKeyEvent,
+                            child: ListenableBuilder(
+                              listenable: _overviewFocusNode,
+                              builder: (context, _) {
+                                final focused = _overviewFocusNode.hasFocus;
+                                return Container(
+                                  key: _overviewSectionKey,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                    border: focused
+                                        ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                                        : null,
+                                    color: focused
+                                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                                        : null,
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (metadata.summary != null) ...[
+                                        Text(
+                                          t.discover.overview,
+                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        isTv
+                                            ? Text(
+                                                metadata.summary!,
+                                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
+                                              )
+                                            : CollapsibleText(
+                                                text: metadata.summary!,
+                                                maxLines: focused ? 100 : (isMobile ? 6 : 4),
+                                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
+                                              ),
+                                      ],
+                                      if (metadata.studio != null) ...[
+                                        if (metadata.summary != null) const SizedBox(height: 16),
+                                        _buildInfoRow(t.discover.studio, metadata.studio!),
+                                      ],
+                                      if (metadata.contentRating != null) ...[
+                                        const SizedBox(height: 12),
+                                        _buildInfoRow(t.discover.rating, formatContentRating(metadata.contentRating!)),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Seasons (for TV shows)
+                        if (isShow) ...[
+                          Row(
+                            key: _seasonsSectionKey,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                t.discover.seasons,
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              if (metadata.effectiveUnwatchedCount != null &&
+                                  metadata.effectiveUnwatchedCount! > 0) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${metadata.effectiveUnwatchedCount!} ${t.accessibility.mediaCardUnwatched}',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (_isLoadingSeasons)
+                            const Center(
+                              child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()),
+                            )
+                          else if (_seasons.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Center(
+                                child: Text(
+                                  t.messages.noSeasonsFound,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          else if (size.width >= 600)
+                            _buildHorizontalSeasons()
+                          else
+                            _buildVerticalSeasons(),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Cast (hidden offline - person images not downloaded)
+                        if (!widget.isOffline && metadata.role != null && metadata.role!.isNotEmpty) ...[
+                          Text(
+                            key: _castSectionKey,
+                            t.discover.cast,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildCastSection(metadata),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // More Like This
+                        if (_similarItems != null && _similarItems!.isNotEmpty) ...[
+                          Text(
+                            key: _similarSectionKey,
+                            t.discover.moreLikeThis,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSimilarItemsSection(),
+                          const SizedBox(height: 24),
+                        ],
                       ],
                     ),
                   ),
-
-                  // Main content
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Summary
-                          if (metadata.summary != null && metadata.summary!.isNotEmpty) ...[
-                            Text(
-                              key: _overviewSectionKey,
-                              t.discover.overview,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            Focus(
-                              focusNode: _overviewFocusNode,
-                              onKeyEvent: _handleOverviewKeyEvent,
-                              onFocusChange: (_) => setState(() {}),
-                              child: Builder(
-                                builder: (context) {
-                                  final showFocus =
-                                      _overviewFocusNode.hasFocus && InputModeTracker.isKeyboardMode(context);
-                                  return AnimatedContainer(
-                                    duration: const Duration(milliseconds: 150),
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                                      border: Border.all(
-                                        color: showFocus
-                                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
-                                            : Colors.transparent,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: () {
-                                      final summaryStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6);
-                                      if (isTv) {
-                                        return Text(metadata.summary!, style: summaryStyle);
-                                      }
-                                      return CollapsibleText(
-                                        text: metadata.summary!,
-                                        maxLines: isMobile ? 6 : 4,
-                                        style: summaryStyle,
-                                      );
-                                    }(),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Seasons / Episodes (for TV shows and seasons)
-                          if (isShow && !_showEpisodesDirectly) ...[
-                            // Season tabs + inline episodes
-                            if (_isLoadingSeasons)
-                              const Center(
-                                child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()),
-                              )
-                            else if (_seasons.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(32),
-                                child: Center(
-                                  child: Text(
-                                    t.messages.noSeasonsFound,
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
-                                  ),
-                                ),
-                              )
-                            else ...[
-                              Text(
-                                key: _seasonsSectionKey,
-                                t.libraries.groupings.episodes,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildSeasonTabs(),
-                              const SizedBox(height: 16),
-                              if (_isLoadingSeasonEpisodes)
-                                const Center(
-                                  child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()),
-                                )
-                              else if (_episodes.isNotEmpty)
-                                _buildEpisodesList()
-                              else
-                                Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Center(
-                                    child: Text(
-                                      t.messages.noEpisodesFoundGeneral,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                            const SizedBox(height: 24),
-                          ] else if ((isShow && _showEpisodesDirectly) || metadata.isSeason) ...[
-                            // Server says flatten — existing behavior unchanged
-                            Text(
-                              key: _seasonsSectionKey,
-                              t.libraries.groupings.episodes,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_isLoadingSeasons || _isLoadingEpisodes)
-                              const Center(
-                                child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()),
-                              )
-                            else if (_episodes.isNotEmpty)
-                              _buildEpisodesList()
-                            else
-                              Padding(
-                                padding: const EdgeInsets.all(32),
-                                child: Center(
-                                  child: Text(
-                                    t.messages.noEpisodesFoundGeneral,
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Cast
-                          if (metadata.role != null && metadata.role!.isNotEmpty) ...[
-                            Text(
-                              key: _castSectionKey,
-                              t.discover.cast,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildCastSection(metadata),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Trailers & Extras Section
-                          if (!widget.isOffline && _extras != null && _extras!.isNotEmpty) ...[
-                            Text(
-                              key: _extrasSectionKey,
-                              t.discover.extras,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildExtrasSection(),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Related Hubs (Collections, Similar, More From...)
-                          for (int i = 0; i < _relatedHubs.length; i++) ...[
-                            HubSection(
-                              key: _relatedHubKeys[i],
-                              hub: _relatedHubs[i],
-                              icon: _getRelatedHubIcon(_relatedHubs[i]),
-                              inset: true,
-                              onVerticalNavigation: (isUp) => _handleRelatedHubNavigation(i, isUp),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-
-                          // Additional info
-                          if (metadata.studio != null) ...[
-                            _buildInfoRow(t.discover.studio, metadata.studio!),
-                            const SizedBox(height: 12),
-                          ],
-                          if (metadata.contentRating != null) ...[
-                            _buildInfoRow(t.discover.rating, formatContentRating(metadata.contentRating!)),
-                            const SizedBox(height: 12),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom)),
-                ],
-              ),
+                ),
+                SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom)),
+              ],
+            ),
+            if (!isTv) ...[
               // Sticky top bar with fading background
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
-                child: ValueListenableBuilder<double>(
-                  valueListenable: _scrollOffset,
-                  builder: (context, offset, child) => IgnorePointer(
-                    ignoring: offset < 50,
-                    child: AnimatedOpacity(
-                      opacity: (offset / 100).clamp(0.0, 1.0),
-                      duration: const Duration(milliseconds: 150),
-                      child: child!,
-                    ),
-                  ),
-                  child: Container(
-                    height: MediaQuery.of(context).padding.top + 58,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
-                          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
-                          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                        ],
-                        stops: const [0.0, 0.3, 1.0],
+                child: IgnorePointer(
+                  ignoring: _scrollOffset < 50,
+                  child: AnimatedOpacity(
+                    opacity: (_scrollOffset / 100).clamp(0.0, 1.0),
+                    duration: const Duration(milliseconds: 150),
+                    child: Container(
+                      height: MediaQuery.of(context).padding.top + 58,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                            Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
+                            Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                          ],
+                          stops: const [0.0, 0.3, 1.0],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              // Back button (always visible)
+              // Floating back button: stays visible when scrolling
               Positioned(
                 top: 0,
                 left: 0,
-                child: DesktopAppBarHelper.buildAdjustedLeading(
-                  AppBarBackButton(
-                    style: BackButtonStyle.circular,
+                child: SafeArea(
+                  bottom: false,
+                  child: FocusableAppBarBackButton(
+                    focusNode: _backButtonFocusNode,
+                    onKeyEvent: _handleBackButtonKeyEvent,
                     onPressed: () => Navigator.pop(context, _watchStateChanged),
+                    useAdjustedLeading: true,
                   ),
-                  context: context,
-                )!,
+                ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -2737,16 +2292,16 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   }
 
   /// Get the primary trailer from the extras list
-  PlexMetadata? _getPrimaryTrailer() {
+  MediaMetadata? _getPrimaryTrailer() {
     if (_extras == null || _extras!.isEmpty) return null;
 
     // If there's a primaryExtraKey, try to find that specific trailer
     final metadata = _fullMetadata ?? widget.metadata;
     if (metadata.primaryExtraKey != null) {
-      // Extract rating key from primaryExtraKey (e.g., "/library/metadata/52601" -> "52601")
+        // Extract item ID from primaryExtraKey (e.g., "/items/52601" -> "52601")
       final primaryKey = metadata.primaryExtraKey!.split('/').last;
       try {
-        return _extras!.firstWhere((extra) => extra.ratingKey == primaryKey);
+        return _extras!.firstWhere((extra) => extra.itemId == primaryKey);
       } catch (_) {
         // Primary key not found, fall through to find any trailer
       }
@@ -2763,12 +2318,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
   /// Build the cast section with locked focus pattern for D-pad navigation
   /// Uses same layout pattern as seasons/extras (ListView.builder + Padding(horizontal: 2))
-  Widget _buildCastSection(PlexMetadata metadata) {
-    final cardWidth = _getResponsiveCardWidth();
-    const innerPadding = 3.0;
-    final imageSize = cardWidth;
+  Widget _buildCastSection(MediaMetadata metadata) {
+    const cardWidth = 120.0;
+    const innerPadding = 6.0;
     // image + inner padding + text area + outer list padding + focus scale headroom
-    final containerHeight = imageSize + innerPadding * 2 + 66 + 16;
+    const containerHeight = 120.0 + innerPadding * 2 + 66 + 16;
 
     final hasFocus = _castFocusNode.hasFocus;
 
@@ -2783,65 +2337,80 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
           builder: (scrollController) => ListView.builder(
             controller: scrollController,
             scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            padding: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
             itemCount: metadata.role!.length,
             itemBuilder: (context, index) {
               final actor = metadata.role![index];
               final isFocused = hasFocus && index == _focusedCastIndex;
 
               return Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: FocusBuilders.buildLockedFocusWrapper(
-                  context: context,
-                  isFocused: isFocused,
-                  borderRadius: tokens(context).radiusSm,
-                  onTap: () => _navigateToActorMedia(actor),
-                  child: Padding(
-                    padding: const EdgeInsets.all(innerPadding),
-                    child: SizedBox(
-                      width: cardWidth,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(tokens(context).radiusSm),
-                            child: PlexOptimizedImage(
-                              client: _getClientForMetadata(context),
-                              imagePath: actor.thumb,
-                              width: imageSize,
-                              height: imageSize,
-                              fit: BoxFit.cover,
-                              imageType: ImageType.avatar,
-                              fallbackIcon: Symbols.person_rounded,
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: GestureDetector(
+                  onTap: () {
+                    final client = _getClientForMetadata(context);
+                    if (client == null) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PersonDetailScreen(
+                          actor: actor,
+                          client: client,
+                          serverId: widget.metadata.serverId ?? '',
+                        ),
+                      ),
+                    );
+                  },
+                  child: FocusBuilders.buildLockedFocusWrapper(
+                    context: context,
+                    isFocused: isFocused,
+                    borderRadius: tokens(context).radiusSm,
+                    child: Padding(
+                      padding: const EdgeInsets.all(innerPadding),
+                      child: SizedBox(
+                        width: cardWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(tokens(context).radiusSm),
+                              child: OptimizedImage(
+                                client: _getClientForMetadata(context),
+                                imagePath: actor.thumb,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                                imageType: ImageType.avatar,
+                                fallbackIcon: Symbols.person_rounded,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  actor.tag,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (actor.role != null) ...[
-                                  const SizedBox(height: 2),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    actor.role!,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    ),
-                                    maxLines: 1,
+                                    actor.tag,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (actor.role != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      actor.role!,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2854,41 +2423,38 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     );
   }
 
-  Widget _buildExtrasSection() {
+  Widget _buildSimilarItemsSection() {
     final cardWidth = _getResponsiveCardWidth();
-    // 16:9 aspect ratio for clip thumbnails (cardWidth includes 8px padding on each side)
-    final posterHeight = (cardWidth - 16) * (9 / 16);
+    final posterHeight = (cardWidth - 16) * 1.5;
     final containerHeight = posterHeight + 66;
 
-    final hasFocus = _extrasFocusNode.hasFocus;
+    final hasFocus = _similarItemsFocusNode.hasFocus;
 
     return Focus(
-      focusNode: _extrasFocusNode,
-      onKeyEvent: _handleExtrasKeyEvent,
+      focusNode: _similarItemsFocusNode,
+      onKeyEvent: _handleSimilarItemsKeyEvent,
       child: SizedBox(
         height: containerHeight,
         child: HorizontalScrollWithArrows(
-          controller: _extrasScrollController,
+          controller: _similarItemsScrollController,
           builder: (scrollController) => ListView.builder(
             controller: scrollController,
             scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            itemCount: _extras!.length,
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+            itemCount: _similarItems!.length,
             itemBuilder: (context, index) {
-              final extra = _extras![index];
-              final isFocused = hasFocus && index == _focusedExtraIndex;
-              final cardKey = _extraCardKeys.putIfAbsent(index, () => GlobalKey<MediaCardState>());
+              final item = _similarItems![index];
+              final isFocused = hasFocus && index == _focusedSimilarIndex;
+              final cardKey = _similarCardKeys.putIfAbsent(index, () => GlobalKey<MediaCardState>());
 
               return Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: FocusBuilders.buildLockedFocusWrapper(
                   context: context,
                   isFocused: isFocused,
-                  onTap: () => navigateToVideoPlayer(context, metadata: extra),
                   child: MediaCard(
                     key: cardKey,
-                    item: extra,
+                    item: item,
                     width: cardWidth,
                     height: posterHeight,
                     forceGridMode: true,
@@ -2918,11 +2484,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     );
   }
 
-  String _getPlayButtonLabel(PlexMetadata metadata) {
+  String _getPlayButtonLabel(MediaMetadata metadata) {
     // For TV shows - use compact S1E1 format
     if (metadata.isShow) {
-      if (_onDeckEpisode != null) {
-        final episode = _onDeckEpisode!;
+      if (_nextEpisode != null) {
+        final episode = _nextEpisode!;
         final seasonNum = episode.parentIndex ?? 0;
         final episodeNum = episode.index ?? 0;
 
@@ -2930,7 +2496,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         // (icon will indicate the difference)
         return t.discover.playEpisode(season: seasonNum.toString(), episode: episodeNum.toString());
       } else {
-        // No on deck episode, will play first episode
+        // No next episode, will play first episode
         return t.discover.playEpisode(season: '1', episode: '1');
       }
     }
@@ -2939,24 +2505,204 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     return '';
   }
 
-  IconData _getPlayButtonIcon(PlexMetadata metadata) {
+  IconData _getPlayButtonIcon(MediaMetadata metadata) {
     // For TV shows
     if (metadata.isShow) {
-      if (_onDeckEpisode != null) {
-        final episode = _onDeckEpisode!;
+      if (_nextEpisode != null) {
+        final episode = _nextEpisode!;
         // Check if episode has been partially watched
-        if (episode.viewOffset != null && episode.viewOffset! > 0) {
+        if (episode.resumePositionMs != null && episode.resumePositionMs! > 0) {
           return Symbols.resume_rounded; // Resume icon
         }
       }
     } else {
       // For movies or episodes
-      if (metadata.viewOffset != null && metadata.viewOffset! > 0) {
+      if (metadata.resumePositionMs != null && metadata.resumePositionMs! > 0) {
         return Symbols.resume_rounded; // Resume icon
       }
     }
 
     return Symbols.play_arrow_rounded; // Default play icon
+  }
+}
+
+/// Season card widget with D-pad long-press support
+class _SeasonCard extends StatefulWidget {
+  final MediaMetadata season;
+  final JellyfinClient? client;
+  final VoidCallback onTap;
+  final VoidCallback onRefresh;
+  final VoidCallback? onListRefresh;
+  final bool isOffline;
+  final String? localPosterPath;
+
+  const _SeasonCard({
+    required this.season,
+    this.client,
+    required this.onTap,
+    required this.onRefresh,
+    this.onListRefresh,
+    this.isOffline = false,
+    this.localPosterPath,
+  });
+
+  @override
+  State<_SeasonCard> createState() => _SeasonCardState();
+}
+
+class _SeasonCardState extends State<_SeasonCard> {
+  final _contextMenuKey = GlobalKey<MediaContextMenuState>();
+
+  void _showContextMenu() {
+    _contextMenuKey.currentState?.showContextMenu(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusableWrapper(
+      enableLongPress: true,
+      onSelect: widget.onTap,
+      onLongPress: _showContextMenu,
+      borderRadius: 12, // Match card border radius
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: MediaContextMenu(
+          key: _contextMenuKey,
+          item: widget.season,
+          onRefresh: (itemId) => widget.onRefresh(),
+          onListRefresh: widget.onListRefresh,
+          onTap: widget.onTap,
+          child: Semantics(
+            label: "media-season-${widget.season.itemId}",
+            identifier: "media-season-${widget.season.itemId}",
+            button: true,
+            hint: "Tap to view ${widget.season.title}",
+            child: InkWell(
+              onTap: widget.onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // Season poster
+                    ClipRRect(borderRadius: const BorderRadius.all(Radius.circular(6)), child: _buildSeasonPoster()),
+                    const SizedBox(width: 16),
+
+                    // Season info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.season.title,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          if (widget.season.leafCount != null)
+                            Text(
+                              t.discover.episodeCount(count: widget.season.leafCount.toString()),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                            ),
+                          if (widget.season.userRating != null && widget.season.userRating! > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Padding(padding: EdgeInsets.only(top: 2), child: Icon(Symbols.star_rounded, size: 14, fill: 1, color: Colors.amber)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  (widget.season.userRating! / 2) == (widget.season.userRating! / 2).truncateToDouble()
+                                      ? '${(widget.season.userRating! / 2).toInt()}'
+                                      : (widget.season.userRating! / 2).toStringAsFixed(1),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ],
+                          // Hide watch progress when offline (not tracked)
+                          if (!widget.isOffline) ...[
+                            const SizedBox(height: 8),
+                            if (widget.season.watchedEpisodeCount != null && widget.season.leafCount != null)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 200,
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
+                                      child: LinearProgressIndicator(
+                                        value: widget.season.watchedEpisodeCount! / widget.season.leafCount!,
+                                        backgroundColor: tokens(context).outline,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Theme.of(context).colorScheme.primary,
+                                        ),
+                                        minHeight: 6,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    t.discover.watchedProgress(
+                                      watched: widget.season.watchedEpisodeCount.toString(),
+                                      total: widget.season.leafCount.toString(),
+                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const AppIcon(Symbols.chevron_right_rounded, fill: 1),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeasonPoster() {
+    if (widget.isOffline && widget.localPosterPath != null) {
+      return Image.file(
+        File(widget.localPosterPath!),
+        width: 80,
+        height: 120,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: 80,
+          height: 120,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: const AppIcon(Symbols.movie_rounded, fill: 1, size: 32),
+        ),
+      );
+    }
+    if (widget.season.thumb != null) {
+      return OptimizedImage.poster(
+        client: widget.client,
+        imagePath: widget.season.thumb,
+        width: 80,
+        height: 120,
+        fit: BoxFit.cover,
+        placeholder: (context, url) =>
+            Container(width: 80, height: 120, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+        errorWidget: (context, url, error) => Container(
+          width: 80,
+          height: 120,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: const AppIcon(Symbols.movie_rounded, fill: 1, size: 32),
+        ),
+      );
+    }
+    return Container(
+      width: 80,
+      height: 120,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: const AppIcon(Symbols.movie_rounded, fill: 1, size: 32),
+    );
   }
 }
 

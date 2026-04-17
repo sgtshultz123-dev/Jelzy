@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Zaloguj się przez Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Wymaga Androida 8.0 lub nowszego",
       "iosVersion": "Wymaga iOS 15.0 lub nowszego",
-      "permissionDisabled": "Uprawnienie obraz w obrazie jest wyłączone. Włącz w Ustawienia > Aplikacje > Plezy > Obraz w obrazie",
+      "permissionDisabled": "Uprawnienie obraz w obrazie jest wyłączone. Włącz w Ustawienia > Aplikacje > Jelzy > Obraz w obrazie",
       "notSupported": "Urządzenie nie obsługuje trybu obraz w obrazie",
       "voSwitchFailed": "Nie udało się przełączyć wyjścia wideo dla trybu obraz w obrazie",
       "failed": "Nie udało się uruchomić trybu obraz w obrazie",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Połącz z komputerem",
-      "discoveryDescription": "Urządzenia w sieci z Plezy na tym samym koncie Plex pojawią się automatycznie",
+      "discoveryDescription": "Urządzenia w sieci z Jelzy na tym samym koncie Plex pojawią się automatycznie",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Łączenie...",
       "searchingForDevices": "Szukanie urządzeń...",
       "noDevicesFound": "Nie znaleziono urządzeń w sieci",
-      "noDevicesHint": "Upewnij się, że Plezy jest otwarte na komputerze i oba urządzenia są w tej samej sieci WiFi",
+      "noDevicesHint": "Upewnij się, że Jelzy jest otwarte na komputerze i oba urządzenia są w tej samej sieci WiFi",
       "availableDevices": "Dostępne urządzenia",
       "manualConnection": "Połączenie ręczne",
       "cryptoInitFailed": "Nie udało się zainicjować bezpiecznego połączenia. Upewnij się, że jesteś zalogowany na konto Plex.",
       "validationHostRequired": "Wprowadź adres hosta",
       "validationHostFormat": "Format musi być IP:port (np. 192.168.1.100:48632)",
       "connectionTimedOut": "Przekroczono limit czasu połączenia. Upewnij się, że oba urządzenia są w tej samej sieci.",
-      "sessionNotFound": "Nie znaleziono urządzenia. Upewnij się, że Plezy działa na hoście.",
+      "sessionNotFound": "Nie znaleziono urządzenia. Upewnij się, że Jelzy działa na hoście.",
       "authFailed": "Uwierzytelnianie nie powiodło się. Upewnij się, że oba urządzenia używają tego samego konta Plex.",
       "failedToConnect": "Nie udało się połączyć: ${error}"
     },

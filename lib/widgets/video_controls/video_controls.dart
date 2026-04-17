@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/gestures.dart' show PointerSignalEvent, PointerScrollEvent;
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:rate_limiter/rate_limiter.dart';
 import 'package:flutter/services.dart'
@@ -28,17 +28,17 @@ import '../../focus/dpad_navigator.dart';
 import '../../focus/focusable_wrapper.dart';
 
 import '../../models/livetv_capture_buffer.dart';
-import '../../services/plex_client.dart';
-import '../../services/plex_api_cache.dart';
-import '../../models/plex_media_info.dart';
-import '../../models/plex_media_version.dart';
-import '../../models/plex_metadata.dart';
+import '../../services/jellyfin_client.dart';
+import '../../services/api_cache.dart';
+import '../../models/media_info.dart';
+import '../../models/media_version.dart';
+import '../../models/media_metadata.dart';
 import '../../screens/video_player_screen.dart';
 import '../../focus/key_event_utils.dart';
 import '../../services/keyboard_shortcuts_service.dart';
 import '../../services/settings_service.dart';
 import '../../utils/platform_detector.dart';
-import '../../utils/plex_cache_parser.dart';
+import '../../utils/cache_parser.dart';
 import '../../utils/player_utils.dart';
 import '../../theme/mono_tokens.dart';
 import '../../utils/provider_extensions.dart';
@@ -62,10 +62,10 @@ import '../../services/shader_service.dart';
 /// Custom video controls builder for Plex with chapter, audio, and subtitle support
 Widget plexVideoControlsBuilder(
   Player player,
-  PlexMetadata metadata, {
+  MediaMetadata metadata, {
   VoidCallback? onNext,
   VoidCallback? onPrevious,
-  List<PlexMediaVersion>? availableVersions,
+  List<MediaVersion>? availableVersions,
   int? selectedMediaIndex,
   VoidCallback? onTogglePIPMode,
   int boxFitMode = 0,
@@ -134,10 +134,10 @@ Widget plexVideoControlsBuilder(
 
 class PlexVideoControls extends StatefulWidget {
   final Player player;
-  final PlexMetadata metadata;
+  final MediaMetadata metadata;
   final VoidCallback? onNext;
   final VoidCallback? onPrevious;
-  final List<PlexMediaVersion> availableVersions;
+  final List<MediaVersion> availableVersions;
   final int selectedMediaIndex;
   final int boxFitMode;
   final VoidCallback? onTogglePIPMode;
@@ -250,7 +250,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   bool _showControls = true;
   bool _forceShowControls = false;
   bool _isLoadingExtras = false;
-  List<PlexChapter> _chapters = [];
+  List<Chapter> _chapters = [];
   bool _chaptersLoaded = false;
   Timer? _hideTimer;
   bool _isFullscreen = false;
@@ -271,8 +271,8 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   // GlobalKey to access DesktopVideoControls state for focus management
   final GlobalKey<DesktopVideoControlsState> _desktopControlsKey = GlobalKey<DesktopVideoControlsState>();
 
-  /// Get the correct PlexClient for this metadata's server
-  PlexClient _getClientForMetadata() {
+  /// Get the correct JellyfinClient for this metadata's server
+  JellyfinClient _getClientForMetadata() {
     return context.getClientForServer(widget.metadata.serverId!);
   }
 
@@ -290,8 +290,8 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   // Seek throttle
   late final Throttle _seekThrottle;
   // Current marker state
-  PlexMarker? _currentMarker;
-  List<PlexMarker> _markers = [];
+  Marker? _currentMarker;
+  List<Marker> _markers = [];
   bool _markersLoaded = false;
   // Playback state subscription for auto-hide timer
   StreamSubscription<bool>? _playingSubscription;
@@ -412,7 +412,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
         return;
       }
 
-      PlexMarker? foundMarker;
+      Marker? foundMarker;
       for (final marker in _markers) {
         if (marker.containsPosition(position)) {
           foundMarker = marker;
@@ -427,7 +427,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   }
 
   /// Updates the current marker and manages auto-skip/focus behavior.
-  void _updateCurrentMarker(PlexMarker? foundMarker) {
+  void _updateCurrentMarker(Marker? foundMarker) {
     setState(() {
       _currentMarker = foundMarker;
       _skipButtonDismissed = false;
@@ -516,7 +516,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
     _cancelSkipButtonDismissTimer();
   }
 
-  void _startAutoSkipTimer(PlexMarker marker) {
+  void _startAutoSkipTimer(Marker marker) {
     _cancelAutoSkipTimer();
 
     final shouldAutoSkip = (marker.isCredits && _autoSkipCredits) || (!marker.isCredits && _autoSkipIntro);
@@ -581,7 +581,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   }
 
   /// Check if auto-skip should be active for the current marker
-  bool _shouldAutoSkipForMarker(PlexMarker marker) {
+  bool _shouldAutoSkipForMarker(Marker marker) {
     return (marker.isCredits && _autoSkipCredits) || (!marker.isCredits && _autoSkipIntro);
   }
 
@@ -1036,7 +1036,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
       final serverId = widget.metadata.serverId;
       if (serverId != null) {
         final cacheKey = '/library/metadata/${widget.metadata.ratingKey}';
-        final cached = await PlexApiCache.instance.get(serverId, cacheKey);
+        final cached = await ApiCache.instance.get(serverId, cacheKey);
         if (cached != null) {
           final extras = await _parsePlaybackExtrasFromCache(cached);
           appLogger.d('_loadPlaybackExtras: loaded ${extras.chapters.length} chapters from cache');
@@ -1059,16 +1059,16 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
 
   /// Parse PlaybackExtras from cached API response (for offline playback)
   Future<PlaybackExtras> _parsePlaybackExtrasFromCache(Map<String, dynamic> cached) async {
-    final chapters = <PlexChapter>[];
-    final markers = <PlexMarker>[];
+    final chapters = <Chapter>[];
+    final markers = <Marker>[];
 
-    final metadataJson = PlexCacheParser.extractFirstMetadata(cached);
+    final metadataJson = CacheParser.extractFirstMetadata(cached);
     if (metadataJson != null) {
       // Parse chapters
       if (metadataJson['Chapter'] != null) {
         for (var chapter in metadataJson['Chapter'] as List) {
           chapters.add(
-            PlexChapter(
+            Chapter(
               id: chapter['id'] as int,
               index: chapter['index'] as int?,
               startTimeOffset: chapter['startTimeOffset'] as int?,
@@ -1084,7 +1084,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
       if (metadataJson['Marker'] != null) {
         for (var marker in metadataJson['Marker'] as List) {
           markers.add(
-            PlexMarker(
+            Marker(
               id: marker['id'] as int,
               type: marker['type'] as String,
               startTimeOffset: marker['startTimeOffset'] as int,
@@ -2422,9 +2422,10 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
   }
 
   /// Switch to a different media version
-  void _onQueueItemSelected(PlexMetadata item) {
+  void _onQueueItemSelected(MediaMetadata item) {
+    // navigateToQueueItem not available in jelzy; no-op stub
+    // ignore: unused_local_variable
     final videoPlayerState = context.findAncestorStateOfType<VideoPlayerScreenState>();
-    videoPlayerState?.navigateToQueueItem(item);
   }
 
   Future<void> _onSubtitleDownloaded() async {
@@ -2464,7 +2465,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
         // Save the selection on the server so it persists across sessions
         final partId = data.mediaInfo!.partId;
         if (partId != null) {
-          await client.selectStreams(partId, subtitleStreamID: plexTrack.id);
+          await client.selectStreams(itemId: partId.toString(), subtitleStreamIndex: plexTrack.id);
         }
       }
     } catch (e) {
@@ -2501,7 +2502,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls> with WindowListen
           context,
           PageRouteBuilder<bool>(
             pageBuilder: (context, animation, secondaryAnimation) => VideoPlayerScreen(
-              metadata: widget.metadata.copyWith(viewOffset: currentPosition.inMilliseconds),
+              metadata: widget.metadata.copyWith(resumePositionMs: currentPosition.inMilliseconds),
               selectedMediaIndex: newMediaIndex,
             ),
             transitionDuration: Duration.zero,

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/plex_media_version.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_version.dart';
+import '../../../models/media_metadata.dart';
 import '../../../mpv/mpv.dart';
 import '../../../services/shader_service.dart';
 
 /// Immutable configuration for track/chapter control widgets.
 class TrackControlsState {
-  final List<PlexMediaVersion> availableVersions;
+  final List<MediaVersion> availableVersions;
   final int selectedMediaIndex;
   final int boxFitMode;
   final int audioSyncOffset;
@@ -39,7 +39,7 @@ class TrackControlsState {
   final bool isLive;
   final bool subtitlesVisible;
   final bool showQueueButton;
-  final Function(PlexMetadata)? onQueueItemSelected;
+  final Function(MediaMetadata)? onQueueItemSelected;
   final String ratingKey;
   final String? mediaTitle;
   final Future<void> Function()? onSubtitleDownloaded;

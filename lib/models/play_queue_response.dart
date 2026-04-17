@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'plex_metadata.dart';
+import 'media_metadata.dart';
 
 part 'play_queue_response.g.dart';
 
@@ -34,7 +34,7 @@ class PlayQueueResponse {
   final int playQueueVersion;
   final int? size; // Number of items in this response window
   @JsonKey(name: 'Metadata')
-  final List<PlexMetadata>? items;
+  final List<MediaMetadata>? items;
 
   PlayQueueResponse({
     required this.playQueueID,
@@ -77,7 +77,7 @@ class PlayQueueResponse {
   }
 
   /// Get the current selected item from the queue
-  PlexMetadata? get selectedItem {
+  MediaMetadata? get selectedItem {
     if (items == null || playQueueSelectedItemID == null) return null;
     try {
       return items!.firstWhere((item) => item.playQueueItemID == playQueueSelectedItemID);

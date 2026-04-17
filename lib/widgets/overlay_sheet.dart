@@ -92,7 +92,17 @@ class OverlaySheetController {
 
   /// Re-focus the first focusable descendant within the sheet.
   /// Useful after internal page changes via setState.
-  void refocus() {
+  /// [prefer] — optional preferred FocusNode to focus first.
+  void refocus({FocusNode? prefer}) {
+    if (prefer != null && prefer.canRequestFocus) {
+      prefer.requestFocus();
+    } else {
+      _state._refocus();
+    }
+  }
+
+  /// Retain focus within the sheet (no-op compatibility stub for Finzy port).
+  void retainSheetFocus() {
     _state._refocus();
   }
 
@@ -192,6 +202,10 @@ class OverlaySheetHost extends StatefulWidget {
 
   const OverlaySheetHost({super.key, required this.child});
 
+  /// Global notifier — true whenever any overlay sheet is open.
+  /// Listen to drive UI changes (e.g. hide app bar, pause scroll snap).
+  static final ValueNotifier<bool> anySheetOpen = ValueNotifier<bool>(false);
+
   @override
   State<OverlaySheetHost> createState() => _OverlaySheetHostState();
 }
@@ -285,6 +299,7 @@ class _OverlaySheetHostState extends State<OverlaySheetHost> with SingleTickerPr
       _dragOffset = 0;
       _isDragging = false;
     });
+    OverlaySheetHost.anySheetOpen.value = true;
 
     BackKeyUpSuppressor.clearSuppression();
     _animationController.forward(from: 0);
@@ -344,6 +359,7 @@ class _OverlaySheetHostState extends State<OverlaySheetHost> with SingleTickerPr
         _dragOffset = 0;
         _isDragging = false;
       });
+      OverlaySheetHost.anySheetOpen.value = false;
       // Clear stale back-key flags. handleBackKeyAction sets
       // markClosedViaBackKey() expecting a route pop, but the overlay
       // doesn't pop a route. Without clearing, the flag leaks into the

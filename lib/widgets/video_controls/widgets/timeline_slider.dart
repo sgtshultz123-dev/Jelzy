@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import '../../../models/plex_media_info.dart';
+import '../../../models/media_info.dart';
 import '../../../mpv/models.dart';
 import '../../../i18n/strings.g.dart';
 import '../../../focus/focusable_wrapper.dart';
@@ -17,7 +17,7 @@ class TimelineSlider extends StatefulWidget {
   final Duration position;
   final Duration duration;
   final List<BufferRange> bufferRanges;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final ValueChanged<Duration> onSeek;
   final ValueChanged<Duration> onSeekEnd;

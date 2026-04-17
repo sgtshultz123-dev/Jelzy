@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Entrar com Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Requer Android 8.0 ou superior",
       "iosVersion": "Requer iOS 15.0 ou superior",
-      "permissionDisabled": "A permissão de picture-in-picture está desativada. Ative em Configurações > Apps > Plezy > Picture-in-picture",
+      "permissionDisabled": "A permissão de picture-in-picture está desativada. Ative em Configurações > Apps > Jelzy > Picture-in-picture",
       "notSupported": "O dispositivo não suporta modo picture-in-picture",
       "voSwitchFailed": "Falha ao trocar saída de vídeo para picture-in-picture",
       "failed": "Falha ao iniciar picture-in-picture",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Conectar ao desktop",
-      "discoveryDescription": "Dispositivos na sua rede a executar Plezy com a mesma conta Plex aparecerão automaticamente",
+      "discoveryDescription": "Dispositivos na sua rede a executar Jelzy com a mesma conta Plex aparecerão automaticamente",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "A conectar...",
       "searchingForDevices": "A procurar dispositivos...",
       "noDevicesFound": "Nenhum dispositivo encontrado na sua rede",
-      "noDevicesHint": "Certifique-se de que o Plezy está aberto no seu desktop e que ambos os dispositivos estão na mesma rede WiFi",
+      "noDevicesHint": "Certifique-se de que o Jelzy está aberto no seu desktop e que ambos os dispositivos estão na mesma rede WiFi",
       "availableDevices": "Dispositivos disponíveis",
       "manualConnection": "Conexão manual",
       "cryptoInitFailed": "Não foi possível inicializar a conexão segura. Certifique-se de que está conectado a uma conta Plex.",
       "validationHostRequired": "Introduza o endereço do host",
       "validationHostFormat": "O formato deve ser IP:porta (ex. 192.168.1.100:48632)",
       "connectionTimedOut": "Tempo de conexão esgotado. Certifique-se de que ambos os dispositivos estão na mesma rede.",
-      "sessionNotFound": "Dispositivo não encontrado. Certifique-se de que o Plezy está em execução no host.",
+      "sessionNotFound": "Dispositivo não encontrado. Certifique-se de que o Jelzy está em execução no host.",
       "authFailed": "Autenticação falhou. Certifique-se de que ambos os dispositivos usam a mesma conta Plex.",
       "failedToConnect": "Falha ao conectar: ${error}"
     },

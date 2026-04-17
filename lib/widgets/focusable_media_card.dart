@@ -11,7 +11,7 @@ import 'media_card.dart';
 /// - Handles SELECT key for activation with long-press detection
 /// - Accepts optional external focusNode for programmatic focus control
 class FocusableMediaCard extends StatefulWidget {
-  final dynamic item; // PlexMetadata or PlexPlaylist
+  final dynamic item; // MediaMetadata or Playlist
   final double? width;
   final double? height;
   final void Function(String ratingKey)? onRefresh;
@@ -46,6 +46,9 @@ class FocusableMediaCard extends StatefulWidget {
   /// Used to navigate from the first column to the sidebar.
   final VoidCallback? onNavigateLeft;
 
+  /// Called when the user presses DOWN and there's no focusable item below.
+  final VoidCallback? onNavigateDown;
+
   /// Called when the user presses RIGHT and there's no focusable item to the right.
   /// Used to navigate from the last column to the alpha jump bar.
   final VoidCallback? onNavigateRight;
@@ -53,6 +56,9 @@ class FocusableMediaCard extends StatefulWidget {
   /// Called when the user presses BACK.
   /// Used to navigate from tab content to tab bar.
   final VoidCallback? onBack;
+
+  /// Optional top offset for scroll-into-view (Finzy-port compat, currently unused).
+  final double? scrollTopOffset;
 
   /// Called when focus changes.
   /// Used to track which grid item was last focused.
@@ -76,10 +82,12 @@ class FocusableMediaCard extends StatefulWidget {
     this.disableScale = false,
     this.focusNode,
     this.onNavigateUp,
+    this.onNavigateDown,
     this.onNavigateLeft,
     this.onNavigateRight,
     this.onBack,
     this.onFocusChange,
+    this.scrollTopOffset,
   });
 
   @override
@@ -97,9 +105,11 @@ class _FocusableMediaCardState extends State<FocusableMediaCard> {
       onSelect: () => _mediaCardKey.currentState?.handleTap(),
       onLongPress: () => _mediaCardKey.currentState?.showContextMenu(),
       onNavigateUp: widget.onNavigateUp,
+      onNavigateDown: widget.onNavigateDown,
       onNavigateLeft: widget.onNavigateLeft,
       onNavigateRight: widget.onNavigateRight,
       onBack: widget.onBack,
+      scrollTopOffset: widget.scrollTopOffset,
       onFocusChange: widget.onFocusChange,
       enableLongPress: true,
       disableScale: widget.disableScale,

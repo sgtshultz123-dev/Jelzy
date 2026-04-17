@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../mpv/mpv.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_video_playback_data.dart';
+import '../models/media_metadata.dart';
+import '../models/video_playback_data.dart';
 import '../providers/download_provider.dart';
 import '../providers/multi_server_provider.dart';
 import '../screens/video_player_screen.dart';
@@ -47,14 +47,14 @@ class WatchTogetherPlaybackNavigationException implements Exception {
 /// was watched, or null if navigation was cancelled.
 Future<bool?> navigateToVideoPlayer(
   BuildContext context, {
-  required PlexMetadata metadata,
+  required MediaMetadata metadata,
   AudioTrack? preferredAudioTrack,
   SubtitleTrack? preferredSubtitleTrack,
   SubtitleTrack? preferredSecondarySubtitleTrack,
   int? selectedMediaIndex,
   bool usePushReplacement = false,
   bool isOffline = false,
-  PlexVideoPlaybackData? playbackData,
+  VideoPlaybackData? playbackData,
 }) async {
   // Extract context-dependent values before any async operations
   final navigator = Navigator.of(context);
@@ -67,7 +67,7 @@ Future<bool?> navigateToVideoPlayer(
   if (selectedMediaIndex == null) {
     try {
       final settingsService = await SettingsService.getInstance();
-      final seriesKey = metadata.grandparentRatingKey ?? metadata.ratingKey;
+      final seriesKey = metadata.seriesId ?? metadata.itemId;
       final savedPreference = settingsService.getMediaVersionPreference(seriesKey);
       if (savedPreference != null) {
         mediaIndex = savedPreference;
@@ -114,10 +114,10 @@ Future<bool?> navigateToVideoPlayer(
 
   // Prevent stacking an identical video player when already active
   if (!usePushReplacement &&
-      VideoPlayerScreenState.activeRatingKey == metadata.ratingKey &&
+      VideoPlayerScreenState.activeItemId == metadata.itemId &&
       VideoPlayerScreenState.activeMediaIndex == mediaIndex) {
     appLogger.d(
-      'Video player already active for ${metadata.ratingKey} (mediaIndex=$mediaIndex), skipping duplicate navigation',
+      'Video player already active for ${metadata.itemId} (mediaIndex=$mediaIndex), skipping duplicate navigation',
     );
     return null;
   }
@@ -156,7 +156,7 @@ Future<bool?> navigateToVideoPlayer(
 /// - All other parameters are passed through to [navigateToVideoPlayer]
 Future<bool?> navigateToVideoPlayerWithRefresh(
   BuildContext context, {
-  required PlexMetadata metadata,
+  required MediaMetadata metadata,
   bool isOffline = false,
   VoidCallback? onRefresh,
   AudioTrack? preferredAudioTrack,
@@ -164,7 +164,7 @@ Future<bool?> navigateToVideoPlayerWithRefresh(
   SubtitleTrack? preferredSecondarySubtitleTrack,
   int? selectedMediaIndex,
   bool usePushReplacement = false,
-  PlexVideoPlaybackData? playbackData,
+  VideoPlaybackData? playbackData,
 }) async {
   final result = await navigateToVideoPlayer(
     context,

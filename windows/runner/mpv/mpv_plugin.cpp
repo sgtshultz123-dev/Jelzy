@@ -31,7 +31,7 @@ MpvPlayerPlugin::MpvPlayerPlugin(flutter::PluginRegistrarWindows* registrar)
   // Create method channel.
   method_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          registrar->messenger(), "com.plezy/mpv_player",
+          registrar->messenger(), "com.jelzy/mpv_player",
           &flutter::StandardMethodCodec::GetInstance());
 
   method_channel_->SetMethodCallHandler(
@@ -42,7 +42,7 @@ MpvPlayerPlugin::MpvPlayerPlugin(flutter::PluginRegistrarWindows* registrar)
   // Create event channel.
   event_channel_ =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
-          registrar->messenger(), "com.plezy/mpv_player/events",
+          registrar->messenger(), "com.jelzy/mpv_player/events",
           &flutter::StandardMethodCodec::GetInstance());
 
   auto handler = std::make_unique<

@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/plex_library.dart';
+import '../constants/library_constants.dart';
+import '../models/media_library.dart';
 import '../services/data_aggregation_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/content_utils.dart';
+import '../utils/error_message_utils.dart';
 
 /// Load state for the libraries provider
 enum LibrariesLoadState { initial, loading, loaded, error }
@@ -14,12 +16,18 @@ enum LibrariesLoadState { initial, loading, loaded, error }
 /// instead of independently fetching library data.
 class LibrariesProvider extends ChangeNotifier {
   DataAggregationService? _aggregationService;
-  List<PlexLibrary> _libraries = [];
+  List<MediaLibrary> _libraries = [];
+  /// Full display order keys from storage (includes [kJellyfinFavoritesKey] when present).
+  List<String> _savedOrderKeys = [];
   LibrariesLoadState _loadState = LibrariesLoadState.initial;
   String? _errorMessage;
 
   /// Unmodifiable list of all libraries (filtered for supported types, ordered)
-  List<PlexLibrary> get libraries => List.unmodifiable(_libraries);
+  List<MediaLibrary> get libraries => List.unmodifiable(_libraries);
+
+  /// Order of keys for sidebar/sheet display (includes Favorites key). Null if not yet loaded.
+  List<String>? get displayOrderKeys =>
+      _savedOrderKeys.isEmpty ? null : List.unmodifiable(_savedOrderKeys);
 
   /// Whether libraries are currently being loaded
   bool get isLoading => _loadState == LibrariesLoadState.loading;
@@ -61,9 +69,10 @@ class LibrariesProvider extends ChangeNotifier {
       // Filter out music libraries (not supported)
       final filteredLibraries = allLibraries.where((lib) => !ContentTypeHelper.isMusicLibrary(lib)).toList();
 
-      // Apply saved library order
+      // Apply saved library order (or default: Movies/Shows alpha, then Collections/Playlists alpha)
       final storage = await StorageService.getInstance();
       final savedOrder = storage.getLibraryOrder();
+      _savedOrderKeys = savedOrder ?? [];
       final orderedLibraries = _applyLibraryOrder(filteredLibraries, savedOrder);
 
       _libraries = orderedLibraries;
@@ -73,31 +82,42 @@ class LibrariesProvider extends ChangeNotifier {
       appLogger.i('LibrariesProvider: Loaded ${_libraries.length} libraries');
       notifyListeners();
     } catch (e, stackTrace) {
-      appLogger.e('LibrariesProvider: Failed to load libraries', error: e, stackTrace: stackTrace);
+      logErrorWithStackTrace('LibrariesProvider: Failed to load libraries', e, stackTrace);
       _loadState = LibrariesLoadState.error;
-      _errorMessage = e.toString();
+      _errorMessage = safeUserMessage(e);
       notifyListeners();
     }
   }
 
-  /// Refresh libraries by reloading from the connected servers.
+  /// Refresh libraries by clearing cache and reloading.
   Future<void> refresh() async {
     if (_aggregationService == null) {
       appLogger.w('LibrariesProvider: Cannot refresh - not initialized');
       return;
     }
+
+    // Clear aggregation service cache
+    _aggregationService!.clearCache();
+
+    // Reload libraries
     await loadLibraries();
   }
 
   /// Update the library order and persist it.
-  Future<void> updateLibraryOrder(List<PlexLibrary> orderedLibraries) async {
-    _libraries = List.from(orderedLibraries);
+  /// [orderedLibraries] may include a synthetic Favorites item (globalKey == [kJellyfinFavoritesKey]);
+  /// only real libraries are stored in [_libraries]; full key list (including Favorites) is persisted.
+  Future<void> updateLibraryOrder(List<MediaLibrary> orderedLibraries) async {
+    final realLibraries = orderedLibraries
+        .where((lib) => lib.globalKey != kJellyfinFavoritesKey)
+        .toList();
+    final allKeys = orderedLibraries.map((lib) => lib.globalKey).toList();
+
+    _libraries = List.from(realLibraries);
+    _savedOrderKeys = List.from(allKeys);
     notifyListeners();
 
-    // Save the new order
     final storage = await StorageService.getInstance();
-    final libraryKeys = orderedLibraries.map((lib) => lib.globalKey).toList();
-    await storage.saveLibraryOrder(libraryKeys);
+    await storage.saveLibraryOrder(allKeys);
 
     appLogger.d('LibrariesProvider: Updated library order');
   }
@@ -105,33 +125,48 @@ class LibrariesProvider extends ChangeNotifier {
   /// Clear all library data (for profile switch or logout).
   void clear() {
     _libraries = [];
+    _savedOrderKeys = [];
     _loadState = LibrariesLoadState.initial;
     _errorMessage = null;
     notifyListeners();
     appLogger.d('LibrariesProvider: Cleared library data');
   }
 
-  /// Apply saved library order to a list of libraries.
-  List<PlexLibrary> _applyLibraryOrder(List<PlexLibrary> libraries, List<String>? savedOrder) {
+  /// Default order: Movies and Shows first (alpha by title), then Collections/Playlists (alpha by title).
+  List<MediaLibrary> _applyDefaultOrder(List<MediaLibrary> libraries) {
+    final primary = <MediaLibrary>[];
+    final secondary = <MediaLibrary>[];
+    for (final lib in libraries) {
+      final t = lib.type.toLowerCase();
+      if (t == 'movie' || t == 'show') {
+        primary.add(lib);
+      } else {
+        secondary.add(lib);
+      }
+    }
+    primary.sort((a, b) => a.title.compareTo(b.title));
+    secondary.sort((a, b) => a.title.compareTo(b.title));
+    return [...primary, ...secondary];
+  }
+
+  /// Apply saved library order to a list of libraries. Skips keys that are not libraries (e.g. [kJellyfinFavoritesKey]).
+  List<MediaLibrary> _applyLibraryOrder(List<MediaLibrary> libraries, List<String>? savedOrder) {
     if (savedOrder == null || savedOrder.isEmpty) {
-      return libraries;
+      return _applyDefaultOrder(libraries);
     }
 
-    // Create a map for quick lookup
     final libraryMap = {for (var lib in libraries) lib.globalKey: lib};
 
-    // Build ordered list based on saved order
-    final orderedLibraries = <PlexLibrary>[];
+    final orderedLibraries = <MediaLibrary>[];
     for (final key in savedOrder) {
+      if (key == kJellyfinFavoritesKey) continue;
       final lib = libraryMap.remove(key);
       if (lib != null) {
         orderedLibraries.add(lib);
       }
     }
 
-    // Add any new libraries that weren't in the saved order
     orderedLibraries.addAll(libraryMap.values);
-
     return orderedLibraries;
   }
 }

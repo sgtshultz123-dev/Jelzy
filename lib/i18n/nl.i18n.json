@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Inloggen met Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Vereist Android 8.0 of nieuwer",
       "iosVersion": "Vereist iOS 15.0 of nieuwer",
-      "permissionDisabled": "Beeld-in-beeld toestemming is uitgeschakeld. Schakel deze in via Instellingen > Apps > Plezy > Beeld-in-beeld",
+      "permissionDisabled": "Beeld-in-beeld toestemming is uitgeschakeld. Schakel deze in via Instellingen > Apps > Jelzy > Beeld-in-beeld",
       "notSupported": "Dit apparaat ondersteunt geen beeld-in-beeld modus",
       "voSwitchFailed": "Kan video-uitvoer niet wisselen voor beeld-in-beeld",
       "failed": "Beeld-in-beeld kon niet worden gestart",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Verbinden met desktop",
-      "discoveryDescription": "Apparaten op je netwerk die Plezy gebruiken met hetzelfde Plex-account verschijnen automatisch",
+      "discoveryDescription": "Apparaten op je netwerk die Jelzy gebruiken met hetzelfde Plex-account verschijnen automatisch",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Verbinden...",
       "searchingForDevices": "Apparaten zoeken...",
       "noDevicesFound": "Geen apparaten gevonden op je netwerk",
-      "noDevicesHint": "Zorg ervoor dat Plezy geopend is op je desktop en dat beide apparaten op hetzelfde WiFi-netwerk zitten",
+      "noDevicesHint": "Zorg ervoor dat Jelzy geopend is op je desktop en dat beide apparaten op hetzelfde WiFi-netwerk zitten",
       "availableDevices": "Beschikbare apparaten",
       "manualConnection": "Handmatige verbinding",
       "cryptoInitFailed": "Kan beveiligde verbinding niet initialiseren. Zorg ervoor dat je bent ingelogd bij een Plex-account.",
       "validationHostRequired": "Voer het hostadres in",
       "validationHostFormat": "Formaat moet IP:poort zijn (bijv. 192.168.1.100:48632)",
       "connectionTimedOut": "Verbinding verlopen. Zorg ervoor dat beide apparaten op hetzelfde netwerk zitten.",
-      "sessionNotFound": "Apparaat niet gevonden. Zorg ervoor dat Plezy draait op de host.",
+      "sessionNotFound": "Apparaat niet gevonden. Zorg ervoor dat Jelzy draait op de host.",
       "authFailed": "Authenticatie mislukt. Zorg ervoor dat beide apparaten hetzelfde Plex-account gebruiken.",
       "failedToConnect": "Kan niet verbinden: ${error}"
     },

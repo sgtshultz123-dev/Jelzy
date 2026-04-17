@@ -14,13 +14,34 @@ class GridItemContext {
   /// Whether this item is in the first column of the grid.
   final bool isFirstColumn;
 
-  /// Whether items are displayed in list mode (single column).
-  final bool isListMode;
+  /// Whether this item is in the last column of the grid.
+  final bool isLastColumn;
+
+  /// Whether this item is in the last row of the grid.
+  final bool isLastRow;
+
+  /// Number of columns in the grid.
+  final int columnCount;
+
+  /// Index of this item in the grid.
+  final int index;
+
+  /// Total number of items in the grid.
+  final int itemCount;
 
   /// Callback to navigate to the sidebar (for first-column items).
   final VoidCallback? navigateToSidebar;
 
-  const GridItemContext({required this.isFirstRow, required this.isFirstColumn, this.isListMode = false, this.navigateToSidebar});
+  const GridItemContext({
+    required this.isFirstRow,
+    required this.isFirstColumn,
+    required this.isLastColumn,
+    required this.isLastRow,
+    required this.columnCount,
+    required this.index,
+    required this.itemCount,
+    this.navigateToSidebar,
+  });
 }
 
 /// A widget that automatically switches between grid and list view
@@ -54,6 +75,9 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
   /// Whether to enable sidebar navigation for first-column items.
   final bool enableSidebarNavigation;
 
+  /// Optional scroll controller for programmatic scrolling (e.g. focus restore).
+  final ScrollController? scrollController;
+
   const AdaptiveMediaGrid({
     super.key,
     required this.items,
@@ -64,6 +88,7 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
     this.firstItemFocusNode,
     this.onBack,
     this.enableSidebarNavigation = false,
+    this.scrollController,
   });
 
   @override
@@ -76,7 +101,7 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
   }
 
   // Extra top padding for focus decoration (scale + border extends beyond item bounds)
-  static const double _focusDecorationPadding = 3.0;
+  static const double _focusDecorationPadding = 8.0;
 
   /// Navigate focus to the sidebar
   void _navigateToSidebar(BuildContext context) {
@@ -90,19 +115,26 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
     final effectivePadding = basePadding.copyWith(top: basePadding.top + _focusDecorationPadding);
     final effectiveAspectRatio = childAspectRatio ?? GridLayoutConstants.posterAspectRatio;
 
+    final cacheExtent = context.read<SettingsProvider>().gridPreloadCacheExtent;
     if (viewMode == ViewMode.list) {
       // In list view, all items are in a single column (first column)
       return ListView.builder(
+        controller: scrollController,
         padding: effectivePadding,
-        // Allow focus decoration to render outside scroll bounds
+        // ignore: deprecated_member_use
+        cacheExtent: cacheExtent,
         clipBehavior: Clip.none,
         itemCount: items.length,
         itemBuilder: (ctx, index) {
           final gridContext = enableSidebarNavigation
               ? GridItemContext(
                   isFirstRow: index == 0,
-                  isFirstColumn: true, // List view = single column
-                  isListMode: true,
+                  isFirstColumn: true,
+                  isLastColumn: true,
+                  isLastRow: index == items.length - 1,
+                  columnCount: 1,
+                  index: index,
+                  itemCount: items.length,
                   navigateToSidebar: () => _navigateToSidebar(context),
                 )
               : null;
@@ -120,8 +152,10 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
           final columnCount = GridSizeCalculator.getColumnCount(availableWidth, maxCrossAxisExtent);
 
           return GridView.builder(
+            controller: scrollController,
             padding: effectivePadding,
-            // Allow focus decoration to render outside scroll bounds
+            // ignore: deprecated_member_use
+            cacheExtent: cacheExtent,
             clipBehavior: Clip.none,
             gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: maxCrossAxisExtent,
@@ -135,6 +169,11 @@ class AdaptiveMediaGrid<T> extends StatelessWidget {
                   ? GridItemContext(
                       isFirstRow: GridSizeCalculator.isFirstRow(index, columnCount),
                       isFirstColumn: GridSizeCalculator.isFirstColumn(index, columnCount),
+                      isLastColumn: index % columnCount == columnCount - 1,
+                      isLastRow: index + columnCount >= items.length,
+                      columnCount: columnCount,
+                      index: index,
+                      itemCount: items.length,
                       navigateToSidebar: () => _navigateToSidebar(context),
                     )
                   : null;

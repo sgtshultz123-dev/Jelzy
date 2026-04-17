@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_metadata.dart';
 import '../../services/play_queue_launcher.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/media_navigation_helper.dart';
@@ -33,8 +33,8 @@ class FolderTreeView extends StatefulWidget {
 }
 
 class _FolderTreeViewState extends State<FolderTreeView> {
-  List<PlexMetadata> _rootFolders = [];
-  final Map<String, List<PlexMetadata>> _childrenCache = {};
+  List<MediaMetadata> _rootFolders = [];
+  final Map<String, List<MediaMetadata>> _childrenCache = {};
   final Set<String> _expandedFolders = {};
   final Set<String> _loadingFolders = {};
   bool _isLoadingRoot = false;
@@ -85,7 +85,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  Future<void> _loadFolderChildren(PlexMetadata folder) async {
+  Future<void> _loadFolderChildren(MediaMetadata folder) async {
     // Already loading this folder
     if (_loadingFolders.contains(folder.key!)) return;
 
@@ -104,7 +104,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     try {
       final client = context.getClientForServer(widget.serverId!);
 
-      // Items are automatically tagged with server info by PlexClient
+      // Items are automatically tagged with server info by JellyfinClient
       final children = await client.getFolderChildren(folder.key!);
 
       if (!mounted) return;
@@ -130,7 +130,7 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  void _toggleFolder(PlexMetadata folder) {
+  void _toggleFolder(MediaMetadata folder) {
     if (_expandedFolders.contains(folder.key!)) {
       setState(() {
         _expandedFolders.remove(folder.key!);
@@ -140,29 +140,29 @@ class _FolderTreeViewState extends State<FolderTreeView> {
     }
   }
 
-  Future<void> _handleItemTap(PlexMetadata item) async {
+  Future<void> _handleItemTap(MediaMetadata item) async {
     await navigateToMediaItem(context, item, onRefresh: widget.onRefresh);
   }
 
-  Future<void> _handleFolderPlay(PlexMetadata folder) async {
+  Future<void> _handleFolderPlay(MediaMetadata folder) async {
     final client = context.getClientForServer(widget.serverId!);
     final launcher = PlayQueueLauncher(context: context, client: client, serverId: widget.serverId);
     await launcher.launchFromFolder(folderKey: folder.key!, shuffle: false);
   }
 
-  Future<void> _handleFolderShuffle(PlexMetadata folder) async {
+  Future<void> _handleFolderShuffle(MediaMetadata folder) async {
     final client = context.getClientForServer(widget.serverId!);
     final launcher = PlayQueueLauncher(context: context, client: client, serverId: widget.serverId);
     await launcher.launchFromFolder(folderKey: folder.key!, shuffle: true);
   }
 
-  bool _isFolder(PlexMetadata item) {
+  bool _isFolder(MediaMetadata item) {
     // Folders typically don't have a specific type or might have special indicators
     // Check for common folder indicators
-    return item.key?.contains('/folder') == true || item.type == null || item.type!.isEmpty || item.mediaType == PlexMediaType.unknown;
+    return item.key?.contains('/folder') == true || item.type == null || item.type!.isEmpty || item.mediaType == MediaType.unknown;
   }
 
-  List<Widget> _buildTreeItems(List<PlexMetadata> items, int depth, [String parentPath = '']) {
+  List<Widget> _buildTreeItems(List<MediaMetadata> items, int depth, [String parentPath = '']) {
     final List<Widget> widgets = [];
 
     for (int i = 0; i < items.length; i++) {

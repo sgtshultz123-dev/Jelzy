@@ -9,25 +9,25 @@ import '../../../focus/dpad_navigator.dart';
 import '../../../focus/focusable_wrapper.dart';
 import '../../../i18n/strings.g.dart';
 import '../../../mpv/mpv.dart';
-import '../../../models/plex_media_info.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_info.dart';
+import '../../../models/media_metadata.dart';
 import '../../../providers/playback_state_provider.dart';
 import '../../../services/download_storage_service.dart';
-import '../../../services/plex_client.dart';
+import '../../../services/jellyfin_client.dart';
 import '../../../utils/formatters.dart';
 import '../../../utils/player_utils.dart';
 import '../../../utils/provider_extensions.dart';
 import '../../app_icon.dart';
-import '../../plex_optimized_image.dart';
+import '../../optimized_image.dart';
 
 /// Horizontal scrollable strip of chapter/queue items shown on swipe-up.
 class ContentStrip extends StatefulWidget {
   final Player player;
-  final List<PlexChapter> chapters;
+  final List<Chapter> chapters;
   final bool chaptersLoaded;
   final String? serverId;
   final bool showQueueTab;
-  final Function(PlexMetadata)? onQueueItemSelected;
+  final Function(MediaMetadata)? onQueueItemSelected;
   final Function(Duration position)? onSeekCompleted;
 
   /// Whether to use dpad/focus-based navigation (TV mode).
@@ -234,7 +234,7 @@ class ContentStripState extends State<ContentStrip> {
     return KeyEventResult.ignored;
   }
 
-  PlexClient? _tryGetClient(BuildContext context, String? serverId) {
+  JellyfinClient? _tryGetClient(BuildContext context, String? serverId) {
     return context.tryGetClientForServer(serverId);
   }
 
@@ -376,7 +376,7 @@ class ContentStripState extends State<ContentStrip> {
               isCurrent: isCurrent,
               isTablet: isTablet,
               thumbnail: chapter.thumb != null
-                  ? PlexOptimizedImage.thumb(
+                  ? OptimizedImage.thumb(
                       client: _tryGetClient(context, widget.serverId),
                       imagePath: chapter.thumb,
                       localFilePath: localThumbPath,
@@ -450,7 +450,7 @@ class ContentStripState extends State<ContentStrip> {
             final item = items[index];
             final isCurrent = item.playQueueItemID == currentItemID;
 
-            PlexClient? client;
+            JellyfinClient? client;
             if (item.serverId != null) {
               try {
                 client = context.tryGetClientForServer(item.serverId);
@@ -464,7 +464,7 @@ class ContentStripState extends State<ContentStrip> {
               isCurrent: isCurrent,
               isTablet: isTablet,
               thumbnail: item.thumb != null
-                  ? PlexOptimizedImage.thumb(
+                  ? OptimizedImage.thumb(
                       client: client,
                       imagePath: item.thumb,
                       width: thumbWidth,
@@ -505,7 +505,7 @@ class ContentStripState extends State<ContentStrip> {
     );
   }
 
-  String _buildQueueSubtitle(PlexMetadata item) {
+  String _buildQueueSubtitle(MediaMetadata item) {
     if (item.grandparentTitle != null && item.parentIndex != null && item.index != null) {
       return '${item.grandparentTitle} \u00b7 S${item.parentIndex}E${item.index}';
     }

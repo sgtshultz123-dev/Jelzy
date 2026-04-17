@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../i18n/strings.g.dart';
-import '../../../models/plex_subtitle_search_result.dart';
+import '../../../models/subtitle_search_result.dart';
 import '../../../utils/language_codes.dart';
 import '../../../utils/provider_extensions.dart';
 import '../../../utils/snackbar_helper.dart';
@@ -38,7 +38,7 @@ class _SubtitleSearchSheetState extends State<SubtitleSearchSheet> {
   final _titleController = TextEditingController();
   Timer? _debounceTimer;
 
-  List<PlexSubtitleSearchResult>? _results;
+  List<SubtitleSearchResult>? _results;
   bool _isSearching = false;
   String? _error;
   String? _downloadingKey;
@@ -79,11 +79,8 @@ class _SubtitleSearchSheetState extends State<SubtitleSearchSheet> {
     try {
       final client = context.getClientForServer(widget.serverId);
       final title = _titleController.text.trim();
-      final results = await client.searchSubtitles(
-        widget.ratingKey,
-        language: _languageCode,
-        title: title.isEmpty ? null : title,
-      );
+      // searchSubtitles not implemented in JellyfinClient — stub empty results
+      final List<SubtitleSearchResult> results = [];
       if (!mounted) return;
       setState(() {
         _results = results;
@@ -112,21 +109,13 @@ class _SubtitleSearchSheetState extends State<SubtitleSearchSheet> {
     _search();
   }
 
-  Future<void> _downloadSubtitle(PlexSubtitleSearchResult result) async {
+  Future<void> _downloadSubtitle(SubtitleSearchResult result) async {
     if (_downloadingKey != null) return;
     setState(() => _downloadingKey = result.key);
 
     try {
-      final client = context.getClientForServer(widget.serverId);
-      final success = await client.downloadSubtitle(
-        widget.ratingKey,
-        key: result.key,
-        codec: result.codec ?? 'srt',
-        language: result.languageCode ?? _languageCode,
-        hearingImpaired: result.hearingImpaired,
-        forced: result.forced,
-        providerTitle: result.providerTitle ?? '',
-      );
+      // downloadSubtitle not implemented in JellyfinClient — stub failure
+      final bool success = false;
 
       if (!mounted) return;
 

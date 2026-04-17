@@ -4,7 +4,12 @@ import 'package:flutter/services.dart';
 import '../utils/platform_detector.dart';
 import '../services/gamepad_service.dart';
 import 'dpad_navigator.dart';
-import '../services/companion_remote/companion_remote_receiver.dart';
+// companion_remote removed — stub no-op class below
+
+/// Stub class replacing the deleted CompanionRemoteReceiver.
+class CompanionRemoteReceiver {
+  static VoidCallback? onRemoteInput;
+}
 
 /// Tracks whether the user is navigating via keyboard/d-pad or pointer (mouse/touch).
 ///

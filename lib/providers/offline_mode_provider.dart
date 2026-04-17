@@ -13,12 +13,27 @@ class OfflineModeProvider extends ChangeNotifier {
   bool _hasNetworkConnection = true;
   late bool _hasServerConnection;
   bool _isInitialized = false;
+  bool _isForcedOffline = false;
 
   OfflineModeProvider(this._serverManager) : _hasServerConnection = _serverManager.onlineServerIds.isNotEmpty;
 
   /// Whether the app is currently in offline mode
   /// Offline = no network OR no servers reachable
-  bool get isOffline => !_hasNetworkConnection || !_hasServerConnection;
+  bool get isOffline => _isForcedOffline || !_hasNetworkConnection || !_hasServerConnection;
+
+  /// Whether the user has manually forced offline mode
+  bool get isForcedOffline => _isForcedOffline;
+
+  /// Whether a connection is actually available while forced offline
+  /// (i.e. user chose to go offline but could go back online)
+  bool get connectionAvailableWhenForced => _isForcedOffline && _hasNetworkConnection && _hasServerConnection;
+
+  /// Force or unforce offline mode
+  void setForcedOffline(bool value) {
+    if (_isForcedOffline == value) return;
+    _isForcedOffline = value;
+    notifyListeners();
+  }
 
   /// Whether there is network connectivity (WiFi, mobile data, etc.)
   bool get hasNetworkConnection => _hasNetworkConnection;

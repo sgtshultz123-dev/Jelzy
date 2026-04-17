@@ -1,7 +1,17 @@
 import 'dart:convert';
 
+import 'package:uuid/uuid.dart';
+
 import '../utils/log_redaction_manager.dart';
 import 'base_shared_preferences_service.dart';
+
+/// Data class representing a pending external return (item to navigate back to
+/// after returning from an external media player or app).
+class PendingExternalReturn {
+  final String? serverId;
+  final String itemId;
+  const PendingExternalReturn({this.serverId, required this.itemId});
+}
 
 class StorageService extends BaseSharedPreferencesService {
   static const String _keyServerUrl = 'server_url';
@@ -121,6 +131,17 @@ class StorageService extends BaseSharedPreferencesService {
 
   String? getClientIdentifier() {
     return prefs.getString(_keyClientId);
+  }
+
+  /// Get or create a unique device identifier for Jellyfin API headers.
+  /// Generated once per installation and persisted across launches.
+  Future<String> getOrCreateDeviceId() async {
+    const key = 'jellyfin_device_id';
+    final existing = prefs.getString(key);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final deviceId = const Uuid().v4();
+    await prefs.setString(key, deviceId);
+    return deviceId;
   }
 
   // Clear all credentials
@@ -419,5 +440,34 @@ class StorageService extends BaseSharedPreferencesService {
   Future<void> _setStringList(String key, List<String> list) async {
     final jsonString = json.encode(list);
     await prefs.setString(key, jsonString);
+  }
+
+  // ---- Stub methods for Finzy-port compatibility ----
+
+  /// Save a pending external return (server/item to restore after returning from an external player).
+  Future<void> savePendingExternalReturn({required String itemId, String? serverId}) async {
+    await prefs.setString('_pendingExternalReturn', json.encode({'serverId': serverId, 'itemId': itemId}));
+  }
+
+  /// Get the pending external return, if any.
+  Future<PendingExternalReturn?> getPendingExternalReturn() async {
+    final raw = prefs.getString('_pendingExternalReturn');
+    if (raw == null) return null;
+    try {
+      final map = json.decode(raw) as Map<String, dynamic>;
+      return PendingExternalReturn(serverId: map['serverId'] as String?, itemId: map['itemId'] as String? ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Clear the pending external return.
+  Future<void> clearPendingExternalReturn() async {
+    await prefs.remove('_pendingExternalReturn');
+  }
+
+  /// Clear the saved sort/filter state for a specific library.
+  Future<void> clearLibrarySort(String libraryId) async {
+    await prefs.remove('library_sort_$libraryId');
   }
 }

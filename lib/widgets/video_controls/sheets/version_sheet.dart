@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../../models/plex_media_version.dart';
+import '../../../models/media_version.dart';
 import '../../../widgets/overlay_sheet.dart';
 import '../helpers/track_selection_helper.dart';
 import 'base_video_control_sheet.dart';
 
 /// Bottom sheet for selecting video version
 class VersionSheet extends StatefulWidget {
-  final List<PlexMediaVersion> availableVersions;
+  final List<MediaVersion> availableVersions;
   final int selectedMediaIndex;
   final Function(int) onVersionSelected;
 

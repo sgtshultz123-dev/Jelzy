@@ -11,7 +11,7 @@ import 'package:slang/generated.dart';
 import 'strings.g.dart';
 
 // Path: <root>
-class TranslationsNb with BaseTranslations<AppLocale, Translations> implements Translations {
+class TranslationsNb extends Translations with BaseTranslations<AppLocale, Translations> {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	TranslationsNb({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver, TranslationMetadata<AppLocale, Translations>? meta})
@@ -21,7 +21,9 @@ class TranslationsNb with BaseTranslations<AppLocale, Translations> implements T
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -29,7 +31,7 @@ class TranslationsNb with BaseTranslations<AppLocale, Translations> implements T
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	late final TranslationsNb _root = this; // ignore: unused_field
 
@@ -78,18 +80,18 @@ class TranslationsNb with BaseTranslations<AppLocale, Translations> implements T
 }
 
 // Path: app
-class _TranslationsAppNb implements TranslationsAppEn {
-	_TranslationsAppNb._(this._root);
+class _TranslationsAppNb extends TranslationsAppEn {
+	_TranslationsAppNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
 	// Translations
-	@override String get title => 'Plezy';
+	@override String get title => 'Jelzy';
 }
 
 // Path: auth
-class _TranslationsAuthNb implements TranslationsAuthEn {
-	_TranslationsAuthNb._(this._root);
+class _TranslationsAuthNb extends TranslationsAuthEn {
+	_TranslationsAuthNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -104,8 +106,8 @@ class _TranslationsAuthNb implements TranslationsAuthEn {
 }
 
 // Path: common
-class _TranslationsCommonNb implements TranslationsCommonEn {
-	_TranslationsCommonNb._(this._root);
+class _TranslationsCommonNb extends TranslationsCommonEn {
+	_TranslationsCommonNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -156,8 +158,8 @@ class _TranslationsCommonNb implements TranslationsCommonEn {
 }
 
 // Path: screens
-class _TranslationsScreensNb implements TranslationsScreensEn {
-	_TranslationsScreensNb._(this._root);
+class _TranslationsScreensNb extends TranslationsScreensEn {
+	_TranslationsScreensNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -170,8 +172,8 @@ class _TranslationsScreensNb implements TranslationsScreensEn {
 }
 
 // Path: update
-class _TranslationsUpdateNb implements TranslationsUpdateEn {
-	_TranslationsUpdateNb._(this._root);
+class _TranslationsUpdateNb extends TranslationsUpdateEn {
+	_TranslationsUpdateNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -186,8 +188,8 @@ class _TranslationsUpdateNb implements TranslationsUpdateEn {
 }
 
 // Path: settings
-class _TranslationsSettingsNb implements TranslationsSettingsEn {
-	_TranslationsSettingsNb._(this._root);
+class _TranslationsSettingsNb extends TranslationsSettingsEn {
+	_TranslationsSettingsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -363,8 +365,8 @@ class _TranslationsSettingsNb implements TranslationsSettingsEn {
 }
 
 // Path: search
-class _TranslationsSearchNb implements TranslationsSearchEn {
-	_TranslationsSearchNb._(this._root);
+class _TranslationsSearchNb extends TranslationsSearchEn {
+	_TranslationsSearchNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -376,8 +378,8 @@ class _TranslationsSearchNb implements TranslationsSearchEn {
 }
 
 // Path: hotkeys
-class _TranslationsHotkeysNb implements TranslationsHotkeysEn {
-	_TranslationsHotkeysNb._(this._root);
+class _TranslationsHotkeysNb extends TranslationsHotkeysEn {
+	_TranslationsHotkeysNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -388,8 +390,8 @@ class _TranslationsHotkeysNb implements TranslationsHotkeysEn {
 }
 
 // Path: fileInfo
-class _TranslationsFileInfoNb implements TranslationsFileInfoEn {
-	_TranslationsFileInfoNb._(this._root);
+class _TranslationsFileInfoNb extends TranslationsFileInfoEn {
+	_TranslationsFileInfoNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -422,8 +424,8 @@ class _TranslationsFileInfoNb implements TranslationsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _TranslationsMediaMenuNb implements TranslationsMediaMenuEn {
-	_TranslationsMediaMenuNb._(this._root);
+class _TranslationsMediaMenuNb extends TranslationsMediaMenuEn {
+	_TranslationsMediaMenuNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -446,8 +448,8 @@ class _TranslationsMediaMenuNb implements TranslationsMediaMenuEn {
 }
 
 // Path: accessibility
-class _TranslationsAccessibilityNb implements TranslationsAccessibilityEn {
-	_TranslationsAccessibilityNb._(this._root);
+class _TranslationsAccessibilityNb extends TranslationsAccessibilityEn {
+	_TranslationsAccessibilityNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -463,8 +465,8 @@ class _TranslationsAccessibilityNb implements TranslationsAccessibilityEn {
 }
 
 // Path: tooltips
-class _TranslationsTooltipsNb implements TranslationsTooltipsEn {
-	_TranslationsTooltipsNb._(this._root);
+class _TranslationsTooltipsNb extends TranslationsTooltipsEn {
+	_TranslationsTooltipsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -476,8 +478,8 @@ class _TranslationsTooltipsNb implements TranslationsTooltipsEn {
 }
 
 // Path: videoControls
-class _TranslationsVideoControlsNb implements TranslationsVideoControlsEn {
-	_TranslationsVideoControlsNb._(this._root);
+class _TranslationsVideoControlsNb extends TranslationsVideoControlsEn {
+	_TranslationsVideoControlsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -546,8 +548,8 @@ class _TranslationsVideoControlsNb implements TranslationsVideoControlsEn {
 }
 
 // Path: userStatus
-class _TranslationsUserStatusNb implements TranslationsUserStatusEn {
-	_TranslationsUserStatusNb._(this._root);
+class _TranslationsUserStatusNb extends TranslationsUserStatusEn {
+	_TranslationsUserStatusNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -559,8 +561,8 @@ class _TranslationsUserStatusNb implements TranslationsUserStatusEn {
 }
 
 // Path: messages
-class _TranslationsMessagesNb implements TranslationsMessagesEn {
-	_TranslationsMessagesNb._(this._root);
+class _TranslationsMessagesNb extends TranslationsMessagesEn {
+	_TranslationsMessagesNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -602,8 +604,8 @@ class _TranslationsMessagesNb implements TranslationsMessagesEn {
 }
 
 // Path: subtitlingStyling
-class _TranslationsSubtitlingStylingNb implements TranslationsSubtitlingStylingEn {
-	_TranslationsSubtitlingStylingNb._(this._root);
+class _TranslationsSubtitlingStylingNb extends TranslationsSubtitlingStylingEn {
+	_TranslationsSubtitlingStylingNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -623,8 +625,8 @@ class _TranslationsSubtitlingStylingNb implements TranslationsSubtitlingStylingE
 }
 
 // Path: mpvConfig
-class _TranslationsMpvConfigNb implements TranslationsMpvConfigEn {
-	_TranslationsMpvConfigNb._(this._root);
+class _TranslationsMpvConfigNb extends TranslationsMpvConfigEn {
+	_TranslationsMpvConfigNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -646,8 +648,8 @@ class _TranslationsMpvConfigNb implements TranslationsMpvConfigEn {
 }
 
 // Path: dialog
-class _TranslationsDialogNb implements TranslationsDialogEn {
-	_TranslationsDialogNb._(this._root);
+class _TranslationsDialogNb extends TranslationsDialogEn {
+	_TranslationsDialogNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -656,8 +658,8 @@ class _TranslationsDialogNb implements TranslationsDialogEn {
 }
 
 // Path: discover
-class _TranslationsDiscoverNb implements TranslationsDiscoverEn {
-	_TranslationsDiscoverNb._(this._root);
+class _TranslationsDiscoverNb extends TranslationsDiscoverEn {
+	_TranslationsDiscoverNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -679,8 +681,8 @@ class _TranslationsDiscoverNb implements TranslationsDiscoverEn {
 }
 
 // Path: errors
-class _TranslationsErrorsNb implements TranslationsErrorsEn {
-	_TranslationsErrorsNb._(this._root);
+class _TranslationsErrorsNb extends TranslationsErrorsEn {
+	_TranslationsErrorsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -699,8 +701,8 @@ class _TranslationsErrorsNb implements TranslationsErrorsEn {
 }
 
 // Path: libraries
-class _TranslationsLibrariesNb implements TranslationsLibrariesEn {
-	_TranslationsLibrariesNb._(this._root);
+class _TranslationsLibrariesNb extends TranslationsLibrariesEn {
+	_TranslationsLibrariesNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -746,8 +748,8 @@ class _TranslationsLibrariesNb implements TranslationsLibrariesEn {
 }
 
 // Path: about
-class _TranslationsAboutNb implements TranslationsAboutEn {
-	_TranslationsAboutNb._(this._root);
+class _TranslationsAboutNb extends TranslationsAboutEn {
+	_TranslationsAboutNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -760,8 +762,8 @@ class _TranslationsAboutNb implements TranslationsAboutEn {
 }
 
 // Path: serverSelection
-class _TranslationsServerSelectionNb implements TranslationsServerSelectionEn {
-	_TranslationsServerSelectionNb._(this._root);
+class _TranslationsServerSelectionNb extends TranslationsServerSelectionEn {
+	_TranslationsServerSelectionNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -772,8 +774,8 @@ class _TranslationsServerSelectionNb implements TranslationsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _TranslationsHubDetailNb implements TranslationsHubDetailEn {
-	_TranslationsHubDetailNb._(this._root);
+class _TranslationsHubDetailNb extends TranslationsHubDetailEn {
+	_TranslationsHubDetailNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -786,8 +788,8 @@ class _TranslationsHubDetailNb implements TranslationsHubDetailEn {
 }
 
 // Path: logs
-class _TranslationsLogsNb implements TranslationsLogsEn {
-	_TranslationsLogsNb._(this._root);
+class _TranslationsLogsNb extends TranslationsLogsEn {
+	_TranslationsLogsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -798,8 +800,8 @@ class _TranslationsLogsNb implements TranslationsLogsEn {
 }
 
 // Path: licenses
-class _TranslationsLicensesNb implements TranslationsLicensesEn {
-	_TranslationsLicensesNb._(this._root);
+class _TranslationsLicensesNb extends TranslationsLicensesEn {
+	_TranslationsLicensesNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -811,8 +813,8 @@ class _TranslationsLicensesNb implements TranslationsLicensesEn {
 }
 
 // Path: navigation
-class _TranslationsNavigationNb implements TranslationsNavigationEn {
-	_TranslationsNavigationNb._(this._root);
+class _TranslationsNavigationNb extends TranslationsNavigationEn {
+	_TranslationsNavigationNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -823,8 +825,8 @@ class _TranslationsNavigationNb implements TranslationsNavigationEn {
 }
 
 // Path: liveTv
-class _TranslationsLiveTvNb implements TranslationsLiveTvEn {
-	_TranslationsLiveTvNb._(this._root);
+class _TranslationsLiveTvNb extends TranslationsLiveTvEn {
+	_TranslationsLiveTvNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -855,8 +857,8 @@ class _TranslationsLiveTvNb implements TranslationsLiveTvEn {
 }
 
 // Path: collections
-class _TranslationsCollectionsNb implements TranslationsCollectionsEn {
-	_TranslationsCollectionsNb._(this._root);
+class _TranslationsCollectionsNb extends TranslationsCollectionsEn {
+	_TranslationsCollectionsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -886,8 +888,8 @@ class _TranslationsCollectionsNb implements TranslationsCollectionsEn {
 }
 
 // Path: playlists
-class _TranslationsPlaylistsNb implements TranslationsPlaylistsEn {
-	_TranslationsPlaylistsNb._(this._root);
+class _TranslationsPlaylistsNb extends TranslationsPlaylistsEn {
+	_TranslationsPlaylistsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -920,8 +922,8 @@ class _TranslationsPlaylistsNb implements TranslationsPlaylistsEn {
 }
 
 // Path: watchTogether
-class _TranslationsWatchTogetherNb implements TranslationsWatchTogetherEn {
-	_TranslationsWatchTogetherNb._(this._root);
+class _TranslationsWatchTogetherNb extends TranslationsWatchTogetherEn {
+	_TranslationsWatchTogetherNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -987,8 +989,8 @@ class _TranslationsWatchTogetherNb implements TranslationsWatchTogetherEn {
 }
 
 // Path: downloads
-class _TranslationsDownloadsNb implements TranslationsDownloadsEn {
-	_TranslationsDownloadsNb._(this._root);
+class _TranslationsDownloadsNb extends TranslationsDownloadsEn {
+	_TranslationsDownloadsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1022,8 +1024,8 @@ class _TranslationsDownloadsNb implements TranslationsDownloadsEn {
 }
 
 // Path: shaders
-class _TranslationsShadersNb implements TranslationsShadersEn {
-	_TranslationsShadersNb._(this._root);
+class _TranslationsShadersNb extends TranslationsShadersEn {
+	_TranslationsShadersNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1043,8 +1045,8 @@ class _TranslationsShadersNb implements TranslationsShadersEn {
 }
 
 // Path: companionRemote
-class _TranslationsCompanionRemoteNb implements TranslationsCompanionRemoteEn {
-	_TranslationsCompanionRemoteNb._(this._root);
+class _TranslationsCompanionRemoteNb extends TranslationsCompanionRemoteEn {
+	_TranslationsCompanionRemoteNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1062,8 +1064,8 @@ class _TranslationsCompanionRemoteNb implements TranslationsCompanionRemoteEn {
 }
 
 // Path: videoSettings
-class _TranslationsVideoSettingsNb implements TranslationsVideoSettingsEn {
-	_TranslationsVideoSettingsNb._(this._root);
+class _TranslationsVideoSettingsNb extends TranslationsVideoSettingsEn {
+	_TranslationsVideoSettingsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1081,8 +1083,8 @@ class _TranslationsVideoSettingsNb implements TranslationsVideoSettingsEn {
 }
 
 // Path: externalPlayer
-class _TranslationsExternalPlayerNb implements TranslationsExternalPlayerEn {
-	_TranslationsExternalPlayerNb._(this._root);
+class _TranslationsExternalPlayerNb extends TranslationsExternalPlayerEn {
+	_TranslationsExternalPlayerNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1105,8 +1107,8 @@ class _TranslationsExternalPlayerNb implements TranslationsExternalPlayerEn {
 }
 
 // Path: metadataEdit
-class _TranslationsMetadataEditNb implements TranslationsMetadataEditEn {
-	_TranslationsMetadataEditNb._(this._root);
+class _TranslationsMetadataEditNb extends TranslationsMetadataEditEn {
+	_TranslationsMetadataEditNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1188,8 +1190,8 @@ class _TranslationsMetadataEditNb implements TranslationsMetadataEditEn {
 }
 
 // Path: serverTasks
-class _TranslationsServerTasksNb implements TranslationsServerTasksEn {
-	_TranslationsServerTasksNb._(this._root);
+class _TranslationsServerTasksNb extends TranslationsServerTasksEn {
+	_TranslationsServerTasksNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1200,8 +1202,8 @@ class _TranslationsServerTasksNb implements TranslationsServerTasksEn {
 }
 
 // Path: hotkeys.actions
-class _TranslationsHotkeysActionsNb implements TranslationsHotkeysActionsEn {
-	_TranslationsHotkeysActionsNb._(this._root);
+class _TranslationsHotkeysActionsNb extends TranslationsHotkeysActionsEn {
+	_TranslationsHotkeysActionsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1228,15 +1230,15 @@ class _TranslationsHotkeysActionsNb implements TranslationsHotkeysActionsEn {
 }
 
 // Path: videoControls.pipErrors
-class _TranslationsVideoControlsPipErrorsNb implements TranslationsVideoControlsPipErrorsEn {
-	_TranslationsVideoControlsPipErrorsNb._(this._root);
+class _TranslationsVideoControlsPipErrorsNb extends TranslationsVideoControlsPipErrorsEn {
+	_TranslationsVideoControlsPipErrorsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
 	// Translations
 	@override String get androidVersion => 'Krever Android 8.0 eller nyere';
 	@override String get iosVersion => 'Krever iOS 15.0 eller nyere';
-	@override String get permissionDisabled => 'Bilde-i-bilde-tillatelse er deaktivert. Aktiver den i Innstillinger > Apper > Plezy > Bilde-i-bilde';
+	@override String get permissionDisabled => 'Bilde-i-bilde-tillatelse er deaktivert. Aktiver den i Innstillinger > Apper > Jelzy > Bilde-i-bilde';
 	@override String get notSupported => 'Enheten støtter ikke bilde-i-bilde-modus';
 	@override String get voSwitchFailed => 'Kunne ikke bytte videoutgang for bilde-i-bilde';
 	@override String get failed => 'Bilde-i-bilde kunne ikke starte';
@@ -1244,8 +1246,8 @@ class _TranslationsVideoControlsPipErrorsNb implements TranslationsVideoControls
 }
 
 // Path: libraries.tabs
-class _TranslationsLibrariesTabsNb implements TranslationsLibrariesTabsEn {
-	_TranslationsLibrariesTabsNb._(this._root);
+class _TranslationsLibrariesTabsNb extends TranslationsLibrariesTabsEn {
+	_TranslationsLibrariesTabsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1257,8 +1259,8 @@ class _TranslationsLibrariesTabsNb implements TranslationsLibrariesTabsEn {
 }
 
 // Path: libraries.groupings
-class _TranslationsLibrariesGroupingsNb implements TranslationsLibrariesGroupingsEn {
-	_TranslationsLibrariesGroupingsNb._(this._root);
+class _TranslationsLibrariesGroupingsNb extends TranslationsLibrariesGroupingsEn {
+	_TranslationsLibrariesGroupingsNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1273,8 +1275,8 @@ class _TranslationsLibrariesGroupingsNb implements TranslationsLibrariesGrouping
 }
 
 // Path: companionRemote.session
-class _TranslationsCompanionRemoteSessionNb implements TranslationsCompanionRemoteSessionEn {
-	_TranslationsCompanionRemoteSessionNb._(this._root);
+class _TranslationsCompanionRemoteSessionNb extends TranslationsCompanionRemoteSessionEn {
+	_TranslationsCompanionRemoteSessionNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1294,33 +1296,33 @@ class _TranslationsCompanionRemoteSessionNb implements TranslationsCompanionRemo
 }
 
 // Path: companionRemote.pairing
-class _TranslationsCompanionRemotePairingNb implements TranslationsCompanionRemotePairingEn {
-	_TranslationsCompanionRemotePairingNb._(this._root);
+class _TranslationsCompanionRemotePairingNb extends TranslationsCompanionRemotePairingEn {
+	_TranslationsCompanionRemotePairingNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
 	// Translations
 	@override String get pairWithDesktop => 'Koble til datamaskin';
-	@override String get discoveryDescription => 'Enheter på nettverket ditt som kjører Plezy med samme Plex-konto vil vises automatisk';
+	@override String get discoveryDescription => 'Enheter på nettverket ditt som kjører Jelzy med samme Plex-konto vil vises automatisk';
 	@override String get hostAddressHint => '192.168.1.100:48632';
 	@override String get connecting => 'Kobler til...';
 	@override String get searchingForDevices => 'Søker etter enheter...';
 	@override String get noDevicesFound => 'Ingen enheter funnet på nettverket ditt';
-	@override String get noDevicesHint => 'Sørg for at Plezy er åpen på datamaskinen din og at begge enhetene er på samme WiFi-nettverk';
+	@override String get noDevicesHint => 'Sørg for at Jelzy er åpen på datamaskinen din og at begge enhetene er på samme WiFi-nettverk';
 	@override String get availableDevices => 'Tilgjengelige enheter';
 	@override String get manualConnection => 'Manuell tilkobling';
 	@override String get cryptoInitFailed => 'Kunne ikke initialisere sikker tilkobling. Sørg for at du er logget inn på en Plex-konto.';
 	@override String get validationHostRequired => 'Vennligst oppgi vertsadresse';
 	@override String get validationHostFormat => 'Format må være IP:port (f.eks. 192.168.1.100:48632)';
 	@override String get connectionTimedOut => 'Tilkoblingen ble tidsavbrutt. Sørg for at begge enhetene er på samme nettverk.';
-	@override String get sessionNotFound => 'Kunne ikke finne enheten. Sørg for at Plezy kjører på verten.';
+	@override String get sessionNotFound => 'Kunne ikke finne enheten. Sørg for at Jelzy kjører på verten.';
 	@override String get authFailed => 'Autentisering mislyktes. Sørg for at begge enhetene bruker samme Plex-konto.';
 	@override String failedToConnect({required Object error}) => 'Kunne ikke koble til: ${error}';
 }
 
 // Path: companionRemote.remote
-class _TranslationsCompanionRemoteRemoteNb implements TranslationsCompanionRemoteRemoteEn {
-	_TranslationsCompanionRemoteRemoteNb._(this._root);
+class _TranslationsCompanionRemoteRemoteNb extends TranslationsCompanionRemoteRemoteEn {
+	_TranslationsCompanionRemoteRemoteNb._(TranslationsNb root) : this._root = root, super.internal(root);
 
 	final TranslationsNb _root; // ignore: unused_field
 
@@ -1364,7 +1366,7 @@ class _TranslationsCompanionRemoteRemoteNb implements TranslationsCompanionRemot
 extension on TranslationsNb {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
-			'app.title' => 'Plezy',
+			'app.title' => 'Jelzy',
 			'auth.signInWithPlex' => 'Logg inn med Plex',
 			'auth.showQRCode' => 'Vis QR-kode',
 			'auth.authenticate' => 'Autentiser',
@@ -1724,7 +1726,7 @@ extension on TranslationsNb {
 			'videoControls.pipFailed' => 'Bilde-i-bilde kunne ikke starte',
 			'videoControls.pipErrors.androidVersion' => 'Krever Android 8.0 eller nyere',
 			'videoControls.pipErrors.iosVersion' => 'Krever iOS 15.0 eller nyere',
-			'videoControls.pipErrors.permissionDisabled' => 'Bilde-i-bilde-tillatelse er deaktivert. Aktiver den i Innstillinger > Apper > Plezy > Bilde-i-bilde',
+			'videoControls.pipErrors.permissionDisabled' => 'Bilde-i-bilde-tillatelse er deaktivert. Aktiver den i Innstillinger > Apper > Jelzy > Bilde-i-bilde',
 			'videoControls.pipErrors.notSupported' => 'Enheten støtter ikke bilde-i-bilde-modus',
 			'videoControls.pipErrors.voSwitchFailed' => 'Kunne ikke bytte videoutgang for bilde-i-bilde',
 			'videoControls.pipErrors.failed' => 'Bilde-i-bilde kunne ikke starte',
@@ -2087,19 +2089,19 @@ extension on TranslationsNb {
 			'companionRemote.session.stopServer' => 'Stopp server',
 			'companionRemote.session.minimize' => 'Minimer',
 			'companionRemote.pairing.pairWithDesktop' => 'Koble til datamaskin',
-			'companionRemote.pairing.discoveryDescription' => 'Enheter på nettverket ditt som kjører Plezy med samme Plex-konto vil vises automatisk',
+			'companionRemote.pairing.discoveryDescription' => 'Enheter på nettverket ditt som kjører Jelzy med samme Plex-konto vil vises automatisk',
 			'companionRemote.pairing.hostAddressHint' => '192.168.1.100:48632',
 			'companionRemote.pairing.connecting' => 'Kobler til...',
 			'companionRemote.pairing.searchingForDevices' => 'Søker etter enheter...',
 			'companionRemote.pairing.noDevicesFound' => 'Ingen enheter funnet på nettverket ditt',
-			'companionRemote.pairing.noDevicesHint' => 'Sørg for at Plezy er åpen på datamaskinen din og at begge enhetene er på samme WiFi-nettverk',
+			'companionRemote.pairing.noDevicesHint' => 'Sørg for at Jelzy er åpen på datamaskinen din og at begge enhetene er på samme WiFi-nettverk',
 			'companionRemote.pairing.availableDevices' => 'Tilgjengelige enheter',
 			'companionRemote.pairing.manualConnection' => 'Manuell tilkobling',
 			'companionRemote.pairing.cryptoInitFailed' => 'Kunne ikke initialisere sikker tilkobling. Sørg for at du er logget inn på en Plex-konto.',
 			'companionRemote.pairing.validationHostRequired' => 'Vennligst oppgi vertsadresse',
 			'companionRemote.pairing.validationHostFormat' => 'Format må være IP:port (f.eks. 192.168.1.100:48632)',
 			'companionRemote.pairing.connectionTimedOut' => 'Tilkoblingen ble tidsavbrutt. Sørg for at begge enhetene er på samme nettverk.',
-			'companionRemote.pairing.sessionNotFound' => 'Kunne ikke finne enheten. Sørg for at Plezy kjører på verten.',
+			'companionRemote.pairing.sessionNotFound' => 'Kunne ikke finne enheten. Sørg for at Jelzy kjører på verten.',
 			'companionRemote.pairing.authFailed' => 'Autentisering mislyktes. Sørg for at begge enhetene bruker samme Plex-konto.',
 			'companionRemote.pairing.failedToConnect' => ({required Object error}) => 'Kunne ikke koble til: ${error}',
 			'companionRemote.remote.disconnectConfirm' => 'Vil du koble fra fjernøkten?',

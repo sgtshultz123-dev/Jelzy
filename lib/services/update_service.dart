@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:auto_updater/auto_updater.dart';
+// auto_updater removed — not available in jelzy
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:logger/logger.dart';
-import 'package:plezy/utils/plex_http_client.dart';
+import 'package:jelzy/utils/plex_http_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service to check for new versions on GitHub
@@ -40,31 +40,14 @@ class UpdateService {
     return false;
   }
 
-  /// Initialize the native auto_updater (Sparkle/WinSparkle).
-  /// Call once at startup if [useNativeUpdater] is true.
+  /// Initialize the native auto_updater — stubbed out (auto_updater not available).
   static Future<void> initNativeUpdater() async {
-    if (_nativeUpdaterInitialized) return;
-
-    try {
-      await autoUpdater.setFeedURL(_feedUrl);
-      _nativeUpdaterInitialized = true;
-    } catch (e) {
-      _logger.e('Failed to initialize native auto updater: $e');
-    }
+    // auto_updater not available in jelzy — no-op
   }
 
-  /// Trigger a background update check via Sparkle/WinSparkle.
-  /// Only shows UI if an update is found.
+  /// Trigger a background update check — stubbed out (auto_updater not available).
   static Future<void> checkForUpdatesNative({bool inBackground = true}) async {
-    if (!_nativeUpdaterInitialized) {
-      await initNativeUpdater();
-      if (!_nativeUpdaterInitialized) return;
-    }
-    try {
-      await autoUpdater.checkForUpdates(inBackground: inBackground);
-    } catch (e) {
-      _logger.e('Native update check failed: $e');
-    }
+    // auto_updater not available in jelzy — no-op
   }
 
   /// Check if the macOS app was installed via Homebrew.

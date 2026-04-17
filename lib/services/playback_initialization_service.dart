@@ -1,19 +1,20 @@
-import 'plex_client.dart';
-import '../models/plex_media_info.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_video_playback_data.dart';
+import 'jellyfin_client.dart';
+import '../models/media_info.dart';
+import '../models/media_metadata.dart';
 import '../models/download_models.dart';
 import '../mpv/mpv.dart';
 import '../utils/app_logger.dart';
+import '../utils/error_message_utils.dart';
 import '../i18n/strings.g.dart';
 import '../database/app_database.dart';
 import 'download_storage_service.dart';
+import 'settings_service.dart';
 import 'dart:io';
 import 'package:drift/drift.dart';
 
-/// Service responsible for fetching video playback data from the Plex server
+/// Service responsible for fetching video playback data from the media server
 class PlaybackInitializationService {
-  final PlexClient client;
+  final JellyfinClient client;
   final AppDatabase? database;
 
   PlaybackInitializationService({required this.client, this.database});
@@ -27,27 +28,20 @@ class PlaybackInitializationService {
   ///
   /// Returns the local file path if the video is downloaded and completed.
   /// Returns null if not available offline or database is not provided.
-  Future<String?> getOfflineVideoPath(String serverId, String ratingKey, {int mediaIndex = 0}) async {
+  Future<String?> getOfflineVideoPath(String serverId, String itemId) async {
     if (database == null) {
       return null;
     }
 
     try {
-      // Query database for downloaded media with matching serverId and ratingKey
+      // Query database for downloaded media with matching serverId and itemId
       final query = database!.select(database!.downloadedMedia)
-        ..where((tbl) => tbl.serverId.equals(serverId) & tbl.ratingKey.equals(ratingKey));
+        ..where((tbl) => tbl.serverId.equals(serverId) & tbl.ratingKey.equals(itemId));
 
       final downloadedItem = await query.getSingleOrNull();
 
       // Return null if not found or not completed
       if (downloadedItem == null || downloadedItem.status != DownloadStatus.completed.index) {
-        return null;
-      }
-
-      // Skip offline file if a different version was requested
-      if (downloadedItem.mediaIndex != mediaIndex) {
-        appLogger.d('[VersionTrace] Offline video is version ${downloadedItem.mediaIndex}, '
-            'but requested version $mediaIndex — skipping offline');
         return null;
       }
 
@@ -83,40 +77,50 @@ class PlaybackInitializationService {
   ///
   /// Returns a PlaybackInitializationResult with video URL and available versions
   /// If [preferOffline] is true and offline content is available, uses local file
-  /// If [playbackData] is provided, skips the network call to fetch it again.
+  /// When [enableExternalSubtitles] is false, external subtitle list is empty so video loads fast.
+  /// When [overrideResumePositionMs] is set (e.g. quality change restart), use it for the URL
+  /// so transcode streams start at the correct position.
   Future<PlaybackInitializationResult> getPlaybackData({
-    required PlexMetadata metadata,
+    required MediaMetadata metadata,
     required int selectedMediaIndex,
     bool preferOffline = false,
-    PlexVideoPlaybackData? playbackData,
+    bool enableExternalSubtitles = false,
+    int? overrideResumePositionMs,
   }) async {
     try {
       // Check for offline content first if preferOffline is enabled
       String? offlineVideoPath;
       if (preferOffline && database != null) {
-        offlineVideoPath = await getOfflineVideoPath(client.serverId, metadata.ratingKey, mediaIndex: selectedMediaIndex);
+        offlineVideoPath = await getOfflineVideoPath(client.serverId, metadata.itemId);
       }
 
       // If offline video is available, use it
       if (offlineVideoPath != null) {
-        appLogger.d('Using offline playback for ${metadata.ratingKey}');
+        appLogger.d('Using offline playback for ${metadata.itemId}');
 
         // For offline playback, we still need to fetch media info for subtitles
         // but use the local file path for video
         try {
-          final data =
-              playbackData ?? await client.getVideoPlaybackData(metadata.ratingKey, mediaIndex: selectedMediaIndex);
+          final settings = await SettingsService.getInstance();
+          final startMs = overrideResumePositionMs ?? metadata.resumePositionMs;
+          final playbackData = await client.getVideoPlaybackData(
+            metadata.itemId,
+            mediaIndex: selectedMediaIndex,
+            playbackMode: settings.getPlaybackMode(),
+            startPositionMs: startMs,
+          );
 
-          // Build list of external subtitle tracks
-          final externalSubtitles = _buildExternalSubtitles(data.mediaInfo);
+          // Always build server subtitle options (embedded + sidecar) so user can select them.
+          final externalSubtitles = _buildExternalSubtitles(playbackData.mediaInfo);
 
-          // Return result with local file path
           return PlaybackInitializationResult(
-            availableVersions: data.availableVersions,
+            availableVersions: playbackData.availableVersions,
             videoUrl: _formatVideoUrl(offlineVideoPath),
-            mediaInfo: data.mediaInfo,
+            mediaInfo: playbackData.mediaInfo,
             externalSubtitles: externalSubtitles,
             isOffline: true,
+            playSessionId: playbackData.playSessionId,
+            mediaSourceId: playbackData.mediaSourceId,
           );
         } catch (e) {
           // If we can't fetch media info (e.g., no network), use offline-only mode
@@ -131,57 +135,72 @@ class PlaybackInitializationService {
         }
       }
 
-      // Use pre-parsed data or fall back to network streaming
-      final data =
-          playbackData ?? await client.getVideoPlaybackData(metadata.ratingKey, mediaIndex: selectedMediaIndex);
+      // Fall back to network streaming
+      final settings = await SettingsService.getInstance();
+      final mode = settings.getPlaybackMode();
+      final startMs = overrideResumePositionMs ?? metadata.resumePositionMs;
+      appLogger.d('Playback init: itemId=${metadata.itemId} playbackMode=${mode.name} startMs=$startMs');
+      final playbackData = await client.getVideoPlaybackData(
+        metadata.itemId,
+        mediaIndex: selectedMediaIndex,
+        playbackMode: mode,
+        startPositionMs: startMs,
+      );
 
-      if (!data.hasValidVideoUrl) {
-        throw PlaybackException(t.messages.fileInfoNotAvailable);
+      if (!playbackData.hasValidVideoUrl) {
+        throw PlaybackException(
+          playbackData.playbackErrorReason ?? t.messages.fileInfoNotAvailable,
+        );
       }
 
-      // Build list of external subtitle tracks
-      final externalSubtitles = _buildExternalSubtitles(data.mediaInfo);
+      // Always build server subtitle options (embedded + sidecar) so user can select them.
+      // They load on demand when selected; enableExternalSubtitles was gating this but server
+      // subtitles (e.g. The Matrix) weren't showing when player has no embedded tracks.
+      final externalSubtitles = _buildExternalSubtitles(playbackData.mediaInfo);
 
-      // Return result with available versions and video URL
       return PlaybackInitializationResult(
-        availableVersions: data.availableVersions,
-        videoUrl: data.videoUrl,
-        mediaInfo: data.mediaInfo,
+        availableVersions: playbackData.availableVersions,
+        videoUrl: playbackData.videoUrl,
+        mediaInfo: playbackData.mediaInfo,
         externalSubtitles: externalSubtitles,
         isOffline: false,
+        isTranscode: playbackData.isTranscode,
+        playSessionId: playbackData.playSessionId,
+        mediaSourceId: playbackData.mediaSourceId,
       );
-    } catch (e) {
+    } catch (e, st) {
       if (e is PlaybackException) {
         rethrow;
       }
-      throw PlaybackException(t.messages.errorLoading(error: e.toString()));
+      logErrorWithStackTrace('Playback initialization failed', e, st);
+      throw PlaybackException(t.messages.errorLoading(error: safeUserMessage(e)));
     }
   }
 
   /// Build list of external subtitle tracks from media info
-  List<SubtitleTrack> _buildExternalSubtitles(PlexMediaInfo? mediaInfo) {
+  List<SubtitleTrack> _buildExternalSubtitles(MediaInfo? mediaInfo) {
     final externalSubtitles = <SubtitleTrack>[];
 
     if (mediaInfo == null) {
       return externalSubtitles;
     }
 
-    final externalTracks = mediaInfo.subtitleTracks.where((PlexSubtitleTrack track) => track.isExternal).toList();
+    final externalTracks = mediaInfo.subtitleTracks.where((MediaSubtitleTrack track) => track.isExternal).toList();
 
     if (externalTracks.isNotEmpty) {
       appLogger.d('Found ${externalTracks.length} external subtitle track(s)');
     }
 
-    for (final plexTrack in externalTracks) {
+    for (final serverTrack in externalTracks) {
       try {
         // Skip if no auth token is available
-        final token = client.config.token;
+        final token = client.token;
         if (token == null) {
           appLogger.w('No auth token available for external subtitles');
           continue;
         }
 
-        final url = plexTrack.getSubtitleUrl(client.config.baseUrl, token);
+        final url = serverTrack.getSubtitleUrl(client.baseUrl, token);
 
         // Skip if URL couldn't be constructed
         if (url == null) continue;
@@ -189,13 +208,13 @@ class PlaybackInitializationService {
         externalSubtitles.add(
           SubtitleTrack.uri(
             url,
-            title: plexTrack.displayTitle ?? plexTrack.language ?? 'Track ${plexTrack.id}',
-            language: plexTrack.languageCode,
+            title: serverTrack.displayTitle ?? serverTrack.language ?? 'Track ${serverTrack.id}',
+            language: serverTrack.languageCode,
           ),
         );
       } catch (e) {
         // Silent fallback - log error but continue with other subtitles
-        appLogger.w('Failed to add external subtitle track ${plexTrack.id}', error: e);
+        appLogger.w('Failed to add external subtitle track ${serverTrack.id}', error: e);
       }
     }
 
@@ -207,9 +226,18 @@ class PlaybackInitializationService {
 class PlaybackInitializationResult {
   final List<dynamic> availableVersions;
   final String? videoUrl;
-  final PlexMediaInfo? mediaInfo;
+  final MediaInfo? mediaInfo;
   final List<SubtitleTrack> externalSubtitles;
   final bool isOffline;
+
+  /// True when using TranscodingUrl (player reports position from stream start).
+  final bool isTranscode;
+
+  /// PlaySessionId from PlaybackInfo; for playback reporting (Start, Progress, Stopped).
+  final String? playSessionId;
+
+  /// MediaSourceId of the chosen source; for playback reporting.
+  final String? mediaSourceId;
 
   PlaybackInitializationResult({
     required this.availableVersions,
@@ -217,6 +245,9 @@ class PlaybackInitializationResult {
     this.mediaInfo,
     this.externalSubtitles = const [],
     this.isOffline = false,
+    this.isTranscode = false,
+    this.playSessionId,
+    this.mediaSourceId,
   });
 }
 

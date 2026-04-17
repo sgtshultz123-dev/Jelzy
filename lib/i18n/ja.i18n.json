@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Plexでサインイン",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Android 8.0以降が必要です",
       "iosVersion": "iOS 15.0以降が必要です",
-      "permissionDisabled": "ピクチャーインピクチャーの権限が無効です。設定 > アプリ > Plezy > ピクチャーインピクチャーで有効にしてください",
+      "permissionDisabled": "ピクチャーインピクチャーの権限が無効です。設定 > アプリ > Jelzy > ピクチャーインピクチャーで有効にしてください",
       "notSupported": "デバイスはピクチャーインピクチャーモードをサポートしていません",
       "voSwitchFailed": "ピクチャーインピクチャーの映像出力切替に失敗しました",
       "failed": "ピクチャーインピクチャーの開始に失敗しました",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "デスクトップに接続",
-      "discoveryDescription": "同じPlexアカウントでPlezyを実行しているネットワーク上のデバイスが自動的に表示されます",
+      "discoveryDescription": "同じPlexアカウントでJelzyを実行しているネットワーク上のデバイスが自動的に表示されます",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "接続中...",
       "searchingForDevices": "デバイスを検索中...",
       "noDevicesFound": "ネットワーク上にデバイスが見つかりません",
-      "noDevicesHint": "デスクトップでPlezyが開いていること、両方のデバイスが同じWiFiネットワーク上にあることを確認してください",
+      "noDevicesHint": "デスクトップでJelzyが開いていること、両方のデバイスが同じWiFiネットワーク上にあることを確認してください",
       "availableDevices": "利用可能なデバイス",
       "manualConnection": "手動接続",
       "cryptoInitFailed": "安全な接続を初期化できませんでした。Plexアカウントにサインインしていることを確認してください。",
       "validationHostRequired": "ホストアドレスを入力してください",
       "validationHostFormat": "形式はIP:ポートである必要があります（例: 192.168.1.100:48632）",
       "connectionTimedOut": "接続がタイムアウトしました。両方のデバイスが同じネットワーク上にあることを確認してください。",
-      "sessionNotFound": "デバイスが見つかりません。ホストでPlezyが実行されていることを確認してください。",
+      "sessionNotFound": "デバイスが見つかりません。ホストでJelzyが実行されていることを確認してください。",
       "authFailed": "認証に失敗しました。両方のデバイスが同じPlexアカウントを使用していることを確認してください。",
       "failedToConnect": "接続に失敗しました: ${error}"
     },

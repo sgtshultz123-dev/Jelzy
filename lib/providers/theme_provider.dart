@@ -66,7 +66,7 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  static const _themeChannel = MethodChannel('com.plezy/theme');
+  static const _themeChannel = MethodChannel('com.jelzy/theme');
 
   Future<void> setThemeMode(settings.ThemeMode mode) async {
     if (_themeMode != mode) {

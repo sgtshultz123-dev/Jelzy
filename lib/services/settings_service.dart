@@ -4,7 +4,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import '../models/hotkey_model.dart';
 import 'image_cache_service.dart';
-import 'package:plezy/utils/app_logger.dart';
+import 'package:jelzy/utils/app_logger.dart';
 import '../i18n/strings.g.dart';
 import '../models/mpv_config_models.dart';
 import '../models/external_player_models.dart';
@@ -29,6 +29,38 @@ enum ViewMode { grid, list }
 enum EpisodePosterMode { seriesPoster, seasonPoster, episodeThumbnail }
 
 enum SubAssOverride { no, yes, scale, force, strip }
+
+/// Performance tier for image quality and grid preload. Small = fastest, Large = best quality.
+enum PerformanceProfile { small, medium, large }
+
+/// Playback mode for streaming. Matches jellyfin-web quality options.
+enum PlaybackMode {
+  auto,
+  directPlay,
+  transcode15,
+  transcode10,
+  transcode8,
+  transcode6,
+  transcode4,
+  transcode3,
+  transcode1_5,
+  transcode720k,
+  transcode420k,
+}
+
+/// Download quality for offline content. Matches jellyfin-web quality options.
+enum DownloadQuality {
+  original,
+  p15,
+  p10,
+  p8,
+  p6,
+  p4,
+  p3,
+  p1_5,
+  p720k,
+  p420k,
+}
 
 class SettingsService extends BaseSharedPreferencesService {
   static const String _keyThemeMode = 'theme_mode';
@@ -1457,6 +1489,28 @@ class SettingsService extends BaseSharedPreferencesService {
     PaintingBinding.instance.imageCache.clearLiveImages();
     await PlexImageCacheManager.instance.emptyCache();
   }
+
+  // ---- Stub methods for Finzy-port compatibility ----
+
+  PlaybackMode getPlaybackMode() => PlaybackMode.auto;
+  Future<void> setPlaybackMode(PlaybackMode mode) async {}
+
+  bool getUseExoPlayerForLiveTv() => true;
+  Future<void> setUseExoPlayerForLiveTv(bool enabled) async {}
+
+  int getLiveTvMaxStreamingBitrate() => 8000000;
+  Future<void> setLiveTvMaxStreamingBitrate(int bitrate) async {}
+
+  bool getAlwaysBurnInSubtitleWhenTranscoding() => false;
+  Future<void> setAlwaysBurnInSubtitleWhenTranscoding(bool enabled) async {}
+
+  bool getEnableTrickplay() => true;
+  Future<void> setEnableTrickplay(bool enabled) async {}
+
+  bool getEnableExternalSubtitles() => true;
+  Future<void> setEnableExternalSubtitles(bool enabled) async {}
+
+  // ---- End stub methods ----
 
   // Get all settings as a map for debugging/export
   Future<Map<String, dynamic>> getAllSettings() async {

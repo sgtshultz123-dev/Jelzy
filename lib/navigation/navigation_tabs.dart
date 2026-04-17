@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../i18n/strings.g.dart';
@@ -24,6 +24,11 @@ class NavigationTab {
   static int indexFor(NavigationTabId id, {required bool isOffline, bool hasLiveTv = false}) {
     final tabs = getVisibleTabs(isOffline: isOffline, hasLiveTv: hasLiveTv);
     return tabs.indexWhere((tab) => tab.id == id);
+  }
+
+  /// Returns true if the given [index] corresponds to [id] in the current visible tabs.
+  static bool isTabAtIndex(NavigationTabId id, int index, {required bool isOffline, bool hasLiveTv = false}) {
+    return indexFor(id, isOffline: isOffline, hasLiveTv: hasLiveTv) == index;
   }
 
   /// Get tabs filtered by offline mode and feature availability

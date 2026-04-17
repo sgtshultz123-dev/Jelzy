@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'dpad_navigator.dart';
+import '../screens/main_screen.dart' show MainScreenFocusScope;
 
 /// Handles back key events by popping the current route.
 ///
@@ -162,6 +163,41 @@ FocusOnKeyEventCallback dpadKeyHandler({
 
     return KeyEventResult.ignored;
   };
+}
+
+/// Handles both back-key and left-arrow key events:
+/// - Back key → calls [onBack]
+/// - Left-arrow key → also calls [onBack] (or navigates to sidebar if one exists)
+///
+/// Returns [KeyEventResult.ignored] for any other key.
+KeyEventResult handleBackOrLeftKeyAction(KeyEvent event, VoidCallback onBack) {
+  final key = event.logicalKey;
+  if (key.isBackKey) return handleBackKeyAction(event, onBack);
+  if (key.isLeftKey) {
+    if (event is KeyDownEvent) onBack();
+    return event is KeyDownEvent || event is KeyRepeatEvent || event is KeyUpEvent ? KeyEventResult.handled : KeyEventResult.ignored;
+  }
+  return KeyEventResult.ignored;
+}
+
+/// Like [handleBackKeyNavigation] but also handles left-arrow to pop.
+/// On left-arrow, also tries to focus the sidebar via [MainScreenFocusScope].
+KeyEventResult handleBackOrLeftKeyNavigation<T>(BuildContext context, KeyEvent event, {T? result}) {
+  final key = event.logicalKey;
+  if (key.isBackKey) return handleBackKeyNavigation(context, event, result: result);
+  if (key.isLeftKey) {
+    if (event is KeyDownEvent) {
+      final scope = MainScreenFocusScope.of(context);
+      if (scope != null) {
+        scope.focusSidebar();
+      } else if (Navigator.canPop(context)) {
+        Navigator.pop(context, result);
+      }
+      return KeyEventResult.handled;
+    }
+    return event is KeyRepeatEvent || event is KeyUpEvent ? KeyEventResult.handled : KeyEventResult.ignored;
+  }
+  return KeyEventResult.ignored;
 }
 
 /// Navigator observer that automatically suppresses stray back KeyUp events

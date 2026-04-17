@@ -1,8 +1,8 @@
-import 'package:os_media_controls/os_media_controls.dart';
+import 'package:os_media_controls/os_media_controls.dart' as osmc;
 import 'package:rate_limiter/rate_limiter.dart';
 
-import 'plex_client.dart';
-import '../models/plex_metadata.dart';
+import 'jellyfin_client.dart';
+import '../models/media_metadata.dart';
 import '../utils/content_utils.dart';
 import '../utils/app_logger.dart';
 
@@ -15,7 +15,7 @@ import '../utils/app_logger.dart';
 /// - Position update throttling to prevent excessive API calls
 class MediaControlsManager {
   /// Stream of control events from OS media controls
-  Stream<dynamic> get controlEvents => OsMediaControls.controlEvents;
+  Stream<dynamic> get controlEvents => osmc.OsMediaControls.controlEvents;
 
   /// Throttled playback state update (1 second interval, leading + trailing)
   late final Throttle _throttledUpdate;
@@ -37,7 +37,7 @@ class MediaControlsManager {
   /// Update media metadata displayed in OS media controls
   ///
   /// This includes title, artist, artwork, and duration.
-  Future<void> updateMetadata({required PlexMetadata metadata, PlexClient? client, Duration? duration}) async {
+  Future<void> updateMetadata({required MediaMetadata metadata, JellyfinClient? client, Duration? duration}) async {
     try {
       // Build artwork URL if client is available
       String? artworkUrl;
@@ -51,8 +51,8 @@ class MediaControlsManager {
       }
 
       // Update OS media controls
-      await OsMediaControls.setMetadata(
-        MediaMetadata(
+      await osmc.OsMediaControls.setMetadata(
+        osmc.MediaMetadata(
           title: metadata.title!,
           artist: _buildArtist(metadata),
           artworkUrl: artworkUrl,
@@ -91,9 +91,9 @@ class MediaControlsManager {
   /// Internal method to actually perform the playback state update
   Future<void> _doUpdatePlaybackState(_PlaybackStateParams params) async {
     try {
-      await OsMediaControls.setPlaybackState(
-        MediaPlaybackState(
-          state: params.isPlaying ? PlaybackState.playing : PlaybackState.paused,
+      await osmc.OsMediaControls.setPlaybackState(
+        osmc.MediaPlaybackState(
+          state: params.isPlaying ? osmc.PlaybackState.playing : osmc.PlaybackState.paused,
           position: params.position,
           speed: params.speed,
         ),
@@ -112,26 +112,26 @@ class MediaControlsManager {
   /// - Movies: Usually disabled
   Future<void> setControlsEnabled({bool canGoNext = false, bool canGoPrevious = false, bool canSeek = false}) async {
     try {
-      final controlsToEnable = <MediaControl>[];
-      final controlsToDisable = <MediaControl>[];
+      final controlsToEnable = <osmc.MediaControl>[];
+      final controlsToDisable = <osmc.MediaControl>[];
 
       if (canGoPrevious != _lastCanGoPrevious) {
-        (canGoPrevious ? controlsToEnable : controlsToDisable).add(MediaControl.previous);
+        (canGoPrevious ? controlsToEnable : controlsToDisable).add(osmc.MediaControl.previous);
       }
       if (canGoNext != _lastCanGoNext) {
-        (canGoNext ? controlsToEnable : controlsToDisable).add(MediaControl.next);
+        (canGoNext ? controlsToEnable : controlsToDisable).add(osmc.MediaControl.next);
       }
       if (canSeek != _lastCanSeek) {
-        (canSeek ? controlsToEnable : controlsToDisable).add(MediaControl.seek);
+        (canSeek ? controlsToEnable : controlsToDisable).add(osmc.MediaControl.seek);
       }
 
       if (controlsToEnable.isEmpty && controlsToDisable.isEmpty) return;
 
       if (controlsToEnable.isNotEmpty) {
-        await OsMediaControls.enableControls(controlsToEnable);
+        await osmc.OsMediaControls.enableControls(controlsToEnable);
       }
       if (controlsToDisable.isNotEmpty) {
-        await OsMediaControls.disableControls(controlsToDisable);
+        await osmc.OsMediaControls.disableControls(controlsToDisable);
       }
 
       _lastCanGoNext = canGoNext;
@@ -148,7 +148,7 @@ class MediaControlsManager {
   /// Should be called when playback stops or screen is disposed.
   Future<void> clear() async {
     try {
-      await OsMediaControls.clear();
+      await osmc.OsMediaControls.clear();
       _throttledUpdate.cancel();
       _lastCanGoNext = null;
       _lastCanGoPrevious = null;
@@ -169,7 +169,7 @@ class MediaControlsManager {
   /// For episodes: "Show Name - Season X Episode Y"
   /// For movies: Director or studio
   /// For other content: Fallback to year or empty
-  String _buildArtist(PlexMetadata metadata) {
+  String _buildArtist(MediaMetadata metadata) {
     if (metadata.isEpisode) {
       final parts = <String>[];
 
@@ -188,7 +188,7 @@ class MediaControlsManager {
       return parts.join(' • ');
     } else if (metadata.isMovie) {
       // For movies, use director or studio
-      // Note: These fields may need to be added to PlexMetadata model
+      // Note: These fields may need to be added to MediaMetadata model
       if (metadata.year != null) {
         return metadata.year.toString();
       }

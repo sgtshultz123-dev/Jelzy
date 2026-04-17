@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_metadata.dart';
 import '../../../utils/library_refresh_notifier.dart';
 import '../../../widgets/focusable_media_card.dart';
 import '../../../i18n/strings.g.dart';
@@ -9,8 +9,9 @@ import 'base_library_tab.dart';
 import 'library_grid_tab_state.dart';
 
 /// Collections tab for library screen
-/// Shows collections for the current library
-class LibraryCollectionsTab extends BaseLibraryTab<PlexMetadata> {
+/// Shows collections for the current library.
+/// Tapping a collection pushes CollectionDetailScreen (like movies/shows).
+class LibraryCollectionsTab extends BaseLibraryTab<MediaMetadata> {
   const LibraryCollectionsTab({
     super.key,
     required super.library,
@@ -20,13 +21,14 @@ class LibraryCollectionsTab extends BaseLibraryTab<PlexMetadata> {
     super.isActive,
     super.suppressAutoFocus,
     super.onBack,
+    super.onBackToNavigation,
   });
 
   @override
   State<LibraryCollectionsTab> createState() => _LibraryCollectionsTabState();
 }
 
-class _LibraryCollectionsTabState extends LibraryGridTabState<PlexMetadata, LibraryCollectionsTab> {
+class _LibraryCollectionsTabState extends LibraryGridTabState<MediaMetadata, LibraryCollectionsTab> {
   @override
   String get focusNodeDebugLabel => 'collections_first_item';
 
@@ -43,24 +45,31 @@ class _LibraryCollectionsTabState extends LibraryGridTabState<PlexMetadata, Libr
   Stream<void>? getRefreshStream() => LibraryRefreshNotifier().collectionsStream;
 
   @override
-  Future<List<PlexMetadata>> loadData() async {
-    // Use server-specific client for this library
+  Future<List<MediaMetadata>> loadData() async {
     final client = getClientForLibrary();
-
-    // Collections are automatically tagged with server info by PlexClient
+    final t = widget.library.type.toLowerCase();
+    if (t == 'collection' || t == 'boxsets') {
+      return await client.getGlobalCollections();
+    }
     return await client.getLibraryCollections(widget.library.key);
   }
 
   @override
-  Widget buildGridItem(BuildContext context, PlexMetadata item, int index, [GridItemContext? gridContext]) {
+  Widget buildGridItem(BuildContext context, MediaMetadata item, int index, [GridItemContext? gridContext]) {
+    final focusNode = index == 0 ? firstItemFocusNode : getGridItemFocusNode(index, prefix: 'collections_grid_item');
+    final gc = gridContext;
     return FocusableMediaCard(
-      key: Key(item.ratingKey),
+      key: Key(item.itemId),
       item: item,
-      focusNode: index == 0 ? firstItemFocusNode : null,
-      disableScale: gridContext?.isListMode ?? false,
+      focusNode: focusNode,
       onListRefresh: loadItems,
-      onBack: widget.onBack,
-      onNavigateLeft: gridContext?.isFirstColumn == true ? gridContext?.navigateToSidebar : null,
+      onBack: widget.onBackToNavigation ?? widget.onBack,
+      onNavigateUp: gc?.isFirstRow == true ? widget.onBack : gc != null ? () => focusGridItemByIndex(gc.index - gc.columnCount, 'collections_grid_item') : null,
+      onNavigateDown: gc != null && !gc.isLastRow ? () => focusGridItemByIndex(gc.index + gc.columnCount, 'collections_grid_item') : null,
+      onNavigateLeft: gc?.isFirstColumn == true ? gc?.navigateToSidebar : gc != null ? () => focusGridItemByIndex(gc.index - 1, 'collections_grid_item') : null,
+      onNavigateRight: gc != null && !gc.isLastColumn ? () => focusGridItemByIndex(gc.index + 1, 'collections_grid_item') : null,
+      onFocusChange: (hasFocus) => trackGridItemFocus(index, hasFocus),
+      scrollTopOffset: gc?.isFirstRow == true ? 8 : null,
     );
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../i18n/strings.g.dart';
-import '../../../models/plex_metadata.dart';
+import '../../../models/media_metadata.dart';
 import '../../../providers/playback_state_provider.dart';
 import '../../../theme/mono_tokens.dart';
 import '../../../utils/provider_extensions.dart';
@@ -12,14 +12,14 @@ import '../../../utils/scroll_utils.dart';
 import '../../../widgets/focusable_list_tile.dart';
 import '../../../widgets/overlay_sheet.dart';
 import 'base_video_control_sheet.dart';
-import '../../plex_optimized_image.dart';
+import '../../optimized_image.dart';
 
 const _kThumbWidth = 60.0;
 const _kThumbHeight = 34.0;
 
 /// Bottom sheet for viewing and navigating the play queue
 class QueueSheet extends StatefulWidget {
-  final Function(PlexMetadata) onItemSelected;
+  final Function(MediaMetadata) onItemSelected;
 
   const QueueSheet({super.key, required this.onItemSelected});
 
@@ -101,7 +101,7 @@ class _QueueSheetState extends State<QueueSheet> {
     );
   }
 
-  Widget? _buildThumbnail(BuildContext context, PlexMetadata item, bool isCurrent) {
+  Widget? _buildThumbnail(BuildContext context, MediaMetadata item, bool isCurrent) {
     if (item.thumb == null) return null;
 
     // Try to get client for thumbnails, may fail in offline mode
@@ -114,7 +114,7 @@ class _QueueSheetState extends State<QueueSheet> {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(4)),
-            child: PlexOptimizedImage.thumb(
+            child: OptimizedImage.thumb(
               client: client,
               imagePath: item.thumb,
               width: _kThumbWidth,
@@ -138,7 +138,7 @@ class _QueueSheetState extends State<QueueSheet> {
     );
   }
 
-  String _buildSubtitle(PlexMetadata item) {
+  String _buildSubtitle(MediaMetadata item) {
     if (item.grandparentTitle != null && item.parentIndex != null && item.index != null) {
       return '${item.grandparentTitle} \u00b7 S${item.parentIndex}E${item.index}';
     }

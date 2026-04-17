@@ -1,12 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../models/livetv_dvr.dart';
-import '../services/plex_client.dart';
+import '../models/registered_server.dart';
 import '../services/data_aggregation_service.dart';
+import '../services/jellyfin_client.dart';
 import '../services/multi_server_manager.dart';
-import '../services/plex_auth_service.dart';
 import '../utils/app_logger.dart';
 
 /// Cached info about a DVR-enabled server
@@ -15,18 +13,16 @@ class LiveTvServerInfo {
   final String dvrKey;
   final String? lineup;
 
-  /// Full DVR objects including channel mappings (avoids re-fetching in LiveTvScreen)
-  final List<LiveTvDvr> dvrs;
+  /// Stub: Plex DVR list (unused in Jellyfin; returns null).
+  List<LiveTvDvr>? get dvrs => null;
 
-  LiveTvServerInfo({required this.serverId, required this.dvrKey, this.lineup, this.dvrs = const []});
+  LiveTvServerInfo({required this.serverId, required this.dvrKey, this.lineup});
 }
 
-/// Provider for multi-server Plex connections
-/// Manages multiple PlexClient instances and provides data aggregation
+/// Provider for multi-server Jellyfin connections and data aggregation
 class MultiServerProvider extends ChangeNotifier {
   final MultiServerManager _serverManager;
   final DataAggregationService _aggregationService;
-  StreamSubscription? _statusSubscription;
 
   /// Whether any connected server has Live TV / DVR
   bool _hasLiveTv = false;
@@ -36,22 +32,12 @@ class MultiServerProvider extends ChangeNotifier {
   final List<LiveTvServerInfo> _liveTvServers = [];
   List<LiveTvServerInfo> get liveTvServers => List.unmodifiable(_liveTvServers);
 
-  /// Previously-seen set of online server IDs, used to detect new servers
-  Set<String> _previousOnlineServerIds = {};
-
   MultiServerProvider(this._serverManager, this._aggregationService) {
     // Listen to server status changes
-    _statusSubscription = _serverManager.statusStream.listen((_) {
-      final currentOnline = Set<String>.from(onlineServerIds);
-      final hasNewServer = currentOnline.any((id) => !_previousOnlineServerIds.contains(id));
-      _previousOnlineServerIds = currentOnline;
-
+    _serverManager.statusStream.listen((_) {
       notifyListeners();
-
-      // Only re-check live TV when a new server came online
-      if (hasNewServer) {
-        checkLiveTvAvailability();
-      }
+      // Re-check live TV availability when servers come online
+      checkLiveTvAvailability();
     });
   }
 
@@ -62,7 +48,7 @@ class MultiServerProvider extends ChangeNotifier {
   DataAggregationService get aggregationService => _aggregationService;
 
   /// Get client for specific server
-  PlexClient? getClientForServer(String serverId) {
+  JellyfinClient? getClientForServer(String serverId) {
     return _serverManager.getClient(serverId);
   }
 
@@ -86,22 +72,26 @@ class MultiServerProvider extends ChangeNotifier {
   /// Check if any servers are connected
   bool get hasConnectedServers => onlineServerCount > 0;
 
+  /// Update token for a server. No-op in Jelzy (Jellyfin tokens are per-user in server data).
+  void updateTokenForServer(String serverId, String newToken) {
+    // No-op: Jellyfin uses per-user tokens stored in RegisteredServer
+  }
+
   /// Clear all server connections
   void clearAllConnections() {
     _serverManager.disconnectAll();
+    _aggregationService.clearCache(); // Clear cached data when servers change
     appLogger.d('MultiServerProvider: All connections cleared');
     notifyListeners();
   }
 
   /// Reconnect all servers after a profile switch
-  /// Clears existing connections and connects to all provided servers
-  Future<int> reconnectWithServers(List<PlexServer> servers, {String? clientIdentifier}) async {
-    // Clear existing connections first
+  Future<int> reconnectWithServers(List<RegisteredServer> servers, {String? clientIdentifier, String? deviceId}) async {
     _serverManager.disconnectAll();
+    _aggregationService.clearCache();
     appLogger.d('MultiServerProvider: Cleared connections, reconnecting to ${servers.length} servers');
 
-    // Connect with new server tokens
-    final connectedCount = await _serverManager.connectToAllServers(servers, clientIdentifier: clientIdentifier);
+    final connectedCount = await _serverManager.connectToAllServers(servers, clientIdentifier: clientIdentifier, deviceId: deviceId);
 
     appLogger.i('MultiServerProvider: Reconnected to $connectedCount/${servers.length} servers after profile switch');
     notifyListeners();
@@ -125,7 +115,7 @@ class MultiServerProvider extends ChangeNotifier {
       try {
         final dvrs = await client.getDvrs();
         for (final dvr in dvrs) {
-          newLiveTvServers.add(LiveTvServerInfo(serverId: serverId, dvrKey: dvr.key, lineup: dvr.lineup, dvrs: dvrs));
+          newLiveTvServers.add(LiveTvServerInfo(serverId: serverId, dvrKey: dvr.key, lineup: dvr.lineup));
         }
       } catch (e) {
         appLogger.d('LiveTV check failed for server $serverId', error: e);
@@ -148,7 +138,6 @@ class MultiServerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _statusSubscription?.cancel();
     _serverManager.dispose();
     super.dispose();
   }

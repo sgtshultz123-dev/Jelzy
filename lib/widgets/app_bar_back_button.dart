@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 /// Defines the visual style of the back button
@@ -153,5 +153,47 @@ class _AppBarBackButtonState extends State<AppBarBackButton> with TickerProvider
         : buttonWidget;
 
     return widget.style == BackButtonStyle.circular ? SafeArea(child: button) : button;
+  }
+}
+
+/// A focusable back-button widget for use in detail screen app bars.
+///
+/// Wraps [AppBarBackButton] in a [Focus] widget that forwards key events via
+/// [onKeyEvent], enabling D-pad / keyboard navigation on TV platforms.
+class FocusableAppBarBackButton extends StatelessWidget {
+  const FocusableAppBarBackButton({
+    super.key,
+    required this.focusNode,
+    required this.onKeyEvent,
+    required this.onPressed,
+    this.useAdjustedLeading = false,
+    this.useDarkBase = false,
+  });
+
+  final FocusNode focusNode;
+  final KeyEventResult Function(FocusNode node, KeyEvent event) onKeyEvent;
+  final VoidCallback onPressed;
+
+  /// When true, the button may be wrapped for macOS traffic-light padding.
+  final bool useAdjustedLeading;
+
+  /// When true, uses a dark circular base (person/cast screens).
+  final bool useDarkBase;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: onKeyEvent,
+      child: ListenableBuilder(
+        listenable: focusNode,
+        builder: (context, _) {
+          return AppBarBackButton(
+            style: BackButtonStyle.circular,
+            onPressed: onPressed,
+          );
+        },
+      ),
+    );
   }
 }

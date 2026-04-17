@@ -40,7 +40,10 @@ void scrollListToIndex(
   required double itemExtent,
   double leadingPadding = 12.0,
   bool animate = true,
+  // Alias for !animate — accepted for Finzy-port compatibility
+  bool disableAnimations = false,
 }) {
+  if (disableAnimations) animate = false;
   if (controller.positions.length != 1 || itemExtent <= 0) return;
 
   final viewport = controller.position.viewportDimension;

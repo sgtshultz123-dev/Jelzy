@@ -2,15 +2,15 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 
-import '../models/plex_metadata.dart';
+import '../models/media_metadata.dart';
 import '../utils/app_logger.dart';
 import '../utils/content_utils.dart';
-import 'plex_client.dart';
+import 'jellyfin_client.dart';
 import 'settings_service.dart' show EpisodePosterMode;
 
 /// Service for syncing Plex "On Deck" content to Android TV's Watch Next row.
 class WatchNextService {
-  static const MethodChannel _channel = MethodChannel('com.plezy/watch_next');
+  static const MethodChannel _channel = MethodChannel('com.jelzy/watch_next');
 
   static final WatchNextService _instance = WatchNextService._internal();
   factory WatchNextService() => _instance;
@@ -54,8 +54,8 @@ class WatchNextService {
 
   /// Sync On Deck items to Watch Next row.
   Future<bool> syncFromOnDeck(
-    List<PlexMetadata> onDeckItems,
-    PlexClient Function(String serverId) getClientForServerId, {
+    List<MediaMetadata> onDeckItems,
+    JellyfinClient Function(String serverId) getClientForServerId, {
     bool hideSpoilers = false,
   }) async {
     if (!Platform.isAndroid) return false;
@@ -112,8 +112,8 @@ class WatchNextService {
   }
 
   Map<String, dynamic> _convertToWatchNextItem(
-    PlexMetadata item,
-    PlexClient Function(String serverId) getClientForServerId, {
+    MediaMetadata item,
+    JellyfinClient Function(String serverId) getClientForServerId, {
     bool hideSpoilers = false,
   }) {
     final contentId = _buildContentId(item.serverId, item.ratingKey);
@@ -137,7 +137,7 @@ class WatchNextService {
 
     final String title;
     final String? episodeTitle;
-    if (item.mediaType == PlexMediaType.episode && item.grandparentTitle != null) {
+    if (item.mediaType == MediaType.episode && item.grandparentTitle != null) {
       title = item.grandparentTitle!;
       episodeTitle = item.title;
     } else {
@@ -164,4 +164,11 @@ class WatchNextService {
       'episodeNumber': item.index,
     };
   }
+
+  /// Stub: alias for [syncFromOnDeck] used by Finzy-ported screens.
+  Future<bool> syncContinueWatching(
+    List<MediaMetadata> items,
+    JellyfinClient Function(String serverId) getClientForServerId, {
+    bool hideSpoilers = false,
+  }) => syncFromOnDeck(items, getClientForServerId, hideSpoilers: hideSpoilers);
 }

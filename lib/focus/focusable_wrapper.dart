@@ -99,6 +99,9 @@ class FocusableWrapper extends StatefulWidget {
   /// that would compete with this wrapper's focus handling.
   final bool descendantsAreFocusable;
 
+  /// Optional top offset for scroll-into-view (Finzy-port compat, currently unused).
+  final double? scrollTopOffset;
+
   const FocusableWrapper({
     super.key,
     required this.child,
@@ -125,6 +128,7 @@ class FocusableWrapper extends StatefulWidget {
     this.focusColor,
     this.disableScale = false,
     this.descendantsAreFocusable = true,
+    this.scrollTopOffset,
   });
 
   @override

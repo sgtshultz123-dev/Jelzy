@@ -1,10 +1,10 @@
 import 'dart:io' show Platform;
 
 import 'package:cronet_http/cronet_http.dart';
-import 'package:cupertino_http/cupertino_http.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
-import 'package:win_http/win_http.dart';
+
+// cupertino_http and win_http removed — not in pubspec
 
 /// Shared Cronet engine so all clients reuse the same connection pool.
 CronetEngine? _sharedEngine;
@@ -18,16 +18,6 @@ http.Client createPlatformClient() {
       enableHttp2: true,
     );
     return CronetClient.fromCronetEngine(_sharedEngine!);
-  }
-  if (Platform.isIOS || Platform.isMacOS) {
-    return CupertinoClient.defaultSessionConfiguration();
-  }
-  if (Platform.isWindows) {
-    try {
-      return WinHttpClient.defaultConfiguration();
-    } catch (_) {
-      return IOClient();
-    }
   }
   return IOClient();
 }

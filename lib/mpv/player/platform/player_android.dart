@@ -7,8 +7,8 @@ import '../player_base.dart';
 /// Android implementation of [Player] using ExoPlayer.
 /// Provides hardware-accelerated playback with ASS subtitle support via libass-android.
 class PlayerAndroid extends PlayerBase {
-  static const _methodChannel = MethodChannel('com.plezy/exo_player');
-  static const _eventChannel = EventChannel('com.plezy/exo_player/events');
+  static const _methodChannel = MethodChannel('com.jelzy/exo_player');
+  static const _eventChannel = EventChannel('com.jelzy/exo_player/events');
 
   int? _bufferSizeBytes;
   bool _tunnelingEnabled = true;

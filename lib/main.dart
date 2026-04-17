@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'screens/main_screen.dart';
 import 'screens/auth_screen.dart';
 import 'services/storage_service.dart';
@@ -16,10 +15,11 @@ import 'services/macos_window_service.dart';
 import 'services/fullscreen_state_manager.dart';
 import 'services/settings_service.dart';
 import 'utils/platform_detector.dart';
-import 'services/discord_rpc_service.dart';
 import 'services/gamepad_service.dart';
 import 'providers/user_profile_provider.dart';
+import 'providers/jellyfin_profile_provider.dart';
 import 'providers/multi_server_provider.dart';
+import 'providers/server_state_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/hidden_libraries_provider.dart';
@@ -28,36 +28,34 @@ import 'providers/playback_state_provider.dart';
 import 'providers/download_provider.dart';
 import 'providers/offline_mode_provider.dart';
 import 'providers/offline_watch_provider.dart';
-import 'providers/companion_remote_provider.dart';
 import 'providers/shader_provider.dart';
 import 'utils/snackbar_helper.dart';
-import 'watch_together/watch_together.dart';
 import 'services/multi_server_manager.dart';
 import 'services/offline_watch_sync_service.dart';
 import 'services/server_connection_orchestrator.dart';
 import 'services/data_aggregation_service.dart';
 import 'services/in_app_review_service.dart';
+import 'models/registered_server.dart';
+import 'services/jellyfin_auth_service.dart';
 import 'services/server_registry.dart';
 import 'services/download_manager_service.dart';
+import 'services/dv_capability_service.dart';
 import 'services/pip_service.dart';
 import 'services/download_storage_service.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'services/plex_api_cache.dart';
+import 'services/api_cache.dart';
 import 'database/app_database.dart';
 import 'utils/app_logger.dart';
 import 'utils/orientation_helper.dart';
+import 'utils/language_codes.dart';
+import 'utils/navigation_transitions.dart';
 import 'i18n/strings.g.dart';
 import 'focus/input_mode_tracker.dart';
 import 'focus/key_event_utils.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'utils/navigation_transitions.dart';
-import 'utils/log_redaction_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-const bool _enableSentry = bool.fromEnvironment('ENABLE_SENTRY', defaultValue: false);
+/// Git commit hash from build (--dart-define=GIT_COMMIT=xxx). Empty when not set.
 const String gitCommit = String.fromEnvironment('GIT_COMMIT');
-const String _sentryEnvironment = String.fromEnvironment('SENTRY_ENVIRONMENT');
-const String _plexTokenDefine = String.fromEnvironment('PLEX_TOKEN');
 
 // Workaround for Flutter bug #177992: iPadOS 26.1+ misinterprets fake touch events
 // at (0,0) as barrier taps, causing modals to dismiss immediately.
@@ -76,34 +74,10 @@ void _absorbZeroOffsetPointerEvent(PointerEvent event) {
   }
 }
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _installZeroOffsetPointerGuard(); // Workaround for iPadOS 26.1+ modal dismissal bug
 
-  if (_enableSentry) {
-    final packageInfo = await PackageInfo.fromPlatform();
-
-    await SentryFlutter.init((options) {
-      options.dsn = 'https://6a1a6ef8c72140099b2798973c1bfb2f@bugs.plezy.app/1';
-      options.release = gitCommit.isNotEmpty
-          ? 'plezy@${gitCommit.substring(0, 7)}'
-          : 'plezy@${packageInfo.version}+${packageInfo.buildNumber}';
-      if (_sentryEnvironment.isNotEmpty) options.environment = _sentryEnvironment;
-      options.tracesSampleRate = 0;
-      options.attachStacktrace = true;
-      options.enableAutoSessionTracking = false;
-      options.recordHttpBreadcrumbs = false;
-      options.captureNativeFailedRequests = false;
-      options.beforeSend = _beforeSend;
-      options.beforeBreadcrumb = _beforeBreadcrumb;
-    }, appRunner: _bootstrapApp);
-    return;
-  }
-
-  await _bootstrapApp();
-}
-
-Future<void> _bootstrapApp() async {
   // Initialize settings first to get saved locale
   final settings = await SettingsService.getInstance();
   final savedLocale = settings.getAppLocale();
@@ -131,11 +105,13 @@ Future<void> _bootstrapApp() async {
     futures.add(windowManager.ensureInitialized());
   }
 
-  // Initialize TV detection and PiP service for Android
+  // Initialize TV detection, PiP service, and DV capability detection for Android
   if (Platform.isAndroid) {
     futures.add(TvDetectionService.getInstance());
     // Initialize PiP service to listen for PiP state changes
     PipService();
+    // Detect hardware Dolby Vision support so device profiles are accurate
+    futures.add(DvCapabilityService.initialize());
   }
 
   // Configure macOS window with custom titlebar (depends on window manager)
@@ -144,14 +120,10 @@ Future<void> _bootstrapApp() async {
   // Initialize storage service
   futures.add(StorageService.getInstance());
 
+  // LanguageCodes.initialize() — not needed in jelzy (no async initialization)
+
   // Wait for all parallel services to complete
   await Future.wait(futures);
-
-  // Seed Plex token from dart-define (used by screenshot automation)
-  if (_plexTokenDefine.isNotEmpty) {
-    final storage = await StorageService.getInstance();
-    await storage.savePlexToken(_plexTokenDefine);
-  }
 
   // Initialize logger level based on debug setting
   final debugEnabled = settings.getEnableDebugLogging();
@@ -159,12 +131,12 @@ Future<void> _bootstrapApp() async {
 
   // Log app version and git commit at startup
   final packageInfo = await PackageInfo.fromPlatform();
-  final commitSuffix = gitCommit.isNotEmpty ? ' (${gitCommit.substring(0, 7)})' : '';
+  final commitSuffix = gitCommit.isNotEmpty ? ' (${gitCommit.length >= 7 ? gitCommit.substring(0, 7) : gitCommit})' : '';
   String renderer = '';
   if (Platform.isAndroid) {
-    renderer = ' [${await const MethodChannel('com.plezy/theme').invokeMethod<String>('getRenderer')}]';
+    renderer = ' [${await const MethodChannel('com.jelzy/theme').invokeMethod<String>('getRenderer')}]';
   }
-  appLogger.i('Plezy v${packageInfo.version}+${packageInfo.buildNumber}$commitSuffix$renderer');
+  appLogger.i('Jelzy v${packageInfo.version}+${packageInfo.buildNumber}$commitSuffix$renderer');
 
   // Initialize download storage service with settings
   await DownloadStorageService.instance.initialize(settings);
@@ -175,13 +147,6 @@ Future<void> _bootstrapApp() async {
   // Initialize gamepad service (all platforms — universal_gamepad auto-registers
   // and intercepts input events, so we must listen to re-dispatch them)
   GamepadService.instance.start();
-
-  // Desktop-only services
-  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-    DiscordRPCService.instance.initialize();
-  }
-
-  // DTD service is available for MCP tooling connection if needed
 
   // Register bundled shader licenses
   _registerShaderLicenses();
@@ -194,80 +159,6 @@ Future<void> _bootstrapApp() async {
   };
 
   runApp(const MainApp());
-}
-
-Breadcrumb? _beforeBreadcrumb(Breadcrumb? breadcrumb, Hint _) {
-  if (breadcrumb == null) return null;
-
-  final message = breadcrumb.message;
-  final data = breadcrumb.data;
-  if (message == null && (data == null || data.isEmpty)) return breadcrumb;
-
-  if (message != null) breadcrumb.message = LogRedactionManager.redact(message);
-  if (data != null) breadcrumb.data = data.map((k, v) => MapEntry(k, v is String ? LogRedactionManager.redact(v) : v));
-  return breadcrumb;
-}
-
-FutureOr<SentryEvent?> _beforeSend(SentryEvent event, Hint _) {
-  // Drop event if user opted out of crash reporting
-  final instance = SettingsService.instanceOrNull;
-  if (instance != null && !instance.getCrashReporting()) return null;
-
-  // Drop unactionable errors
-  var exceptions = event.exceptions;
-  if (exceptions != null) {
-    bool shouldDrop(SentryException e) {
-      final v = e.value;
-      // Windows file-lock errors from cache manager cleanup
-      if (e.type == 'FileSystemException' &&
-          v != null &&
-          v.contains('plexImageCache') &&
-          v.contains('errno = 32')) {
-        return true;
-      }
-      // Linux without DBus/NetworkManager
-      if (e.type == 'DBusServiceUnknownException' ||
-          (v != null && v.contains('system_bus_socket'))) {
-        return true;
-      }
-      // Device out of disk space
-      if (v != null &&
-          (v.contains('SQLITE_FULL') ||
-           v.contains('No space left on device') ||
-           v.contains('errno = 112') ||
-           v.contains('database or disk is full'))) {
-        return true;
-      }
-      // Native HTTP errors from CFNetwork (server errors, not actionable)
-      if (e.type == 'HTTPClientError') return true;
-      // Discord RPC errors when Discord is not running
-      if (e.type == 'DiscordStateException') return true;
-      return false;
-    }
-
-    if (exceptions.any(shouldDrop)) return null;
-
-    // Scrub Plex tokens and server URLs from exception messages
-    for (final e in exceptions) {
-      final value = e.value;
-      if (value != null) {
-        e.value = LogRedactionManager.redact(value);
-      }
-    }
-  }
-
-  // Scrub breadcrumb messages and data
-  final breadcrumbs = event.breadcrumbs;
-  if (breadcrumbs != null) {
-    for (final b in breadcrumbs) {
-      final message = b.message;
-      final data = b.data;
-      if (message != null) b.message = LogRedactionManager.redact(message);
-      if (data != null) b.data = data.map((k, v) => MapEntry(k, v is String ? LogRedactionManager.redact(v) : v));
-    }
-  }
-
-  return event;
 }
 
 void _registerShaderLicenses() {
@@ -370,7 +261,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     _appDatabase = AppDatabase();
 
     // Initialize API cache with database
-    PlexApiCache.initialize(_appDatabase);
+    ApiCache.initialize(_appDatabase);
 
     _downloadManager = DownloadManagerService(database: _appDatabase, storageService: DownloadStorageService.instance);
     _downloadManager.setClientResolver(_serverManager.getClient);
@@ -431,9 +322,6 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         // Database is session-scoped and must survive suspend/resume.
-        // Closing here would kill the Drift isolate channel while services
-        // (sync, downloads, cache) still hold references to the executor.
-        // SQLite WAL mode handles process death; desktop uses onExitRequested.
         InAppReviewService.instance.endSession();
         if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
           if (ProcessInfo.currentRss > 1024 * 1024 * 1024) { // 1GB
@@ -452,6 +340,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => MultiServerProvider(_serverManager, _aggregationService)),
+        ChangeNotifierProvider(create: (context) => ServerStateProvider()),
         // Offline mode provider - depends on MultiServerProvider
         ChangeNotifierProxyProvider<MultiServerProvider, OfflineModeProvider>(
           create: (_) {
@@ -499,18 +388,21 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
             downloadProvider: context.read<DownloadProvider>(),
           ),
           update: (_, syncService, downloadProvider, previous) {
-            return previous ?? OfflineWatchProvider(syncService: syncService, downloadProvider: downloadProvider);
+            return previous ??
+                OfflineWatchProvider(
+                  syncService: syncService,
+                  downloadProvider: downloadProvider,
+                );
           },
         ),
         // Existing providers
         ChangeNotifierProvider(create: (context) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (context) => JellyfinProfileProvider()),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider(create: (context) => SettingsProvider(), lazy: true),
         ChangeNotifierProvider(create: (context) => HiddenLibrariesProvider(), lazy: true),
         ChangeNotifierProvider(create: (context) => LibrariesProvider()),
         ChangeNotifierProvider(create: (context) => PlaybackStateProvider()),
-        ChangeNotifierProvider(create: (context) => WatchTogetherProvider()),
-        ChangeNotifierProvider(create: (context) => CompanionRemoteProvider()),
         ChangeNotifierProvider(create: (context) => ShaderProvider()),
       ],
       child: Consumer<ThemeProvider>(
@@ -598,48 +490,15 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _loadSavedCredentials() async {
-    _setStatus(t.common.checkingNetwork);
+    _setStatus(t.common.loading);
 
     final storage = await StorageService.getInstance();
     final registry = ServerRegistry(storage);
 
-    // Check network connectivity early to fast-path airplane mode.
-    // Timeout guards against connectivity_plus hanging on some Android TV devices after force-close.
-    bool hasNetwork;
-    Sentry.addBreadcrumb(Breadcrumb(message: 'Checking network connectivity', category: 'setup'));
-    try {
-      final connectivityResult = await Connectivity().checkConnectivity().timeout(
-        const Duration(seconds: 3),
-        onTimeout: () => [ConnectivityResult.other],
-      );
-      hasNetwork = !connectivityResult.contains(ConnectivityResult.none);
-    } catch (e) {
-      // connectivity_plus throws DBusServiceUnknownException on Linux without NetworkManager
-      hasNetwork = true;
-    }
-
-    Sentry.addBreadcrumb(Breadcrumb(message: 'Network check done: hasNetwork=$hasNetwork', category: 'setup'));
-
-    if (hasNetwork) {
-      _setStatus(t.common.refreshingServers);
-
-      // Refresh servers from API to get updated connection info (IPs may change).
-      // If the stored token is invalid (e.g. after removing a Plex profile PIN),
-      // redirect to AuthScreen so the user can re-authenticate.
-      final refreshResult = await registry.refreshServersFromApi();
-      if (refreshResult == ServerRefreshResult.authError) {
-        await storage.clearCredentials();
-        if (mounted) {
-          Navigator.pushReplacement(context, fadeRoute(const AuthScreen()));
-        }
-        return;
-      }
-    }
-
-    _setStatus(t.common.loadingServers);
-
     // Load all configured servers
     final servers = await registry.getServers();
+
+    appLogger.i('_loadSavedCredentials: ${servers.length} server(s) found');
 
     if (servers.isEmpty) {
       if (mounted) {
@@ -650,16 +509,11 @@ class _SetupScreenState extends State<SetupScreen> {
 
     if (!mounted) return;
 
-    // No network — skip connection attempts and go straight to offline mode
-    if (!hasNetwork) {
-      _setStatus(t.common.startingOfflineMode);
-      await context.read<DownloadProvider>().ensureInitialized();
-      if (!mounted) return;
-      Navigator.pushReplacement(context, fadeRoute(const MainScreen(isOfflineMode: true)));
-      return;
-    }
+    final multiServerProvider = context.read<MultiServerProvider>();
+    final librariesProvider = context.read<LibrariesProvider>();
+    final syncService = context.read<OfflineWatchSyncService>();
+    final downloadProvider = context.read<DownloadProvider>();
 
-    Sentry.addBreadcrumb(Breadcrumb(message: 'Connecting to ${servers.length} server(s)', category: 'setup'));
     _setStatus(t.common.connectingToServers);
 
     // Populate per-server status for splash display
@@ -671,51 +525,94 @@ class _SetupScreenState extends State<SetupScreen> {
       });
     }
 
+    if (!mounted) return;
+
     try {
-      final result = await ServerConnectionOrchestrator.connectAndInitialize(
+      final deviceId = await storage.getOrCreateDeviceId();
+      if (!mounted) return;
+
+      // Retry connection on cold start — TV/phone network may not be ready immediately
+      var result = await ServerConnectionOrchestrator.connectAndInitialize(
         servers: servers,
-        multiServerProvider: context.read<MultiServerProvider>(),
-        librariesProvider: context.read<LibrariesProvider>(),
-        syncService: context.read<OfflineWatchSyncService>(),
+        multiServerProvider: multiServerProvider,
+        librariesProvider: librariesProvider,
+        syncService: syncService,
         clientIdentifier: storage.getClientIdentifier(),
-        onServerStatus: (serverId, success) {
-          if (mounted) {
-            setState(() {
-              final existing = _serverStatus[serverId];
-              if (existing != null) {
-                _serverStatus[serverId] = (existing.$1, success);
-              }
-            });
-          }
-        },
+        deviceId: deviceId,
       );
+
+      if (!result.hasConnections) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        multiServerProvider.clearAllConnections();
+        result = await ServerConnectionOrchestrator.connectAndInitialize(
+          servers: servers,
+          multiServerProvider: multiServerProvider,
+          librariesProvider: librariesProvider,
+          syncService: syncService,
+          clientIdentifier: storage.getClientIdentifier(),
+          deviceId: deviceId,
+        );
+      }
 
       if (!mounted) return;
 
-      if (result.hasConnections && result.firstClient != null) {
+      if (result.hasConnections) {
+        // Connect may have backfilled PrimaryImageTag from Jellyfin `/Users/{id}` — reload registry before UI.
+        await context.read<JellyfinProfileProvider>().refresh();
+        if (!mounted) return;
+
         // Resume any downloads that were interrupted by app kill
-        final downloadProvider = context.read<DownloadProvider>();
         downloadProvider.ensureInitialized().then((_) {
           downloadProvider.resumeQueuedDownloads(result.firstClient!);
         });
 
-        Navigator.pushReplacement(context, fadeRoute(MainScreen(client: result.firstClient!)));
+        Navigator.pushReplacement(
+          context,
+          fadeRoute(MainScreen(client: result.firstClient!)),
+        );
       } else {
-        _setStatus(t.common.startingOfflineMode);
-        await context.read<DownloadProvider>().ensureInitialized();
-        if (!mounted) return;
-        Navigator.pushReplacement(context, fadeRoute(const MainScreen(isOfflineMode: true)));
+        // Check if any server is reachable — if so, it's an auth issue, not network
+        if (await _isAnyServerReachable(servers)) {
+          appLogger.i('Server reachable but auth failed — redirecting to login');
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            fadeRoute(const AuthScreen()),
+          );
+        } else {
+          _setStatus(t.common.startingOfflineMode);
+          await downloadProvider.ensureInitialized();
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            fadeRoute(const MainScreen(isOfflineMode: true)),
+          );
+        }
       }
     } catch (e, stackTrace) {
       appLogger.e('Error during multi-server connection', error: e, stackTrace: stackTrace);
 
       if (mounted) {
         _setStatus(t.common.startingOfflineMode);
-        await context.read<DownloadProvider>().ensureInitialized();
+        await downloadProvider.ensureInitialized();
         if (!mounted) return;
-        Navigator.pushReplacement(context, fadeRoute(const MainScreen(isOfflineMode: true)));
+        Navigator.pushReplacement(
+          context,
+          fadeRoute(const MainScreen(isOfflineMode: true)),
+        );
       }
     }
+  }
+
+  Future<bool> _isAnyServerReachable(List<RegisteredServer> servers) async {
+    for (final server in servers) {
+      if (await JellyfinAuthService.testConnection(server.jellyfinData.baseUrl,
+          timeout: const Duration(seconds: 3))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Widget _buildStatusText(BuildContext context) {
@@ -777,7 +674,7 @@ class _SetupScreenState extends State<SetupScreen> {
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Stack(
         children: [
-          Center(child: SvgPicture.asset('assets/plezy_adaptive_foreground.svg', width: 288, height: 288)),
+          Center(child: SvgPicture.asset('assets/jelzy_adaptive_foreground.svg', width: 288, height: 288)),
           Positioned(
             left: 0, right: 0,
             bottom: MediaQuery.of(context).size.height * 0.5 - 170,

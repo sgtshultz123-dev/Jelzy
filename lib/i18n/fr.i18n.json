@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "S'inscrire avec Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Nécessite Android 8.0 ou plus récent",
       "iosVersion": "Nécessite iOS 15.0 ou plus récent",
-      "permissionDisabled": "L'autorisation Image dans l'image est désactivée. Activez-la dans Paramètres > Applications > Plezy > Image dans l'image",
+      "permissionDisabled": "L'autorisation Image dans l'image est désactivée. Activez-la dans Paramètres > Applications > Jelzy > Image dans l'image",
       "notSupported": "Cet appareil ne prend pas en charge le mode image dans l'image",
       "voSwitchFailed": "Échec du changement de sortie vidéo pour l'image dans l'image",
       "failed": "Échec du démarrage du mode image dans l'image",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Se connecter au bureau",
-      "discoveryDescription": "Les appareils de votre réseau exécutant Plezy avec le même compte Plex apparaîtront automatiquement",
+      "discoveryDescription": "Les appareils de votre réseau exécutant Jelzy avec le même compte Plex apparaîtront automatiquement",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Connexion...",
       "searchingForDevices": "Recherche d'appareils...",
       "noDevicesFound": "Aucun appareil trouvé sur votre réseau",
-      "noDevicesHint": "Assurez-vous que Plezy est ouvert sur votre bureau et que les deux appareils sont sur le même réseau WiFi",
+      "noDevicesHint": "Assurez-vous que Jelzy est ouvert sur votre bureau et que les deux appareils sont sur le même réseau WiFi",
       "availableDevices": "Appareils disponibles",
       "manualConnection": "Connexion manuelle",
       "cryptoInitFailed": "Impossible d'initialiser la connexion sécurisée. Assurez-vous d'être connecté à un compte Plex.",
       "validationHostRequired": "Veuillez entrer l'adresse de l'hôte",
       "validationHostFormat": "Le format doit être IP:port (ex. 192.168.1.100:48632)",
       "connectionTimedOut": "Délai de connexion dépassé. Assurez-vous que les deux appareils sont sur le même réseau.",
-      "sessionNotFound": "Appareil introuvable. Assurez-vous que Plezy est en cours d'exécution sur l'hôte.",
+      "sessionNotFound": "Appareil introuvable. Assurez-vous que Jelzy est en cours d'exécution sur l'hôte.",
       "authFailed": "Échec de l'authentification. Assurez-vous que les deux appareils utilisent le même compte Plex.",
       "failedToConnect": "Échec de la connexion : ${error}"
     },

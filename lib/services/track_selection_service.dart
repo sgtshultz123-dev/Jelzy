@@ -2,9 +2,9 @@ import 'dart:async';
 
 import '../mpv/mpv.dart';
 
-import '../models/plex_media_info.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_user_profile.dart';
+import '../models/media_info.dart';
+import '../models/media_metadata.dart';
+import '../models/user_profile_preferences.dart';
 import '../utils/app_logger.dart';
 import '../utils/language_codes.dart';
 
@@ -16,7 +16,7 @@ import '../utils/language_codes.dart';
 // differently.
 
 /// Find the MPV subtitle track that matches a Plex subtitle track
-SubtitleTrack? findMpvTrackForPlexSubtitle(PlexSubtitleTrack plexTrack, List<SubtitleTrack> mpvTracks, {List<PlexSubtitleTrack>? allPlexTracks}) {
+SubtitleTrack? findMpvTrackForPlexSubtitle(MediaSubtitleTrack plexTrack, List<SubtitleTrack> mpvTracks, {List<MediaSubtitleTrack>? allPlexTracks}) {
   if (mpvTracks.isEmpty) return null;
 
   // For external subtitles, match by URI containing the Plex key
@@ -86,7 +86,7 @@ SubtitleTrack? findMpvTrackForPlexSubtitle(PlexSubtitleTrack plexTrack, List<Sub
 }
 
 /// Find the Plex subtitle track that matches an MPV subtitle track
-PlexSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<PlexSubtitleTrack> plexTracks, {List<SubtitleTrack>? allMpvTracks}) {
+MediaSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<MediaSubtitleTrack> plexTracks, {List<SubtitleTrack>? allMpvTracks}) {
   if (plexTracks.isEmpty) return null;
 
   // For external subtitles, match by URI containing the Plex key
@@ -101,7 +101,7 @@ PlexSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<Plex
   }
 
   // For internal subtitles, use scoring based on properties
-  PlexSubtitleTrack? bestMatch;
+  MediaSubtitleTrack? bestMatch;
   int bestScore = 0;
 
   // Ordinal tiebreaker: precompute position of mpvTrack among internal tracks
@@ -154,7 +154,7 @@ PlexSubtitleTrack? findPlexTrackForMpvSubtitle(SubtitleTrack mpvTrack, List<Plex
 }
 
 /// Find the MPV audio track that matches a Plex audio track
-AudioTrack? findMpvTrackForPlexAudio(PlexAudioTrack plexTrack, List<AudioTrack> mpvTracks, {List<PlexAudioTrack>? allPlexTracks}) {
+AudioTrack? findMpvTrackForPlexAudio(MediaAudioTrack plexTrack, List<AudioTrack> mpvTracks, {List<MediaAudioTrack>? allPlexTracks}) {
   if (mpvTracks.isEmpty) return null;
 
   AudioTrack? bestMatch;
@@ -208,10 +208,10 @@ AudioTrack? findMpvTrackForPlexAudio(PlexAudioTrack plexTrack, List<AudioTrack> 
 }
 
 /// Find the Plex audio track that matches an MPV audio track
-PlexAudioTrack? findPlexTrackForMpvAudio(AudioTrack mpvTrack, List<PlexAudioTrack> plexTracks, {List<AudioTrack>? allMpvTracks}) {
+MediaAudioTrack? findPlexTrackForMpvAudio(AudioTrack mpvTrack, List<MediaAudioTrack> plexTracks, {List<AudioTrack>? allMpvTracks}) {
   if (plexTracks.isEmpty) return null;
 
-  PlexAudioTrack? bestMatch;
+  MediaAudioTrack? bestMatch;
   int bestScore = 0;
   final mpvOrdinal = allMpvTracks?.indexOf(mpvTrack) ?? -1;
 
@@ -386,14 +386,14 @@ class TrackSelectionResult<T> {
 /// preferences, user profiles, and per-media settings.
 class TrackSelectionService {
   final Player player;
-  final PlexUserProfile? profileSettings;
-  final PlexMetadata metadata;
-  final PlexMediaInfo? plexMediaInfo;
+  final UserProfilePreferences? profileSettings;
+  final MediaMetadata metadata;
+  final MediaInfo? plexMediaInfo;
 
   TrackSelectionService({required this.player, this.profileSettings, required this.metadata, this.plexMediaInfo});
 
   /// Build list of preferred languages from a user profile
-  List<String> _buildPreferredLanguages(PlexUserProfile profile, {required bool isAudio}) {
+  List<String> _buildPreferredLanguages(UserProfilePreferences profile, {required bool isAudio}) {
     final primary = isAudio ? profile.defaultAudioLanguage : profile.defaultSubtitleLanguage;
     final list = isAudio ? profile.defaultAudioLanguages : profile.defaultSubtitleLanguages;
 
@@ -477,7 +477,7 @@ class TrackSelectionService {
     return findBestTrackMatch<AudioTrack>(availableTracks, preferred, (t) => t.id, (t) => t.title, (t) => t.language);
   }
 
-  AudioTrack? findAudioTrackByProfile(List<AudioTrack> availableTracks, PlexUserProfile profile) {
+  AudioTrack? findAudioTrackByProfile(List<AudioTrack> availableTracks, UserProfilePreferences profile) {
     if (availableTracks.isEmpty || !profile.autoSelectAudio) return null;
 
     final preferredLanguages = _buildPreferredLanguages(profile, isAudio: true);

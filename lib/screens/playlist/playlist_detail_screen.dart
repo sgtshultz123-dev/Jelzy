@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../focus/focusable_action_bar.dart';
-import '../../services/plex_client.dart';
+import '../../services/jellyfin_client.dart';
 import '../../services/play_queue_launcher.dart';
-import '../../models/plex_playlist.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/playlist.dart';
+import '../../models/media_metadata.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/provider_extensions.dart';
 import '../../widgets/app_icon.dart';
@@ -26,7 +26,7 @@ import '../../mixins/grid_focus_node_mixin.dart';
 
 /// Screen to display the contents of a playlist
 class PlaylistDetailScreen extends StatefulWidget {
-  final PlexPlaylist playlist;
+  final Playlist playlist;
 
   const PlaylistDetailScreen({super.key, required this.playlist});
 
@@ -78,7 +78,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
   // Move mode state
   int? _movingIndex;
   int? _originalIndex;
-  List<PlexMetadata>? _originalOrder;
+  List<MediaMetadata>? _originalOrder;
 
   // Estimated item height for scroll-into-view (card + vertical margins)
   static const double _estimatedItemHeight = 114.0;
@@ -91,8 +91,8 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
   }
 
   @override
-  Future<List<PlexMetadata>> fetchItems() async {
-    return await client.getPlaylist(widget.playlist.ratingKey);
+  Future<List<MediaMetadata>> fetchItems() async {
+    return await client.getPlaylist(widget.playlist.itemId);
   }
 
   @override
@@ -139,8 +139,8 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
     }
   }
 
-  /// Get the correct PlexClient for this playlist's server
-  PlexClient _getClientForPlaylist() {
+  /// Get the correct JellyfinClient for this playlist's server
+  JellyfinClient _getClientForPlaylist() {
     return context.getClientForServer(widget.playlist.serverId!);
   }
 
@@ -177,7 +177,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
     );
 
     if (confirmed && mounted) {
-      final success = await client.deletePlaylist(widget.playlist.ratingKey);
+      final success = await client.deletePlaylist(widget.playlist.itemId);
 
       if (mounted) {
         if (success) {
@@ -237,7 +237,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
 
     // Call API to persist the change
     final success = await client.movePlaylistItem(
-      playlistId: widget.playlist.ratingKey,
+      playlistId: widget.playlist.itemId,
       playlistItemId: movedItem.playlistItemID!,
       afterPlaylistItemId: afterPlaylistItemId,
     );
@@ -286,7 +286,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
 
     // Call API to persist the change (UI is already updated)
     final success = await client.movePlaylistItem(
-      playlistId: widget.playlist.ratingKey,
+      playlistId: widget.playlist.itemId,
       playlistItemId: movedItem.playlistItemID!,
       afterPlaylistItemId: afterPlaylistItemId,
     );
@@ -331,7 +331,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
 
     // Call API to persist the change
     final success = await client.removeFromPlaylist(
-      playlistId: widget.playlist.ratingKey,
+      playlistId: widget.playlist.itemId,
       playlistItemId: item.playlistItemID.toString(),
     );
 

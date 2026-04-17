@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-import '../../services/plex_client.dart';
-import '../models/plex_hub.dart';
-import '../models/plex_metadata.dart';
-import '../models/plex_sort.dart';
+import '../services/jellyfin_client.dart';
+import '../models/hub.dart';
+import '../models/media_metadata.dart';
+import '../models/library_sort.dart';
 import '../providers/settings_provider.dart';
 import '../services/settings_service.dart';
 import '../utils/provider_extensions.dart';
@@ -25,7 +25,7 @@ import 'focusable_detail_screen_mixin.dart';
 
 /// Screen to display full content of a recommendation hub
 class HubDetailScreen extends StatefulWidget {
-  final PlexHub hub;
+  final Hub hub;
 
   const HubDetailScreen({super.key, required this.hub});
 
@@ -35,12 +35,12 @@ class HubDetailScreen extends StatefulWidget {
 
 class _HubDetailScreenState extends State<HubDetailScreen>
     with Refreshable, GridFocusNodeMixin, FocusableDetailScreenMixin {
-  PlexClient get client => _getClientForHub();
+  JellyfinClient get client => _getClientForHub();
 
-  List<PlexMetadata> _items = [];
-  List<PlexMetadata> _filteredItems = [];
-  List<PlexSort> _sortOptions = [];
-  PlexSort? _selectedSort;
+  List<MediaMetadata> _items = [];
+  List<MediaMetadata> _filteredItems = [];
+  List<LibrarySort> _sortOptions = [];
+  LibrarySort? _selectedSort;
   bool _isSortDescending = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -81,8 +81,8 @@ class _HubDetailScreenState extends State<HubDetailScreen>
     }
   }
 
-  /// Get the correct PlexClient for this hub's server
-  PlexClient _getClientForHub() {
+  /// Get the correct JellyfinClient for this hub's server
+  JellyfinClient _getClientForHub() {
     return context.getClientForServer(widget.hub.serverId!);
   }
 
@@ -158,12 +158,12 @@ class _HubDetailScreenState extends State<HubDetailScreen>
     }
   }
 
-  List<PlexSort> _getDefaultSortOptions() {
+  List<LibrarySort> _getDefaultSortOptions() {
     return [
-      PlexSort(key: 'titleSort', title: t.hubDetail.title, defaultDirection: 'asc'),
-      PlexSort(key: 'year', descKey: 'year:desc', title: t.hubDetail.releaseYear, defaultDirection: 'desc'),
-      PlexSort(key: 'addedAt', descKey: 'addedAt:desc', title: t.hubDetail.dateAdded, defaultDirection: 'desc'),
-      PlexSort(key: 'rating', descKey: 'rating:desc', title: t.hubDetail.rating, defaultDirection: 'desc'),
+      LibrarySort(key: 'titleSort', title: t.hubDetail.title, defaultDirection: 'asc'),
+      LibrarySort(key: 'year', descKey: 'year:desc', title: t.hubDetail.releaseYear, defaultDirection: 'desc'),
+      LibrarySort(key: 'addedAt', descKey: 'addedAt:desc', title: t.hubDetail.dateAdded, defaultDirection: 'desc'),
+      LibrarySort(key: 'rating', descKey: 'rating:desc', title: t.hubDetail.rating, defaultDirection: 'desc'),
     ];
   }
 

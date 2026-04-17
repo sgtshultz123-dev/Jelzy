@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-import '../../models/plex_metadata.dart';
+import '../../models/media_metadata.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/multi_server_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -272,7 +272,7 @@ class _DownloadsGridContentState extends State<_DownloadsGridContent> {
   Widget build(BuildContext context) {
     return Consumer2<DownloadProvider, SettingsProvider>(
       builder: (context, downloadProvider, settingsProvider, _) {
-        final List<PlexMetadata> items = widget.type == DownloadType.tvShows
+        final List<MediaMetadata> items = widget.type == DownloadType.tvShows
             ? downloadProvider.downloadedShows
             : downloadProvider.downloadedMovies;
 

@@ -1,23 +1,24 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 
-import 'plex_client.dart';
-import '../models/plex_config.dart';
+import '../models/jellyfin_config.dart';
+import '../models/registered_server.dart';
 import '../utils/app_logger.dart';
 import '../utils/connection_constants.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
-import 'plex_auth_service.dart';
-import 'settings_service.dart';
+import 'jellyfin_auth_service.dart';
+import 'jellyfin_client.dart';
+import 'server_registry.dart';
 import 'storage_service.dart';
 
-/// Manages multiple Plex server connections simultaneously
+/// Manages multiple Jellyfin server connections.
 class MultiServerManager {
-  /// Map of serverId (clientIdentifier) to PlexClient instances
-  final Map<String, PlexClient> _clients = {};
+  /// Map of serverId to client
+  final Map<String, JellyfinClient> _clients = {};
 
-  /// Map of serverId to server info
-  final Map<String, PlexServer> _servers = {};
+  /// Map of serverId to registered server info
+  final Map<String, RegisteredServer> _servers = {};
 
   /// Map of serverId to online status
   final Map<String, bool> _serverStatus = {};
@@ -31,23 +32,21 @@ class MultiServerManager {
   /// Connectivity subscription for network monitoring
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
-  /// Map of serverId to active optimization futures
+  /// Periodic timer to retry reconnection when offline. connectivity_plus can miss
+  /// the "back online" event on Android, so we poll when we have offline servers.
+  Timer? _offlineReconnectTimer;
+
+  /// When true, user has forced offline; do not run periodic reconnect.
+  bool _isForcedOffline = false;
+
+  /// Map of serverId to active reconnection futures
   final Map<String, Future<void>> _activeOptimizations = {};
 
   /// Cached client identifier for reconnection without async storage lookup
   String? _clientIdentifier;
 
-  /// Debounce timers for endpoint-exhaustion-triggered reconnection (per server)
-  final Map<String, Timer> _reconnectDebounce = {};
-
-  /// Coalescing guard for checkServerHealth — prevents concurrent health checks
-  Future<void>? _activeHealthCheck;
-
-  /// Coalescing guard for reconnectOfflineServers — prevents concurrent reconnect sweeps
-  Future<void>? _activeReconnect;
-
-  /// Debounce timer for connectivity events — collapses rapid network flapping
-  Timer? _connectivityDebounce;
+  /// Per-installation device ID for Jellyfin auth headers
+  String? _deviceId;
 
   /// Get all registered server IDs
   List<String> get serverIds => _servers.keys.toList();
@@ -59,14 +58,14 @@ class MultiServerManager {
   List<String> get offlineServerIds => _serverStatus.entries.where((e) => !e.value).map((e) => e.key).toList();
 
   /// Get client for specific server
-  PlexClient? getClient(String serverId) => _clients[serverId];
+  JellyfinClient? getClient(String serverId) => _clients[serverId];
 
   /// Get server info for specific server
-  PlexServer? getServer(String serverId) => _servers[serverId];
+  RegisteredServer? getServer(String serverId) => _servers[serverId];
 
   /// Get all online clients
-  Map<String, PlexClient> get onlineClients {
-    final result = <String, PlexClient>{};
+  Map<String, JellyfinClient> get onlineClients {
+    final result = <String, JellyfinClient>{};
     for (final serverId in onlineServerIds) {
       final client = _clients[serverId];
       if (client != null) {
@@ -77,114 +76,44 @@ class MultiServerManager {
   }
 
   /// Get all servers
-  Map<String, PlexServer> get servers => Map.unmodifiable(_servers);
+  Map<String, RegisteredServer> get servers => Map.unmodifiable(_servers);
 
   /// Check if a server is online
   bool isServerOnline(String serverId) => _serverStatus[serverId] ?? false;
 
-  /// Creates and initializes a PlexClient for a given server
-  ///
-  /// Handles finding working connection, loading cached endpoint,
-  /// creating config, and building client with failover support.
-  Future<PlexClient> _createClientForServer({required PlexServer server, required String clientIdentifier}) async {
-    final serverId = server.clientIdentifier;
-
-    // Get storage and load cached endpoint for this server
-    final storage = await StorageService.getInstance();
-    final cachedEndpoint = storage.getServerEndpoint(serverId);
-
-    // Find best working connection, passing cached endpoint for fast-path
-    final streamIterator = StreamIterator(server.findBestWorkingConnection(preferredUri: cachedEndpoint, clientIdentifier: clientIdentifier));
-
-    if (!await streamIterator.moveNext()) {
-      throw Exception('No working connection found');
+  Future<void> _persistPrimaryImageTagFromClient(JellyfinClient client) async {
+    final tag = client.fetchedUserPrimaryImageTag;
+    if (tag == null || tag.isEmpty) return;
+    try {
+      final storage = await StorageService.getInstance();
+      final registry = ServerRegistry(storage);
+      await registry.mergePrimaryImageTagForUser(userId: client.config.userId, primaryImageTag: tag);
+    } catch (e, st) {
+      appLogger.w('Persist PrimaryImageTag after connect failed', error: e, stackTrace: st);
     }
-
-    final workingConnection = streamIterator.current;
-    final baseUrl = workingConnection.uri;
-
-    // Create PlexClient with failover support
-    final prioritizedEndpoints = server.prioritizedEndpointUrls(preferredFirst: baseUrl);
-    final config = await PlexConfig.create(
-      baseUrl: baseUrl,
-      token: server.accessToken,
-      clientIdentifier: clientIdentifier,
-    );
-
-    final client = await PlexClient.create(
-      config,
-      serverId: serverId,
-      serverName: server.name,
-      prioritizedEndpoints: prioritizedEndpoints,
-      onEndpointChanged: (newUrl) async {
-        await storage.saveServerEndpoint(serverId, newUrl);
-        appLogger.i('Updated endpoint for ${server.name} after failover: $newUrl');
-      },
-      onAllEndpointsExhausted: () => _onServerEndpointsExhausted(serverId),
-    );
-
-    // Save the initial endpoint
-    await storage.saveServerEndpoint(serverId, baseUrl);
-
-    // Drain remaining stream values in background to apply better connections
-    _drainOptimizationStream(streamIterator, client: client, server: server, storage: storage);
-
-    return client;
   }
 
-  /// Persists a new endpoint, rebuilds the failover list, and switches the client.
-  Future<void> _promoteEndpoint({
-    required PlexClient client,
-    required PlexServer server,
-    required StorageService storage,
-    required String newUrl,
-  }) async {
-    await storage.saveServerEndpoint(server.clientIdentifier, newUrl);
-    final newEndpoints = server.prioritizedEndpointUrls(preferredFirst: newUrl);
-    await client.updateEndpointPreferences(newEndpoints, switchToFirst: true);
-  }
-
-  /// Continues draining the connection optimization stream in the background,
-  /// switching the client to any better endpoint found.
-  void _drainOptimizationStream(
-    StreamIterator<PlexConnection> streamIterator, {
-    required PlexClient client,
-    required PlexServer server,
-    required StorageService storage,
-  }) {
-    () async {
-      try {
-        while (await streamIterator.moveNext()) {
-          final connection = streamIterator.current;
-          final newUrl = connection.uri;
-
-          if (newUrl == client.config.baseUrl) {
-            appLogger.d('Background optimization confirmed current endpoint for ${server.name}');
-            continue;
-          }
-
-          appLogger.i(
-            'Background optimization found better endpoint for ${server.name}',
-            error: {'from': client.config.baseUrl, 'to': newUrl, 'type': connection.displayType},
-          );
-
-          await _promoteEndpoint(client: client, server: server, storage: storage, newUrl: newUrl);
-        }
-      } catch (e, stackTrace) {
-        appLogger.w('Background connection optimization failed for ${server.name}', error: e, stackTrace: stackTrace);
-      } finally {
-        await streamIterator.cancel();
-      }
-    }();
+  /// Creates a JellyfinClient for the given Jellyfin server data
+  JellyfinClient _createJellyfinClient(JellyfinServerData data) {
+    final config = JellyfinConfig(
+      baseUrl: data.baseUrl,
+      token: data.token,
+      userId: data.userId,
+      serverId: data.serverId,
+      serverName: data.serverName,
+      deviceId: _deviceId ?? JellyfinAuthService.defaultDeviceId,
+    );
+    return JellyfinClient(config, serverId: data.serverId, serverName: data.serverName);
   }
 
   /// Connect to all available servers in parallel
   /// Returns the number of successfully connected servers
   Future<int> connectToAllServers(
-    List<PlexServer> servers, {
+    List<RegisteredServer> servers, {
     String? clientIdentifier,
-    Duration timeout = ConnectionTimeouts.perServerConnect,
-    Function(String serverId, PlexClient client)? onServerConnected,
+    String? deviceId,
+    Duration timeout = ConnectionTimeouts.connectAll,
+    Function(String serverId, JellyfinClient client)? onServerConnected,
     Function(String serverId, Object error)? onServerFailed,
   }) async {
     if (servers.isEmpty) {
@@ -193,49 +122,35 @@ class MultiServerManager {
     }
 
     appLogger.i('Connecting to ${servers.length} servers...');
-    Sentry.addBreadcrumb(Breadcrumb(message: 'Connecting to ${servers.length} server(s)', category: 'servers'));
 
-    // Use provided client ID or generate a unique one for this app instance
     final effectiveClientId = clientIdentifier ?? DateTime.now().millisecondsSinceEpoch.toString();
     _clientIdentifier = effectiveClientId;
+    if (deviceId != null) _deviceId = deviceId;
 
-    // Create connection tasks for all servers (timeout is inside each task
-    // so a timed-out task cannot keep mutating manager state).
-    final connectionFutures = servers.map((server) async {
-      final serverId = server.clientIdentifier;
+    final connectionFutures = servers.map((registered) async {
+      final serverId = registered.serverId;
+      final serverName = registered.serverName;
 
       try {
-        appLogger.d('Attempting connection to server: ${server.name}');
+        appLogger.d('Attempting connection to server: $serverName');
 
-        final client = await _createClientForServer(server: server, clientIdentifier: effectiveClientId).timeout(timeout);
+        final client = _createJellyfinClient(registered.jellyfinData);
+        await client.loadUserPolicy();
+        await _persistPrimaryImageTagFromClient(client);
+        await client.reportCapabilities();
 
-        // Store the client and server info
-        _clients[serverId]?.close();
         _clients[serverId] = client;
-        _servers[serverId] = server;
+        _servers[serverId] = registered;
         _serverStatus[serverId] = true;
 
         onServerConnected?.call(serverId, client);
-        appLogger.i('Successfully connected to ${server.name}');
-
-        // Fire-and-forget: fetch server prefs and cache watched threshold
-        client.fetchServerPrefs().then((_) {
-          final threshold = client.watchedThresholdPercent;
-          SettingsService.instanceOrNull?.setWatchedThreshold(serverId, threshold);
-        });
+        appLogger.i('Successfully connected to $serverName');
 
         return serverId;
-      } on TimeoutException {
-        appLogger.w('Server connection timed out for ${server.name}');
-        _servers[serverId] = server;
-        _serverStatus[serverId] = false;
-        onServerFailed?.call(serverId, TimeoutException('Connection to ${server.name} timed out'));
-        return null;
       } catch (e, stackTrace) {
-        appLogger.e('Failed to connect to ${server.name}', error: e, stackTrace: stackTrace);
+        appLogger.e('Failed to connect to server $serverName', error: e, stackTrace: stackTrace);
 
-        // Mark as offline
-        _servers[serverId] = server;
+        _servers[serverId] = registered;
         _serverStatus[serverId] = false;
 
         onServerFailed?.call(serverId, e);
@@ -243,50 +158,55 @@ class MultiServerManager {
       }
     });
 
-    final results = await Future.wait(connectionFutures);
+    final results = await Future.wait(
+      connectionFutures.map(
+        (f) => f.timeout(
+          timeout,
+          onTimeout: () {
+            appLogger.w('Server connection timed out');
+            return null;
+          },
+        ),
+      ),
+    );
 
-    // Count successful connections
     final successCount = results.where((id) => id != null).length;
-
-    // Notify listeners of status change
     _statusController.add(Map.from(_serverStatus));
-
     appLogger.i('Connected to $successCount/${servers.length} servers successfully');
 
-    // Start network monitoring if we have any connected servers
     if (successCount > 0) {
       startNetworkMonitoring();
+      _startOfflineReconnectTimer();
     }
 
     return successCount;
   }
 
   /// Add a single server connection
-  Future<bool> addServer(PlexServer server, {String? clientIdentifier}) async {
-    final serverId = server.clientIdentifier;
+  Future<bool> addServer(RegisteredServer registered, {String? clientIdentifier}) async {
+    final serverId = registered.serverId;
     final effectiveClientId = clientIdentifier ?? DateTime.now().millisecondsSinceEpoch.toString();
     _clientIdentifier ??= effectiveClientId;
 
     try {
-      appLogger.d('Adding server: ${server.name}');
+      appLogger.d('Adding server: ${registered.serverName}');
 
-      final client = await _createClientForServer(server: server, clientIdentifier: effectiveClientId);
+      final client = _createJellyfinClient(registered.jellyfinData);
+      await client.loadUserPolicy();
+      await _persistPrimaryImageTagFromClient(client);
+      await client.reportCapabilities();
 
-      // Store
-      _clients[serverId]?.close();
       _clients[serverId] = client;
-      _servers[serverId] = server;
+      _servers[serverId] = registered;
       _serverStatus[serverId] = true;
-
-      // Notify
       _statusController.add(Map.from(_serverStatus));
 
-      appLogger.i('Successfully added server: ${server.name}');
+      appLogger.i('Successfully added server: ${registered.serverName}');
       return true;
     } catch (e, stackTrace) {
-      appLogger.e('Failed to add server ${server.name}', error: e, stackTrace: stackTrace);
+      appLogger.e('Failed to add server ${registered.serverName}', error: e, stackTrace: stackTrace);
 
-      _servers[serverId] = server;
+      _servers[serverId] = registered;
       _serverStatus[serverId] = false;
       _statusController.add(Map.from(_serverStatus));
 
@@ -296,7 +216,7 @@ class MultiServerManager {
 
   /// Remove a server connection
   void removeServer(String serverId) {
-    _clients.remove(serverId)?.close();
+    _clients.remove(serverId);
     _servers.remove(serverId);
     _serverStatus.remove(serverId);
     _statusController.add(Map.from(_serverStatus));
@@ -312,36 +232,55 @@ class MultiServerManager {
     }
   }
 
+  /// Number of retries before marking a server offline. Transient failures (timeout,
+  /// connection reset) are common when app resumes on Android.
+  static const int _healthCheckRetries = 3;
+
+  /// Delay between health check retries.
+  static const Duration _healthCheckRetryDelay = Duration(milliseconds: 800);
+
   /// Test connection health for all servers.
-  /// Uses [PlexClient.isHealthy] which checks for HTTP 200, so servers with
-  /// invalid tokens (401) are correctly reported as offline.
+  /// Retries transient failures before marking offline — a single timeout or
+  /// connection reset on app resume must not permanently break the app.
   Future<void> checkServerHealth() async {
-    // Coalesce concurrent calls — return the in-flight future if one exists
-    if (_activeHealthCheck != null) return _activeHealthCheck!;
-
-    _activeHealthCheck = _doCheckServerHealth();
-    try {
-      await _activeHealthCheck;
-    } finally {
-      _activeHealthCheck = null;
-    }
-  }
-
-  Future<void> _doCheckServerHealth() async {
     appLogger.d('Checking health for ${_clients.length} servers');
 
     final healthChecks = _clients.entries.map((entry) async {
       final serverId = entry.key;
       final client = entry.value;
 
-      final healthy = await client.isHealthy();
-      updateServerStatus(serverId, healthy);
-      if (!healthy) {
-        appLogger.w('Server $serverId health check failed');
+      Object? lastError;
+      for (var attempt = 0; attempt < _healthCheckRetries; attempt++) {
+        try {
+          await client.getServerIdentity();
+          updateServerStatus(serverId, true);
+          return;
+        } catch (e) {
+          lastError = e;
+          final is401 = _isAuthError(e);
+          if (is401) {
+            // 401 = invalid token. Mark offline (match Plezy) — user sees offline UI
+            // with reconnect; no global redirect to login on every 401.
+            appLogger.w('Server $serverId returned 401 (auth), marking offline');
+            updateServerStatus(serverId, false);
+            return;
+          }
+          if (attempt < _healthCheckRetries - 1) {
+            appLogger.d('Server $serverId health check attempt ${attempt + 1} failed, retrying: $e');
+            await Future<void>.delayed(_healthCheckRetryDelay);
+          }
+        }
       }
+      appLogger.w('Server $serverId health check failed after $_healthCheckRetries attempts: $lastError');
+      updateServerStatus(serverId, false);
     });
 
     await Future.wait(healthChecks);
+  }
+
+  static bool _isAuthError(Object e) {
+    if (e is DioException && e.response?.statusCode == 401) return true;
+    return false;
   }
 
   /// Start monitoring network connectivity for all servers
@@ -352,159 +291,119 @@ class MultiServerManager {
     }
 
     appLogger.i('Starting network monitoring for all servers');
-    runZonedGuarded(() {
-      final connectivity = Connectivity();
-      _connectivitySubscription = connectivity.onConnectivityChanged.listen(
-        (results) {
-          final status = results.isNotEmpty ? results.first : ConnectivityResult.none;
+    final connectivity = Connectivity();
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen(
+      (results) {
+        final status = results.isNotEmpty ? results.first : ConnectivityResult.none;
 
-          if (status == ConnectivityResult.none) {
-            appLogger.w('Connectivity lost, pausing optimization until network returns');
-            return;
-          }
+        if (status == ConnectivityResult.none) {
+          return;
+        }
 
-          // Debounce rapid connectivity events (e.g. WiFi flapping) into a single trigger
-          _connectivityDebounce?.cancel();
-          _connectivityDebounce = Timer(const Duration(seconds: 2), () {
-            _connectivityDebounce = null;
+        appLogger.d('Connectivity change detected, re-probing offline servers');
 
-            appLogger.d(
-              'Connectivity change detected, re-optimizing all servers',
-              error: {
-                'status': status.name,
-                'interfaces': results.map((r) => r.name).toList(),
-                'serverCount': _servers.length,
-              },
-            );
-
-            // Re-optimize all servers and re-probe offline ones
-            _reoptimizeAllServers(reason: 'connectivity:${status.name}');
-            checkServerHealth();
-          });
-        },
-        onError: (error, stackTrace) {
-          appLogger.w('Connectivity listener error', error: error, stackTrace: stackTrace);
-        },
-      );
-    }, (error, stack) {
-      appLogger.w('Connectivity monitoring unavailable', error: error);
-    });
+        // Brief delay so the new network is ready (Android can report connectivity
+        // before TCP is actually usable).
+        Future<void>.delayed(const Duration(seconds: 1), () {
+          _reoptimizeAllServers(reason: 'connectivity:${status.name}');
+          checkServerHealth();
+        });
+      },
+      onError: (error, stackTrace) {
+        appLogger.w('Connectivity listener error', error: error, stackTrace: stackTrace);
+      },
+    );
   }
 
   /// Stop monitoring network connectivity
   void stopNetworkMonitoring() {
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
-    _connectivityDebounce?.cancel();
-    _connectivityDebounce = null;
+    _offlineReconnectTimer?.cancel();
+    _offlineReconnectTimer = null;
     appLogger.i('Stopped network monitoring');
   }
 
-  /// Re-optimize all connected servers and attempt reconnection for offline ones
+  /// Interval for periodic reconnect attempts when we have offline servers.
+  /// connectivity_plus can miss "back online" on Android, so we poll.
+  static const Duration _offlineReconnectInterval = Duration(seconds: 45);
+
+  /// Called when user forces offline or goes back online. When forced, stop periodic reconnect.
+  void setForcedOffline(bool forced) {
+    if (_isForcedOffline == forced) return;
+    _isForcedOffline = forced;
+    if (forced) {
+      _offlineReconnectTimer?.cancel();
+      _offlineReconnectTimer = null;
+      appLogger.d('Forced offline: periodic reconnect paused');
+    } else {
+      if (offlineServerIds.isNotEmpty) {
+        _startOfflineReconnectTimer();
+      }
+    }
+  }
+
+  void _startOfflineReconnectTimer() {
+    if (_isForcedOffline) return;
+    _offlineReconnectTimer?.cancel();
+    _offlineReconnectTimer = Timer.periodic(_offlineReconnectInterval, (_) {
+      if (_isForcedOffline) return;
+      final offline = offlineServerIds;
+      if (offline.isEmpty) return;
+      appLogger.d('Periodic reconnect: ${offline.length} offline server(s)');
+      checkServerHealth();
+      reconnectOfflineServers();
+    });
+  }
+
+  /// Reconnect offline servers; no-op for already online Jellyfin servers
   void _reoptimizeAllServers({required String reason}) {
     for (final entry in _servers.entries) {
       final serverId = entry.key;
-      final server = entry.value;
+      final registered = entry.value;
 
-      // Skip if optimization/reconnection already running for this server
       if (_activeOptimizations.containsKey(serverId)) {
-        appLogger.d('Optimization already running for ${server.name}, skipping', error: {'reason': reason});
+        appLogger.d('Reconnection already running for ${registered.serverName}, skipping', error: {'reason': reason});
         continue;
       }
 
       if (!isServerOnline(serverId)) {
-        // Attempt reconnection for offline servers
-        _activeOptimizations[serverId] = _reconnectServer(serverId, server).whenComplete(() {
+        _activeOptimizations[serverId] = _reconnectServer(serverId, registered).whenComplete(() {
           _activeOptimizations.remove(serverId);
         });
-      } else {
-        // Re-optimize online servers
-        _activeOptimizations[serverId] = _reoptimizeServer(serverId: serverId, server: server, reason: reason)
-            .whenComplete(() {
-              _activeOptimizations.remove(serverId);
-            });
       }
-    }
-  }
-
-  /// Re-optimize connection for a specific server
-  Future<void> _reoptimizeServer({required String serverId, required PlexServer server, required String reason}) async {
-    final storage = await StorageService.getInstance();
-    final client = _clients[serverId];
-    final cachedEndpoint = storage.getServerEndpoint(serverId);
-
-    try {
-      appLogger.d('Starting connection optimization for ${server.name}', error: {'reason': reason});
-
-      await for (final connection in server.findBestWorkingConnection(preferredUri: cachedEndpoint, clientIdentifier: _clientIdentifier)) {
-        final newUrl = connection.uri;
-
-        // Check if this is actually a better connection than current
-        if (client != null && client.config.baseUrl == newUrl) {
-          appLogger.d('Already using optimal endpoint for ${server.name}: $newUrl');
-          continue;
-        }
-
-        if (client != null) {
-          await _promoteEndpoint(client: client, server: server, storage: storage, newUrl: newUrl);
-          appLogger.i('Switched ${server.name} to better endpoint: $newUrl', error: {'type': connection.displayType});
-        } else {
-          await storage.saveServerEndpoint(serverId, newUrl);
-          appLogger.i('Updated optimal endpoint for ${server.name}: $newUrl', error: {'type': connection.displayType});
-        }
-      }
-    } catch (e, stackTrace) {
-      appLogger.w('Connection optimization failed for ${server.name}', error: e, stackTrace: stackTrace);
     }
   }
 
   /// Attempt full reconnection for a single offline server
-  Future<void> _reconnectServer(String serverId, PlexServer server) async {
-    final clientId = _clientIdentifier;
-    if (clientId == null) {
-      appLogger.w('Cannot reconnect ${server.name}: no client identifier cached');
-      return;
-    }
-
+  Future<void> _reconnectServer(String serverId, RegisteredServer registered) async {
     try {
-      appLogger.d('Attempting reconnection for ${server.name}');
-      final client = await _createClientForServer(server: server, clientIdentifier: clientId);
+      appLogger.d('Attempting reconnection for ${registered.serverName}');
 
-      _clients[serverId]?.close();
+      final client = _createJellyfinClient(registered.jellyfinData);
+      await client.loadUserPolicy();
+      await _persistPrimaryImageTagFromClient(client);
+      await client.reportCapabilities();
+
       _clients[serverId] = client;
       updateServerStatus(serverId, true);
-      appLogger.i('Successfully reconnected to ${server.name}');
+      appLogger.i('Successfully reconnected to ${registered.serverName}');
     } catch (e) {
-      appLogger.d('Reconnection failed for ${server.name}: $e');
-      // Leave status as offline — will retry on next trigger
+      appLogger.d('Reconnection failed for ${registered.serverName}: $e');
     }
   }
 
   /// Attempt reconnection for all offline servers
   Future<void> reconnectOfflineServers() async {
-    // Coalesce concurrent calls — return the in-flight future if one exists
-    if (_activeReconnect != null) return _activeReconnect!;
-
-    _activeReconnect = _doReconnectOfflineServers();
-    try {
-      await _activeReconnect;
-    } finally {
-      _activeReconnect = null;
-    }
-  }
-
-  Future<void> _doReconnectOfflineServers() async {
     final offline = offlineServerIds;
     if (offline.isEmpty) return;
 
     appLogger.d('Attempting reconnection for ${offline.length} offline servers');
-    Sentry.addBreadcrumb(Breadcrumb(message: 'Reconnecting ${offline.length} offline server(s)', category: 'servers'));
 
     final futures = offline.map((serverId) {
       final server = _servers[serverId];
       if (server == null) return Future<void>.value();
 
-      // Skip if already running
       if (_activeOptimizations.containsKey(serverId)) return Future<void>.value();
 
       final future = _reconnectServer(serverId, server)
@@ -523,43 +422,12 @@ class MultiServerManager {
     await Future.wait(futures);
   }
 
-  /// Called when all failover endpoints are exhausted for a server.
-  /// Debounced per-server to prevent cascading reconnections from parallel failures.
-  void _onServerEndpointsExhausted(String serverId) {
-    // Cancel any existing debounce timer for this server
-    _reconnectDebounce[serverId]?.cancel();
-
-    _reconnectDebounce[serverId] = Timer(const Duration(seconds: 5), () {
-      _reconnectDebounce.remove(serverId);
-
-      final server = _servers[serverId];
-      if (server == null) return;
-
-      appLogger.i('All endpoints exhausted for $serverId, triggering reconnection');
-      updateServerStatus(serverId, false);
-
-      // Guard with _activeOptimizations to prevent duplicate reconnections
-      if (_activeOptimizations.containsKey(serverId)) return;
-
-      _activeOptimizations[serverId] = _reconnectServer(serverId, server).whenComplete(() {
-        _activeOptimizations.remove(serverId);
-      });
-    });
-  }
-
   /// Disconnect all servers
   void disconnectAll() {
     appLogger.i('Disconnecting all servers');
+    _offlineReconnectTimer?.cancel();
+    _offlineReconnectTimer = null;
     stopNetworkMonitoring();
-    for (final timer in _reconnectDebounce.values) {
-      timer.cancel();
-    }
-    _reconnectDebounce.clear();
-    _activeHealthCheck = null;
-    _activeReconnect = null;
-    for (final client in _clients.values) {
-      client.close();
-    }
     _clients.clear();
     _servers.clear();
     _serverStatus.clear();

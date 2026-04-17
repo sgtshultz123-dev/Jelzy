@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Accedi con Plex",
@@ -387,7 +387,7 @@
     "pipErrors": {
       "androidVersion": "Richiede Android 8.0 o versioni successive",
       "iosVersion": "Richiede iOS 15.0 o versioni successive",
-      "permissionDisabled": "L'autorizzazione Picture-in-Picture è disabilitata. Abilitala in Impostazioni > App > Plezy > Picture-in-Picture",
+      "permissionDisabled": "L'autorizzazione Picture-in-Picture è disabilitata. Abilitala in Impostazioni > App > Jelzy > Picture-in-Picture",
       "notSupported": "Questo dispositivo non supporta la modalità Picture-in-Picture",
       "voSwitchFailed": "Impossibile cambiare l'uscita video per Picture-in-Picture",
       "failed": "Impossibile avviare la modalità Picture-in-Picture",
@@ -798,19 +798,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Connetti al desktop",
-      "discoveryDescription": "I dispositivi nella tua rete che eseguono Plezy con lo stesso account Plex appariranno automaticamente",
+      "discoveryDescription": "I dispositivi nella tua rete che eseguono Jelzy con lo stesso account Plex appariranno automaticamente",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Connessione...",
       "searchingForDevices": "Ricerca dispositivi...",
       "noDevicesFound": "Nessun dispositivo trovato nella tua rete",
-      "noDevicesHint": "Assicurati che Plezy sia aperto sul tuo desktop e che entrambi i dispositivi siano sulla stessa rete WiFi",
+      "noDevicesHint": "Assicurati che Jelzy sia aperto sul tuo desktop e che entrambi i dispositivi siano sulla stessa rete WiFi",
       "availableDevices": "Dispositivi disponibili",
       "manualConnection": "Connessione manuale",
       "cryptoInitFailed": "Impossibile inizializzare la connessione sicura. Assicurati di aver effettuato l'accesso a un account Plex.",
       "validationHostRequired": "Inserisci l'indirizzo host",
       "validationHostFormat": "Il formato deve essere IP:porta (es. 192.168.1.100:48632)",
       "connectionTimedOut": "Connessione scaduta. Assicurati che entrambi i dispositivi siano sulla stessa rete.",
-      "sessionNotFound": "Dispositivo non trovato. Assicurati che Plezy sia in esecuzione sull'host.",
+      "sessionNotFound": "Dispositivo non trovato. Assicurati che Jelzy sia in esecuzione sull'host.",
       "authFailed": "Autenticazione fallita. Assicurati che entrambi i dispositivi utilizzino lo stesso account Plex.",
       "failedToConnect": "Connessione fallita: ${error}"
     },

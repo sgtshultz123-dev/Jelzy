@@ -11,7 +11,7 @@ import 'event_aware.dart';
 /// Example usage:
 /// ```dart
 /// class _MyScreenState extends State<MyScreen> with WatchStateAware {
-///   List<PlexMetadata> _items = [];
+///   List<MediaMetadata> _items = [];
 ///
 ///   @override
 ///   Set<String>? get watchedRatingKeys =>
@@ -38,7 +38,7 @@ mixin WatchStateAware<T extends StatefulWidget> on State<T> {
   /// Return null to fall back to [watchedRatingKeys] matching.
   Set<String>? get watchedGlobalKeys => null;
 
-  /// Override to specify which ratingKeys this screen cares about.
+  /// Override to specify which ratingKeys (or itemIds) this screen cares about.
   ///
   /// Return null to receive ALL events (not recommended for performance).
   /// Return an empty set to receive no events.
@@ -46,7 +46,13 @@ mixin WatchStateAware<T extends StatefulWidget> on State<T> {
   /// The set should include:
   /// - Direct items displayed (e.g., episode ratingKeys in a season view)
   /// - Parent items that affect display (e.g., show ratingKey for on-deck)
-  Set<String>? get watchedRatingKeys;
+  ///
+  /// If you implement [watchedItemIds] instead, it will be used as a fallback.
+  Set<String>? get watchedRatingKeys => watchedItemIds;
+
+  /// Alias for [watchedRatingKeys] for compatibility with Jellyfin item ID naming.
+  /// Override either this or [watchedRatingKeys].
+  Set<String>? get watchedItemIds => null;
 
   /// Called when a relevant watch state change occurs.
   ///

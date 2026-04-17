@@ -40,61 +40,61 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	Translations $copyWith({TranslationMetadata<AppLocale, Translations>? meta}) => Translations(meta: meta ?? this.$meta);
 
 	// Translations
-	late final TranslationsAppEn app = TranslationsAppEn._(_root);
-	late final TranslationsAuthEn auth = TranslationsAuthEn._(_root);
-	late final TranslationsCommonEn common = TranslationsCommonEn._(_root);
-	late final TranslationsScreensEn screens = TranslationsScreensEn._(_root);
-	late final TranslationsUpdateEn update = TranslationsUpdateEn._(_root);
-	late final TranslationsSettingsEn settings = TranslationsSettingsEn._(_root);
-	late final TranslationsSearchEn search = TranslationsSearchEn._(_root);
-	late final TranslationsHotkeysEn hotkeys = TranslationsHotkeysEn._(_root);
-	late final TranslationsFileInfoEn fileInfo = TranslationsFileInfoEn._(_root);
-	late final TranslationsMediaMenuEn mediaMenu = TranslationsMediaMenuEn._(_root);
-	late final TranslationsAccessibilityEn accessibility = TranslationsAccessibilityEn._(_root);
-	late final TranslationsTooltipsEn tooltips = TranslationsTooltipsEn._(_root);
-	late final TranslationsVideoControlsEn videoControls = TranslationsVideoControlsEn._(_root);
-	late final TranslationsUserStatusEn userStatus = TranslationsUserStatusEn._(_root);
-	late final TranslationsMessagesEn messages = TranslationsMessagesEn._(_root);
-	late final TranslationsSubtitlingStylingEn subtitlingStyling = TranslationsSubtitlingStylingEn._(_root);
-	late final TranslationsMpvConfigEn mpvConfig = TranslationsMpvConfigEn._(_root);
-	late final TranslationsDialogEn dialog = TranslationsDialogEn._(_root);
-	late final TranslationsDiscoverEn discover = TranslationsDiscoverEn._(_root);
-	late final TranslationsErrorsEn errors = TranslationsErrorsEn._(_root);
-	late final TranslationsLibrariesEn libraries = TranslationsLibrariesEn._(_root);
-	late final TranslationsAboutEn about = TranslationsAboutEn._(_root);
-	late final TranslationsServerSelectionEn serverSelection = TranslationsServerSelectionEn._(_root);
-	late final TranslationsHubDetailEn hubDetail = TranslationsHubDetailEn._(_root);
-	late final TranslationsLogsEn logs = TranslationsLogsEn._(_root);
-	late final TranslationsLicensesEn licenses = TranslationsLicensesEn._(_root);
-	late final TranslationsNavigationEn navigation = TranslationsNavigationEn._(_root);
-	late final TranslationsLiveTvEn liveTv = TranslationsLiveTvEn._(_root);
-	late final TranslationsCollectionsEn collections = TranslationsCollectionsEn._(_root);
-	late final TranslationsPlaylistsEn playlists = TranslationsPlaylistsEn._(_root);
-	late final TranslationsWatchTogetherEn watchTogether = TranslationsWatchTogetherEn._(_root);
-	late final TranslationsDownloadsEn downloads = TranslationsDownloadsEn._(_root);
-	late final TranslationsShadersEn shaders = TranslationsShadersEn._(_root);
-	late final TranslationsCompanionRemoteEn companionRemote = TranslationsCompanionRemoteEn._(_root);
-	late final TranslationsVideoSettingsEn videoSettings = TranslationsVideoSettingsEn._(_root);
-	late final TranslationsExternalPlayerEn externalPlayer = TranslationsExternalPlayerEn._(_root);
-	late final TranslationsMetadataEditEn metadataEdit = TranslationsMetadataEditEn._(_root);
-	late final TranslationsServerTasksEn serverTasks = TranslationsServerTasksEn._(_root);
+	late final TranslationsAppEn app = TranslationsAppEn.internal(_root);
+	late final TranslationsAuthEn auth = TranslationsAuthEn.internal(_root);
+	late final TranslationsCommonEn common = TranslationsCommonEn.internal(_root);
+	late final TranslationsScreensEn screens = TranslationsScreensEn.internal(_root);
+	late final TranslationsUpdateEn update = TranslationsUpdateEn.internal(_root);
+	late final TranslationsSettingsEn settings = TranslationsSettingsEn.internal(_root);
+	late final TranslationsSearchEn search = TranslationsSearchEn.internal(_root);
+	late final TranslationsHotkeysEn hotkeys = TranslationsHotkeysEn.internal(_root);
+	late final TranslationsFileInfoEn fileInfo = TranslationsFileInfoEn.internal(_root);
+	late final TranslationsMediaMenuEn mediaMenu = TranslationsMediaMenuEn.internal(_root);
+	late final TranslationsAccessibilityEn accessibility = TranslationsAccessibilityEn.internal(_root);
+	late final TranslationsTooltipsEn tooltips = TranslationsTooltipsEn.internal(_root);
+	late final TranslationsVideoControlsEn videoControls = TranslationsVideoControlsEn.internal(_root);
+	late final TranslationsUserStatusEn userStatus = TranslationsUserStatusEn.internal(_root);
+	late final TranslationsMessagesEn messages = TranslationsMessagesEn.internal(_root);
+	late final TranslationsSubtitlingStylingEn subtitlingStyling = TranslationsSubtitlingStylingEn.internal(_root);
+	late final TranslationsMpvConfigEn mpvConfig = TranslationsMpvConfigEn.internal(_root);
+	late final TranslationsDialogEn dialog = TranslationsDialogEn.internal(_root);
+	late final TranslationsDiscoverEn discover = TranslationsDiscoverEn.internal(_root);
+	late final TranslationsErrorsEn errors = TranslationsErrorsEn.internal(_root);
+	late final TranslationsLibrariesEn libraries = TranslationsLibrariesEn.internal(_root);
+	late final TranslationsAboutEn about = TranslationsAboutEn.internal(_root);
+	late final TranslationsServerSelectionEn serverSelection = TranslationsServerSelectionEn.internal(_root);
+	late final TranslationsHubDetailEn hubDetail = TranslationsHubDetailEn.internal(_root);
+	late final TranslationsLogsEn logs = TranslationsLogsEn.internal(_root);
+	late final TranslationsLicensesEn licenses = TranslationsLicensesEn.internal(_root);
+	late final TranslationsNavigationEn navigation = TranslationsNavigationEn.internal(_root);
+	late final TranslationsLiveTvEn liveTv = TranslationsLiveTvEn.internal(_root);
+	late final TranslationsCollectionsEn collections = TranslationsCollectionsEn.internal(_root);
+	late final TranslationsPlaylistsEn playlists = TranslationsPlaylistsEn.internal(_root);
+	late final TranslationsWatchTogetherEn watchTogether = TranslationsWatchTogetherEn.internal(_root);
+	late final TranslationsDownloadsEn downloads = TranslationsDownloadsEn.internal(_root);
+	late final TranslationsShadersEn shaders = TranslationsShadersEn.internal(_root);
+	late final TranslationsCompanionRemoteEn companionRemote = TranslationsCompanionRemoteEn.internal(_root);
+	late final TranslationsVideoSettingsEn videoSettings = TranslationsVideoSettingsEn.internal(_root);
+	late final TranslationsExternalPlayerEn externalPlayer = TranslationsExternalPlayerEn.internal(_root);
+	late final TranslationsMetadataEditEn metadataEdit = TranslationsMetadataEditEn.internal(_root);
+	late final TranslationsServerTasksEn serverTasks = TranslationsServerTasksEn.internal(_root);
 }
 
 // Path: app
 class TranslationsAppEn {
-	TranslationsAppEn._(this._root);
+	TranslationsAppEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
 	// Translations
 
-	/// en: 'Plezy'
-	String get title => 'Plezy';
+	/// en: 'Jelzy'
+	String get title => 'Jelzy';
 }
 
 // Path: auth
 class TranslationsAuthEn {
-	TranslationsAuthEn._(this._root);
+	TranslationsAuthEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -120,11 +120,41 @@ class TranslationsAuthEn {
 
 	/// en: 'Use browser'
 	String get useBrowser => 'Use browser';
+
+	/// en: 'Server URL'
+	String get jellyfinServerUrl => 'Server URL';
+
+	/// en: 'https://your-jellyfin-server.com'
+	String get jellyfinServerUrlHint => 'https://your-jellyfin-server.com';
+
+	/// en: 'Username'
+	String get jellyfinUsername => 'Username';
+
+	/// en: 'Password'
+	String get jellyfinPassword => 'Password';
+
+	/// en: 'Sign In'
+	String get jellyfinSignIn => 'Sign In';
+
+	/// en: 'Connection timed out. Please check the server URL.'
+	String get connectionTimeout => 'Connection timed out. Please check the server URL.';
+
+	/// en: 'Server unreachable. Please check your connection.'
+	String get serverUnreachable => 'Server unreachable. Please check your connection.';
+
+	/// en: 'Invalid username or password.'
+	String get invalidPassword => 'Invalid username or password.';
+
+	/// en: 'Not authorized. Please check your credentials.'
+	String get notAuthorized => 'Not authorized. Please check your credentials.';
+
+	/// en: 'Server error. Please try again later.'
+	String get serverError => 'Server error. Please try again later.';
 }
 
 // Path: common
 class TranslationsCommonEn {
-	TranslationsCommonEn._(this._root);
+	TranslationsCommonEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -258,11 +288,35 @@ class TranslationsCommonEn {
 
 	/// en: 'Loading...'
 	String get loading => 'Loading...';
+
+	/// en: 'Go Online'
+	String get goOnline => 'Go Online';
+
+	/// en: 'Connection available'
+	String get connectionAvailable => 'Connection available';
+
+	/// en: 'Quick Connect'
+	String get quickConnect => 'Quick Connect';
+
+	/// en: 'Quick Connect authorized!'
+	String get quickConnectSuccess => 'Quick Connect authorized!';
+
+	/// en: 'Quick Connect failed. Please try again.'
+	String get quickConnectError => 'Quick Connect failed. Please try again.';
+
+	/// en: 'Enter the Quick Connect code shown on your other device.'
+	String get quickConnectDescription => 'Enter the Quick Connect code shown on your other device.';
+
+	/// en: 'Quick Connect Code'
+	String get quickConnectCode => 'Quick Connect Code';
+
+	/// en: 'Authorize'
+	String get authorize => 'Authorize';
 }
 
 // Path: screens
 class TranslationsScreensEn {
-	TranslationsScreensEn._(this._root);
+	TranslationsScreensEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -286,7 +340,7 @@ class TranslationsScreensEn {
 
 // Path: update
 class TranslationsUpdateEn {
-	TranslationsUpdateEn._(this._root);
+	TranslationsUpdateEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -312,11 +366,14 @@ class TranslationsUpdateEn {
 
 	/// en: 'Failed to check for updates'
 	String get checkFailed => 'Failed to check for updates';
+
+	/// en: 'Update in Store'
+	String get updateInStore => 'Update in Store';
 }
 
 // Path: settings
 class TranslationsSettingsEn {
-	TranslationsSettingsEn._(this._root);
+	TranslationsSettingsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -829,7 +886,7 @@ class TranslationsSettingsEn {
 
 // Path: search
 class TranslationsSearchEn {
-	TranslationsSearchEn._(this._root);
+	TranslationsSearchEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -846,11 +903,13 @@ class TranslationsSearchEn {
 
 	/// en: 'Enter a title, actor, or keyword'
 	String get enterTitleActorOrKeyword => 'Enter a title, actor, or keyword';
+
+	late final TranslationsSearchCategoriesEn categories = TranslationsSearchCategoriesEn.internal(_root);
 }
 
 // Path: hotkeys
 class TranslationsHotkeysEn {
-	TranslationsHotkeysEn._(this._root);
+	TranslationsHotkeysEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -862,12 +921,12 @@ class TranslationsHotkeysEn {
 	/// en: 'Clear shortcut'
 	String get clearShortcut => 'Clear shortcut';
 
-	late final TranslationsHotkeysActionsEn actions = TranslationsHotkeysActionsEn._(_root);
+	late final TranslationsHotkeysActionsEn actions = TranslationsHotkeysActionsEn.internal(_root);
 }
 
 // Path: fileInfo
 class TranslationsFileInfoEn {
-	TranslationsFileInfoEn._(this._root);
+	TranslationsFileInfoEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -951,7 +1010,7 @@ class TranslationsFileInfoEn {
 
 // Path: mediaMenu
 class TranslationsMediaMenuEn {
-	TranslationsMediaMenuEn._(this._root);
+	TranslationsMediaMenuEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1005,7 +1064,7 @@ class TranslationsMediaMenuEn {
 
 // Path: accessibility
 class TranslationsAccessibilityEn {
-	TranslationsAccessibilityEn._(this._root);
+	TranslationsAccessibilityEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1038,7 +1097,7 @@ class TranslationsAccessibilityEn {
 
 // Path: tooltips
 class TranslationsTooltipsEn {
-	TranslationsTooltipsEn._(this._root);
+	TranslationsTooltipsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1055,11 +1114,14 @@ class TranslationsTooltipsEn {
 
 	/// en: 'Mark as unwatched'
 	String get markAsUnwatched => 'Mark as unwatched';
+
+	/// en: 'Play from start'
+	String get playFromStart => 'Play from start';
 }
 
 // Path: videoControls
 class TranslationsVideoControlsEn {
-	TranslationsVideoControlsEn._(this._root);
+	TranslationsVideoControlsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1215,7 +1277,7 @@ class TranslationsVideoControlsEn {
 	/// en: 'Picture-in-picture failed to start'
 	String get pipFailed => 'Picture-in-picture failed to start';
 
-	late final TranslationsVideoControlsPipErrorsEn pipErrors = TranslationsVideoControlsPipErrorsEn._(_root);
+	late final TranslationsVideoControlsPipErrorsEn pipErrors = TranslationsVideoControlsPipErrorsEn.internal(_root);
 
 	/// en: 'Chapters'
 	String get chapters => 'Chapters';
@@ -1250,7 +1312,7 @@ class TranslationsVideoControlsEn {
 
 // Path: userStatus
 class TranslationsUserStatusEn {
-	TranslationsUserStatusEn._(this._root);
+	TranslationsUserStatusEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1271,7 +1333,7 @@ class TranslationsUserStatusEn {
 
 // Path: messages
 class TranslationsMessagesEn {
-	TranslationsMessagesEn._(this._root);
+	TranslationsMessagesEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1378,11 +1440,14 @@ class TranslationsMessagesEn {
 
 	/// en: 'Log ID'
 	String get logId => 'Log ID';
+
+	/// en: 'Playback quality reverted due to an error'
+	String get qualityRevertedOnError => 'Playback quality reverted due to an error';
 }
 
 // Path: subtitlingStyling
 class TranslationsSubtitlingStylingEn {
-	TranslationsSubtitlingStylingEn._(this._root);
+	TranslationsSubtitlingStylingEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1427,7 +1492,7 @@ class TranslationsSubtitlingStylingEn {
 
 // Path: mpvConfig
 class TranslationsMpvConfigEn {
-	TranslationsMpvConfigEn._(this._root);
+	TranslationsMpvConfigEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1478,7 +1543,7 @@ class TranslationsMpvConfigEn {
 
 // Path: dialog
 class TranslationsDialogEn {
-	TranslationsDialogEn._(this._root);
+	TranslationsDialogEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1490,7 +1555,7 @@ class TranslationsDialogEn {
 
 // Path: discover
 class TranslationsDiscoverEn {
-	TranslationsDiscoverEn._(this._root);
+	TranslationsDiscoverEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1537,11 +1602,32 @@ class TranslationsDiscoverEn {
 
 	/// en: '${minutes} min left'
 	String minutesLeft({required Object minutes}) => '${minutes} min left';
+
+	/// en: 'Seasons'
+	String get seasons => 'Seasons';
+
+	/// en: 'More Like This'
+	String get moreLikeThis => 'More Like This';
+
+	/// en: 'Movies & Shows'
+	String get moviesAndShows => 'Movies & Shows';
+
+	/// en: 'No items found'
+	String get noItemsFound => 'No items found';
+
+	/// en: 'Categories'
+	String get categories => 'Categories';
+
+	/// en: '${count} episode(s)'
+	String episodeCount({required Object count}) => '${count} episode(s)';
+
+	/// en: '${watched} / ${total} watched'
+	String watchedProgress({required Object watched, required Object total}) => '${watched} / ${total} watched';
 }
 
 // Path: errors
 class TranslationsErrorsEn {
-	TranslationsErrorsEn._(this._root);
+	TranslationsErrorsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1583,7 +1669,7 @@ class TranslationsErrorsEn {
 
 // Path: libraries
 class TranslationsLibrariesEn {
-	TranslationsLibrariesEn._(this._root);
+	TranslationsLibrariesEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1633,6 +1719,12 @@ class TranslationsLibrariesEn {
 
 	/// en: 'This library is empty'
 	String get thisLibraryIsEmpty => 'This library is empty';
+
+	/// en: 'No favorites yet'
+	String get noFavorites => 'No favorites yet';
+
+	/// en: 'No genres found'
+	String get noGenres => 'No genres found';
 
 	/// en: 'All'
 	String get all => 'All';
@@ -1697,13 +1789,13 @@ class TranslationsLibrariesEn {
 	/// en: 'folders'
 	String get folders => 'folders';
 
-	late final TranslationsLibrariesTabsEn tabs = TranslationsLibrariesTabsEn._(_root);
-	late final TranslationsLibrariesGroupingsEn groupings = TranslationsLibrariesGroupingsEn._(_root);
+	late final TranslationsLibrariesTabsEn tabs = TranslationsLibrariesTabsEn.internal(_root);
+	late final TranslationsLibrariesGroupingsEn groupings = TranslationsLibrariesGroupingsEn.internal(_root);
 }
 
 // Path: about
 class TranslationsAboutEn {
-	TranslationsAboutEn._(this._root);
+	TranslationsAboutEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1727,7 +1819,7 @@ class TranslationsAboutEn {
 
 // Path: serverSelection
 class TranslationsServerSelectionEn {
-	TranslationsServerSelectionEn._(this._root);
+	TranslationsServerSelectionEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1745,7 +1837,7 @@ class TranslationsServerSelectionEn {
 
 // Path: hubDetail
 class TranslationsHubDetailEn {
-	TranslationsHubDetailEn._(this._root);
+	TranslationsHubDetailEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1769,7 +1861,7 @@ class TranslationsHubDetailEn {
 
 // Path: logs
 class TranslationsLogsEn {
-	TranslationsLogsEn._(this._root);
+	TranslationsLogsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1787,7 +1879,7 @@ class TranslationsLogsEn {
 
 // Path: licenses
 class TranslationsLicensesEn {
-	TranslationsLicensesEn._(this._root);
+	TranslationsLicensesEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1808,7 +1900,7 @@ class TranslationsLicensesEn {
 
 // Path: navigation
 class TranslationsNavigationEn {
-	TranslationsNavigationEn._(this._root);
+	TranslationsNavigationEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1826,7 +1918,7 @@ class TranslationsNavigationEn {
 
 // Path: liveTv
 class TranslationsLiveTvEn {
-	TranslationsLiveTvEn._(this._root);
+	TranslationsLiveTvEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1904,7 +1996,7 @@ class TranslationsLiveTvEn {
 
 // Path: collections
 class TranslationsCollectionsEn {
-	TranslationsCollectionsEn._(this._root);
+	TranslationsCollectionsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -1979,7 +2071,7 @@ class TranslationsCollectionsEn {
 
 // Path: playlists
 class TranslationsPlaylistsEn {
-	TranslationsPlaylistsEn._(this._root);
+	TranslationsPlaylistsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2063,7 +2155,7 @@ class TranslationsPlaylistsEn {
 
 // Path: watchTogether
 class TranslationsWatchTogetherEn {
-	TranslationsWatchTogetherEn._(this._root);
+	TranslationsWatchTogetherEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2246,7 +2338,7 @@ class TranslationsWatchTogetherEn {
 
 // Path: downloads
 class TranslationsDownloadsEn {
-	TranslationsDownloadsEn._(this._root);
+	TranslationsDownloadsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2333,7 +2425,7 @@ class TranslationsDownloadsEn {
 
 // Path: shaders
 class TranslationsShadersEn {
-	TranslationsShadersEn._(this._root);
+	TranslationsShadersEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2378,7 +2470,7 @@ class TranslationsShadersEn {
 
 // Path: companionRemote
 class TranslationsCompanionRemoteEn {
-	TranslationsCompanionRemoteEn._(this._root);
+	TranslationsCompanionRemoteEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2405,14 +2497,14 @@ class TranslationsCompanionRemoteEn {
 	/// en: 'Connected to ${name}'
 	String connectedTo({required Object name}) => 'Connected to ${name}';
 
-	late final TranslationsCompanionRemoteSessionEn session = TranslationsCompanionRemoteSessionEn._(_root);
-	late final TranslationsCompanionRemotePairingEn pairing = TranslationsCompanionRemotePairingEn._(_root);
-	late final TranslationsCompanionRemoteRemoteEn remote = TranslationsCompanionRemoteRemoteEn._(_root);
+	late final TranslationsCompanionRemoteSessionEn session = TranslationsCompanionRemoteSessionEn.internal(_root);
+	late final TranslationsCompanionRemotePairingEn pairing = TranslationsCompanionRemotePairingEn.internal(_root);
+	late final TranslationsCompanionRemoteRemoteEn remote = TranslationsCompanionRemoteRemoteEn.internal(_root);
 }
 
 // Path: videoSettings
 class TranslationsVideoSettingsEn {
-	TranslationsVideoSettingsEn._(this._root);
+	TranslationsVideoSettingsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2451,7 +2543,7 @@ class TranslationsVideoSettingsEn {
 
 // Path: externalPlayer
 class TranslationsExternalPlayerEn {
-	TranslationsExternalPlayerEn._(this._root);
+	TranslationsExternalPlayerEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2505,7 +2597,7 @@ class TranslationsExternalPlayerEn {
 
 // Path: metadataEdit
 class TranslationsMetadataEditEn {
-	TranslationsMetadataEditEn._(this._root);
+	TranslationsMetadataEditEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2736,7 +2828,7 @@ class TranslationsMetadataEditEn {
 
 // Path: serverTasks
 class TranslationsServerTasksEn {
-	TranslationsServerTasksEn._(this._root);
+	TranslationsServerTasksEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2752,9 +2844,39 @@ class TranslationsServerTasksEn {
 	String get noTasks => 'No tasks running';
 }
 
+// Path: search.categories
+class TranslationsSearchCategoriesEn {
+	TranslationsSearchCategoriesEn.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Movies'
+	String get movies => 'Movies';
+
+	/// en: 'Shows'
+	String get shows => 'Shows';
+
+	/// en: 'Episodes'
+	String get episodes => 'Episodes';
+
+	/// en: 'People'
+	String get people => 'People';
+
+	/// en: 'Collections'
+	String get collections => 'Collections';
+
+	/// en: 'Programs'
+	String get programs => 'Programs';
+
+	/// en: 'Channels'
+	String get channels => 'Channels';
+}
+
 // Path: hotkeys.actions
 class TranslationsHotkeysActionsEn {
-	TranslationsHotkeysActionsEn._(this._root);
+	TranslationsHotkeysActionsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2820,7 +2942,7 @@ class TranslationsHotkeysActionsEn {
 
 // Path: videoControls.pipErrors
 class TranslationsVideoControlsPipErrorsEn {
-	TranslationsVideoControlsPipErrorsEn._(this._root);
+	TranslationsVideoControlsPipErrorsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2832,8 +2954,8 @@ class TranslationsVideoControlsPipErrorsEn {
 	/// en: 'Requires iOS 15.0 or newer'
 	String get iosVersion => 'Requires iOS 15.0 or newer';
 
-	/// en: 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Plezy > Picture-in-picture'
-	String get permissionDisabled => 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Plezy > Picture-in-picture';
+	/// en: 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Jelzy > Picture-in-picture'
+	String get permissionDisabled => 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Jelzy > Picture-in-picture';
 
 	/// en: 'Device doesn't support picture-in-picture mode'
 	String get notSupported => 'Device doesn\'t support picture-in-picture mode';
@@ -2850,7 +2972,7 @@ class TranslationsVideoControlsPipErrorsEn {
 
 // Path: libraries.tabs
 class TranslationsLibrariesTabsEn {
-	TranslationsLibrariesTabsEn._(this._root);
+	TranslationsLibrariesTabsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2867,11 +2989,26 @@ class TranslationsLibrariesTabsEn {
 
 	/// en: 'Playlists'
 	String get playlists => 'Playlists';
+
+	/// en: 'Favorites'
+	String get favorites => 'Favorites';
+
+	/// en: 'Genres'
+	String get genres => 'Genres';
+
+	/// en: 'Movies'
+	String get movies => 'Movies';
+
+	/// en: 'TV Shows'
+	String get shows => 'TV Shows';
+
+	/// en: 'Suggestions'
+	String get suggestions => 'Suggestions';
 }
 
 // Path: libraries.groupings
 class TranslationsLibrariesGroupingsEn {
-	TranslationsLibrariesGroupingsEn._(this._root);
+	TranslationsLibrariesGroupingsEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2901,7 +3038,7 @@ class TranslationsLibrariesGroupingsEn {
 
 // Path: companionRemote.session
 class TranslationsCompanionRemoteSessionEn {
-	TranslationsCompanionRemoteSessionEn._(this._root);
+	TranslationsCompanionRemoteSessionEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2946,7 +3083,7 @@ class TranslationsCompanionRemoteSessionEn {
 
 // Path: companionRemote.pairing
 class TranslationsCompanionRemotePairingEn {
-	TranslationsCompanionRemotePairingEn._(this._root);
+	TranslationsCompanionRemotePairingEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -2955,8 +3092,8 @@ class TranslationsCompanionRemotePairingEn {
 	/// en: 'Connect to Desktop'
 	String get pairWithDesktop => 'Connect to Desktop';
 
-	/// en: 'Devices on your network running Plezy with the same Plex account will appear automatically'
-	String get discoveryDescription => 'Devices on your network running Plezy with the same Plex account will appear automatically';
+	/// en: 'Devices on your network running Jelzy with the same Plex account will appear automatically'
+	String get discoveryDescription => 'Devices on your network running Jelzy with the same Plex account will appear automatically';
 
 	/// en: '192.168.1.100:48632'
 	String get hostAddressHint => '192.168.1.100:48632';
@@ -2970,8 +3107,8 @@ class TranslationsCompanionRemotePairingEn {
 	/// en: 'No devices found on your network'
 	String get noDevicesFound => 'No devices found on your network';
 
-	/// en: 'Make sure Plezy is open on your desktop and both devices are on the same WiFi network'
-	String get noDevicesHint => 'Make sure Plezy is open on your desktop and both devices are on the same WiFi network';
+	/// en: 'Make sure Jelzy is open on your desktop and both devices are on the same WiFi network'
+	String get noDevicesHint => 'Make sure Jelzy is open on your desktop and both devices are on the same WiFi network';
 
 	/// en: 'Available Devices'
 	String get availableDevices => 'Available Devices';
@@ -2991,8 +3128,8 @@ class TranslationsCompanionRemotePairingEn {
 	/// en: 'Connection timed out. Make sure both devices are on the same network.'
 	String get connectionTimedOut => 'Connection timed out. Make sure both devices are on the same network.';
 
-	/// en: 'Could not find the device. Make sure Plezy is running on the host.'
-	String get sessionNotFound => 'Could not find the device. Make sure Plezy is running on the host.';
+	/// en: 'Could not find the device. Make sure Jelzy is running on the host.'
+	String get sessionNotFound => 'Could not find the device. Make sure Jelzy is running on the host.';
 
 	/// en: 'Authentication failed. Make sure both devices are on the same Plex account.'
 	String get authFailed => 'Authentication failed. Make sure both devices are on the same Plex account.';
@@ -3003,7 +3140,7 @@ class TranslationsCompanionRemotePairingEn {
 
 // Path: companionRemote.remote
 class TranslationsCompanionRemoteRemoteEn {
-	TranslationsCompanionRemoteRemoteEn._(this._root);
+	TranslationsCompanionRemoteRemoteEn.internal(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -3105,7 +3242,7 @@ class TranslationsCompanionRemoteRemoteEn {
 extension on Translations {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
-			'app.title' => 'Plezy',
+			'app.title' => 'Jelzy',
 			'auth.signInWithPlex' => 'Sign in with Plex',
 			'auth.showQRCode' => 'Show QR Code',
 			'auth.authenticate' => 'Authenticate',
@@ -3113,6 +3250,16 @@ extension on Translations {
 			'auth.scanQRToSignIn' => 'Scan this QR code to sign in',
 			'auth.waitingForAuth' => 'Waiting for authentication...\nPlease complete sign-in in your browser.',
 			'auth.useBrowser' => 'Use browser',
+			'auth.jellyfinServerUrl' => 'Server URL',
+			'auth.jellyfinServerUrlHint' => 'https://your-jellyfin-server.com',
+			'auth.jellyfinUsername' => 'Username',
+			'auth.jellyfinPassword' => 'Password',
+			'auth.jellyfinSignIn' => 'Sign In',
+			'auth.connectionTimeout' => 'Connection timed out. Please check the server URL.',
+			'auth.serverUnreachable' => 'Server unreachable. Please check your connection.',
+			'auth.invalidPassword' => 'Invalid username or password.',
+			'auth.notAuthorized' => 'Not authorized. Please check your credentials.',
+			'auth.serverError' => 'Server error. Please try again later.',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
 			'common.close' => 'Close',
@@ -3156,6 +3303,14 @@ extension on Translations {
 			'common.connectingToServers' => 'Connecting to servers...',
 			'common.startingOfflineMode' => 'Starting offline mode...',
 			'common.loading' => 'Loading...',
+			'common.goOnline' => 'Go Online',
+			'common.connectionAvailable' => 'Connection available',
+			'common.quickConnect' => 'Quick Connect',
+			'common.quickConnectSuccess' => 'Quick Connect authorized!',
+			'common.quickConnectError' => 'Quick Connect failed. Please try again.',
+			'common.quickConnectDescription' => 'Enter the Quick Connect code shown on your other device.',
+			'common.quickConnectCode' => 'Quick Connect Code',
+			'common.authorize' => 'Authorize',
 			'screens.licenses' => 'Licenses',
 			'screens.switchProfile' => 'Switch Profile',
 			'screens.subtitleStyling' => 'Subtitle Styling',
@@ -3168,6 +3323,7 @@ extension on Translations {
 			'update.viewRelease' => 'View Release',
 			'update.latestVersion' => 'You are on the latest version',
 			'update.checkFailed' => 'Failed to check for updates',
+			'update.updateInStore' => 'Update in Store',
 			'settings.title' => 'Settings',
 			'settings.language' => 'Language',
 			'settings.theme' => 'Theme',
@@ -3340,6 +3496,13 @@ extension on Translations {
 			'search.tryDifferentTerm' => 'Try a different search term',
 			'search.searchYourMedia' => 'Search your media',
 			'search.enterTitleActorOrKeyword' => 'Enter a title, actor, or keyword',
+			'search.categories.movies' => 'Movies',
+			'search.categories.shows' => 'Shows',
+			'search.categories.episodes' => 'Episodes',
+			'search.categories.people' => 'People',
+			'search.categories.collections' => 'Collections',
+			'search.categories.programs' => 'Programs',
+			'search.categories.channels' => 'Channels',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Set Shortcut for ${actionName}',
 			'hotkeys.clearShortcut' => 'Clear shortcut',
 			'hotkeys.actions.playPause' => 'Play/Pause',
@@ -3413,6 +3576,7 @@ extension on Translations {
 			'tooltips.playTrailer' => 'Play trailer',
 			'tooltips.markAsWatched' => 'Mark as watched',
 			'tooltips.markAsUnwatched' => 'Mark as unwatched',
+			'tooltips.playFromStart' => 'Play from start',
 			'videoControls.audioLabel' => 'Audio',
 			'videoControls.subtitlesLabel' => 'Subtitles',
 			'videoControls.resetToZero' => 'Reset to 0ms',
@@ -3465,7 +3629,7 @@ extension on Translations {
 			'videoControls.pipFailed' => 'Picture-in-picture failed to start',
 			'videoControls.pipErrors.androidVersion' => 'Requires Android 8.0 or newer',
 			'videoControls.pipErrors.iosVersion' => 'Requires iOS 15.0 or newer',
-			'videoControls.pipErrors.permissionDisabled' => 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Plezy > Picture-in-picture',
+			'videoControls.pipErrors.permissionDisabled' => 'Picture-in-picture permission is disabled. Enable it in Settings > Apps > Jelzy > Picture-in-picture',
 			'videoControls.pipErrors.notSupported' => 'Device doesn\'t support picture-in-picture mode',
 			'videoControls.pipErrors.voSwitchFailed' => 'Failed to switch video output for picture-in-picture',
 			'videoControls.pipErrors.failed' => 'Picture-in-picture failed to start',
@@ -3518,6 +3682,7 @@ extension on Translations {
 			'messages.logsUploaded' => 'Logs uploaded',
 			'messages.logsUploadFailed' => 'Failed to upload logs',
 			'messages.logId' => 'Log ID',
+			'messages.qualityRevertedOnError' => 'Playback quality reverted due to an error',
 			'subtitlingStyling.stylingOptions' => 'Styling Options',
 			'subtitlingStyling.text' => 'Text',
 			'subtitlingStyling.border' => 'Border',
@@ -3559,6 +3724,13 @@ extension on Translations {
 			'discover.movie' => 'Movie',
 			'discover.tvShow' => 'TV Show',
 			'discover.minutesLeft' => ({required Object minutes}) => '${minutes} min left',
+			'discover.seasons' => 'Seasons',
+			'discover.moreLikeThis' => 'More Like This',
+			'discover.moviesAndShows' => 'Movies & Shows',
+			'discover.noItemsFound' => 'No items found',
+			'discover.categories' => 'Categories',
+			'discover.episodeCount' => ({required Object count}) => '${count} episode(s)',
+			'discover.watchedProgress' => ({required Object watched, required Object total}) => '${watched} / ${total} watched',
 			'errors.searchFailed' => ({required Object error}) => 'Search failed: ${error}',
 			'errors.connectionTimeout' => ({required Object context}) => 'Connection timeout while loading ${context}',
 			'errors.connectionFailed' => 'Unable to connect to Plex server',
@@ -3582,9 +3754,13 @@ extension on Translations {
 			'libraries.failedToEmptyTrash' => ({required Object error}) => 'Failed to empty trash: ${error}',
 			'libraries.analyzing' => ({required Object title}) => 'Analyzing "${title}"...',
 			'libraries.analysisStarted' => ({required Object title}) => 'Analysis started for "${title}"',
+			_ => null,
+		} ?? switch (path) {
 			'libraries.failedToAnalyze' => ({required Object error}) => 'Failed to analyze library: ${error}',
 			'libraries.noLibrariesFound' => 'No libraries found',
 			'libraries.thisLibraryIsEmpty' => 'This library is empty',
+			'libraries.noFavorites' => 'No favorites yet',
+			'libraries.noGenres' => 'No genres found',
 			'libraries.all' => 'All',
 			'libraries.clearAll' => 'Clear All',
 			'libraries.scanLibraryConfirm' => ({required Object title}) => 'Are you sure you want to scan "${title}"?',
@@ -3610,6 +3786,11 @@ extension on Translations {
 			'libraries.tabs.browse' => 'Browse',
 			'libraries.tabs.collections' => 'Collections',
 			'libraries.tabs.playlists' => 'Playlists',
+			'libraries.tabs.favorites' => 'Favorites',
+			'libraries.tabs.genres' => 'Genres',
+			'libraries.tabs.movies' => 'Movies',
+			'libraries.tabs.shows' => 'TV Shows',
+			'libraries.tabs.suggestions' => 'Suggestions',
 			'libraries.groupings.title' => 'Grouping',
 			'libraries.groupings.all' => 'All',
 			'libraries.groupings.movies' => 'Movies',
@@ -3617,8 +3798,6 @@ extension on Translations {
 			'libraries.groupings.seasons' => 'Seasons',
 			'libraries.groupings.episodes' => 'Episodes',
 			'libraries.groupings.folders' => 'Folders',
-			_ => null,
-		} ?? switch (path) {
 			'about.title' => 'About',
 			'about.openSourceLicenses' => 'Open Source Licenses',
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
@@ -3828,19 +4007,19 @@ extension on Translations {
 			'companionRemote.session.stopServer' => 'Stop Server',
 			'companionRemote.session.minimize' => 'Minimize',
 			'companionRemote.pairing.pairWithDesktop' => 'Connect to Desktop',
-			'companionRemote.pairing.discoveryDescription' => 'Devices on your network running Plezy with the same Plex account will appear automatically',
+			'companionRemote.pairing.discoveryDescription' => 'Devices on your network running Jelzy with the same Plex account will appear automatically',
 			'companionRemote.pairing.hostAddressHint' => '192.168.1.100:48632',
 			'companionRemote.pairing.connecting' => 'Connecting...',
 			'companionRemote.pairing.searchingForDevices' => 'Looking for devices...',
 			'companionRemote.pairing.noDevicesFound' => 'No devices found on your network',
-			'companionRemote.pairing.noDevicesHint' => 'Make sure Plezy is open on your desktop and both devices are on the same WiFi network',
+			'companionRemote.pairing.noDevicesHint' => 'Make sure Jelzy is open on your desktop and both devices are on the same WiFi network',
 			'companionRemote.pairing.availableDevices' => 'Available Devices',
 			'companionRemote.pairing.manualConnection' => 'Manual Connection',
 			'companionRemote.pairing.cryptoInitFailed' => 'Could not initialize secure connection. Make sure you are signed in to a Plex account.',
 			'companionRemote.pairing.validationHostRequired' => 'Please enter host address',
 			'companionRemote.pairing.validationHostFormat' => 'Format must be IP:port (e.g., 192.168.1.100:48632)',
 			'companionRemote.pairing.connectionTimedOut' => 'Connection timed out. Make sure both devices are on the same network.',
-			'companionRemote.pairing.sessionNotFound' => 'Could not find the device. Make sure Plezy is running on the host.',
+			'companionRemote.pairing.sessionNotFound' => 'Could not find the device. Make sure Jelzy is running on the host.',
 			'companionRemote.pairing.authFailed' => 'Authentication failed. Make sure both devices are on the same Plex account.',
 			'companionRemote.pairing.failedToConnect' => ({required Object error}) => 'Failed to connect: ${error}',
 			'companionRemote.remote.disconnectConfirm' => 'Do you want to disconnect from the remote session?',

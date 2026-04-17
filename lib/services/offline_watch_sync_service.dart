@@ -5,10 +5,10 @@ import 'package:flutter/foundation.dart';
 import '../database/app_database.dart';
 import '../providers/offline_mode_provider.dart';
 import '../utils/app_logger.dart';
-import '../utils/plex_cache_parser.dart';
+import '../utils/cache_parser.dart';
 import 'multi_server_manager.dart';
-import 'plex_api_cache.dart';
-import 'plex_client.dart';
+import 'api_cache.dart';
+import 'jellyfin_client.dart';
 import 'settings_service.dart';
 
 /// Service for managing offline watch progress and syncing to Plex servers.
@@ -145,7 +145,7 @@ class OfflineWatchSyncService extends ChangeNotifier {
 
   /// Called when servers connect on app startup.
   ///
-  /// Triggers the initial sync now that PlexClients are available.
+  /// Triggers the initial sync now that JellyfinClients are available.
   /// Only runs once per app session.
   void onServersConnected() {
     if (_isShutDown) return;
@@ -377,8 +377,8 @@ class OfflineWatchSyncService extends ChangeNotifier {
   /// Execute a callback with an online client for the given server.
   ///
   /// Returns null if no client available or server is offline.
-  /// The callback receives the PlexClient and should return the result.
-  Future<T?> _withOnlineClient<T>(String serverId, Future<T> Function(PlexClient client) callback) async {
+  /// The callback receives the JellyfinClient and should return the result.
+  Future<T?> _withOnlineClient<T>(String serverId, Future<T> Function(JellyfinClient client) callback) async {
     final client = _serverManager.getClient(serverId);
     if (client == null) {
       appLogger.d('No client for server $serverId, skipping');
@@ -394,7 +394,7 @@ class OfflineWatchSyncService extends ChangeNotifier {
   }
 
   /// Sync a single action to the server.
-  Future<void> _syncAction(PlexClient client, OfflineWatchProgressItem action) async {
+  Future<void> _syncAction(JellyfinClient client, OfflineWatchProgressItem action) async {
     switch (action.actionType) {
       case 'watched':
         await client.markAsWatched(action.ratingKey);
@@ -427,7 +427,7 @@ class OfflineWatchSyncService extends ChangeNotifier {
   ///
   /// Returns the number of episodes synced, or -1 on failure.
   Future<int> _syncSeasonEpisodes(
-    PlexClient client,
+    JellyfinClient client,
     String serverId,
     String seasonRatingKey,
     Set<String> downloadedEpisodeKeys,
@@ -440,8 +440,8 @@ class OfflineWatchSyncService extends ChangeNotifier {
         if (!downloadedEpisodeKeys.contains(episode.ratingKey)) continue;
 
         final cacheKey = '/library/metadata/${episode.ratingKey}';
-        final existing = await PlexApiCache.instance.get(serverId, cacheKey);
-        final existingMeta = PlexCacheParser.extractFirstMetadata(existing);
+        final existing = await ApiCache.instance.get(serverId, cacheKey);
+        final existingMeta = CacheParser.extractFirstMetadata(existing);
 
         if (existingMeta != null) {
           // Only update watch-state fields — preserves Chapter/Marker/Media/etc.
@@ -449,7 +449,7 @@ class OfflineWatchSyncService extends ChangeNotifier {
           existingMeta['viewOffset'] = episode.viewOffset;
           existingMeta['lastViewedAt'] = episode.lastViewedAt;
           existingMeta['viewedLeafCount'] = episode.viewedLeafCount;
-          await PlexApiCache.instance.put(serverId, cacheKey, {
+          await ApiCache.instance.put(serverId, cacheKey, {
             'MediaContainer': {'Metadata': [existingMeta]},
           });
 
@@ -461,7 +461,7 @@ class OfflineWatchSyncService extends ChangeNotifier {
           }
         } else {
           // No existing entry — write what we have
-          await PlexApiCache.instance.put(serverId, cacheKey, {
+          await ApiCache.instance.put(serverId, cacheKey, {
             'MediaContainer': {'Metadata': [episode.toJson()]},
           });
         }
@@ -564,6 +564,20 @@ class OfflineWatchSyncService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       appLogger.w('Error syncing watch states from server: $e');
+    }
+  }
+
+  /// Get the locally stored resume position for a media item identified by [globalKey].
+  /// Returns null if no offline progress is stored.
+  Future<int?> getLocalResumePosition(String globalKey) async {
+    try {
+      final items = await _database.getPendingWatchActions();
+      // Find the most recent progress entry for this globalKey
+      final progressItems = items.where((i) => i.globalKey == globalKey && i.actionType == 'progress').toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      return progressItems.firstOrNull?.viewOffset;
+    } catch (e) {
+      return null;
     }
   }
 

@@ -27,6 +27,9 @@ class FocusableTabChip extends StatefulWidget {
   /// Should switch to the next tab.
   final VoidCallback? onNavigateRight;
 
+  /// Called when the user presses UP from this chip.
+  final VoidCallback? onNavigateUp;
+
   /// Called when the user presses DOWN from this chip.
   final VoidCallback? onNavigateDown;
 
@@ -44,6 +47,7 @@ class FocusableTabChip extends StatefulWidget {
     this.focusNode,
     this.onNavigateLeft,
     this.onNavigateRight,
+    this.onNavigateUp,
     this.onNavigateDown,
     this.onBack,
     this.onLongPress,
@@ -87,6 +91,7 @@ class _FocusableTabChipState extends State<FocusableTabChip> with FocusableChipS
         onLongPress: widget.onLongPress,
         onNavigateLeft: widget.onNavigateLeft,
         onNavigateRight: widget.onNavigateRight,
+        onNavigateUp: widget.onNavigateUp,
         onNavigateDown: widget.onNavigateDown,
         onBack: widget.onBack,
       ),

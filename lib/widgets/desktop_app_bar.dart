@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../utils/desktop_window_padding.dart';
 import '../services/fullscreen_state_manager.dart';
@@ -214,6 +214,7 @@ class DesktopTopBar extends StatelessWidget {
 /// using [DesktopTopBar] directly for a more unified approach.
 class CustomAppBar extends StatelessWidget {
   final Widget? title;
+  final Widget? leading;
   final List<Widget>? actions;
   final VoidCallback? onBackPressed;
   final double? elevation;
@@ -231,6 +232,7 @@ class CustomAppBar extends StatelessWidget {
   const CustomAppBar({
     super.key,
     this.title,
+    this.leading,
     this.actions,
     this.onBackPressed,
     this.elevation,
@@ -263,6 +265,7 @@ class CustomAppBar extends StatelessWidget {
         flexibleSpace: flexibleSpace,
         bottom: bottom,
       ),
+      leading: leading,
       onBackPressed: onBackPressed,
       automaticallyImplyLeading: automaticallyImplyLeading,
     );

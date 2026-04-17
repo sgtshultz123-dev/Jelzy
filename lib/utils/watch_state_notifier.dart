@@ -1,4 +1,4 @@
-import '../models/plex_metadata.dart';
+import '../models/media_metadata.dart';
 import 'app_logger.dart';
 import 'base_notifier.dart';
 import 'global_key_utils.dart';
@@ -12,6 +12,9 @@ class WatchStateEvent with HierarchicalEventMixin {
   /// The item that changed
   @override
   final String ratingKey;
+
+  /// Jellyfin-naming alias for ratingKey
+  String get itemId => ratingKey;
 
   /// Composite key: serverId:ratingKey
   @override
@@ -79,10 +82,10 @@ class WatchStateNotifier extends BaseNotifier<WatchStateEvent> {
   }
 
   /// Helper to emit a watched/unwatched event from metadata
-  void notifyWatched({required PlexMetadata metadata, bool isNowWatched = true}) {
+  void notifyWatched({required MediaMetadata metadata, bool isNowWatched = true}) {
     notify(
       WatchStateEvent(
-        ratingKey: metadata.ratingKey,
+        ratingKey: metadata.itemId,
         serverId: metadata.serverId ?? '',
         changeType: isNowWatched ? WatchStateChangeType.watched : WatchStateChangeType.unwatched,
         parentChain: _buildParentChain(metadata),
@@ -93,13 +96,13 @@ class WatchStateNotifier extends BaseNotifier<WatchStateEvent> {
   }
 
   /// Helper to emit a progress update event
-  void notifyProgress({required PlexMetadata metadata, required int viewOffset, required int duration}) {
+  void notifyProgress({required MediaMetadata metadata, required int viewOffset, required int duration}) {
     const threshold = 0.9;
     final isNowWatched = duration > 0 && (viewOffset / duration) >= threshold;
 
     notify(
       WatchStateEvent(
-        ratingKey: metadata.ratingKey,
+        ratingKey: metadata.itemId,
         serverId: metadata.serverId ?? '',
         changeType: WatchStateChangeType.progressUpdate,
         parentChain: _buildParentChain(metadata),
@@ -111,13 +114,13 @@ class WatchStateNotifier extends BaseNotifier<WatchStateEvent> {
   }
 
   /// Build parent chain from metadata's parent keys
-  List<String> _buildParentChain(PlexMetadata metadata) {
+  List<String> _buildParentChain(MediaMetadata metadata) {
     final chain = <String>[];
     if (metadata.parentRatingKey != null) {
       chain.add(metadata.parentRatingKey!);
     }
-    if (metadata.grandparentRatingKey != null) {
-      chain.add(metadata.grandparentRatingKey!);
+    if (metadata.seriesId != null) {
+      chain.add(metadata.seriesId!);
     }
     return chain;
   }

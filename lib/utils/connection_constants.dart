@@ -22,4 +22,7 @@ class ConnectionTimeouts {
 
   /// HTTP receive timeout for plex.tv / clients.plex.tv API responses.
   static const plexTvReceive = Duration(seconds: 10);
+
+  /// Timeout for connecting to all servers at app start.
+  static const connectAll = Duration(seconds: 15);
 }

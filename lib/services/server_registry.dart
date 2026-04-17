@@ -1,29 +1,20 @@
-import 'dart:convert';
-
+import '../models/registered_server.dart';
 import '../utils/app_logger.dart';
-import '../utils/plex_http_exception.dart';
-import 'plex_auth_service.dart';
 import 'storage_service.dart';
 
-enum ServerRefreshResult { success, networkError, authError, noToken }
-
-/// Centralized server configuration registry
-/// Manages which servers are available and their configurations
+/// Centralized server configuration registry.
+/// Manages which Jellyfin servers are available and their configurations.
 class ServerRegistry {
   final StorageService _storage;
 
   ServerRegistry(this._storage);
 
   /// Get all registered servers
-  Future<List<PlexServer>> getServers() async {
+  Future<List<RegisteredServer>> getServers() async {
     try {
       final serversJson = _storage.getServersListJson();
-      if (serversJson == null || serversJson.isEmpty) {
-        return [];
-      }
-
-      final List<dynamic> serversList = jsonDecode(serversJson);
-      return serversList.map((json) => PlexServer.fromJson(json as Map<String, dynamic>)).toList();
+      final list = RegisteredServer.listFromJsonString(serversJson);
+      return list;
     } catch (e, stackTrace) {
       appLogger.e('Failed to load servers from storage', error: e, stackTrace: stackTrace);
       return [];
@@ -31,11 +22,11 @@ class ServerRegistry {
   }
 
   /// Save all servers to storage
-  Future<void> saveServers(List<PlexServer> servers) async {
+  Future<void> saveServers(List<RegisteredServer> servers) async {
     try {
-      final serversJson = jsonEncode(servers.map((s) => s.toJson()).toList());
+      final serversJson = RegisteredServer.listToJsonString(servers);
       await _storage.saveServersListJson(serversJson);
-      appLogger.d('Saved ${servers.length} servers to storage');
+      appLogger.d('Saved ${servers.length} servers');
     } catch (e, stackTrace) {
       appLogger.e('Failed to save servers to storage', error: e, stackTrace: stackTrace);
       rethrow;
@@ -43,37 +34,113 @@ class ServerRegistry {
   }
 
   /// Get a specific server by ID
-  Future<PlexServer?> getServer(String serverId) async {
+  Future<RegisteredServer?> getServer(String serverId) async {
     final servers = await getServers();
     try {
-      return servers.firstWhere((s) => s.clientIdentifier == serverId);
+      return servers.firstWhere((s) => s.serverId == serverId);
     } catch (e) {
       return null;
     }
   }
 
-  /// Add or update a single server
-  Future<void> upsertServer(PlexServer server) async {
+  /// Add a Jellyfin server (e.g. after sign-in). Replaces existing if same serverId.
+  /// For one-server multi-user: if a server already exists, adds or updates this user and sets as current.
+  Future<void> addOrReplaceJellyfinServer(JellyfinServerData data) async {
     final servers = await getServers();
-    final index = servers.indexWhere((s) => s.clientIdentifier == server.clientIdentifier);
-
+    final index = servers.indexWhere((s) => s.serverId == data.serverId);
     if (index >= 0) {
-      servers[index] = server;
-      appLogger.d('Updated server: ${server.name}');
+      servers[index] = RegisteredServer.jellyfin(data);
+      appLogger.d('Updated Jellyfin server: ${data.serverName}');
     } else {
-      servers.add(server);
-      appLogger.d('Added new server: ${server.name}');
+      servers.add(RegisteredServer.jellyfin(data));
+      appLogger.d('Added Jellyfin server: ${data.serverName}');
     }
-
     await saveServers(servers);
+  }
+
+  /// Add or update a user on the existing server and set as current user.
+  /// If no server exists, returns false (caller should use addOrReplaceJellyfinServer with full data).
+  Future<bool> addOrUpdateJellyfinUserAndSetCurrent(JellyfinStoredUser user) async {
+    final servers = await getServers();
+    if (servers.isEmpty) return false;
+    final index = 0;
+    final reg = servers[index];
+    final data = reg.jellyfinData;
+    final existing = data.users.where((u) => u.userId == user.userId).toList();
+    final newUsers = existing.isEmpty
+        ? [...data.users, user]
+        : data.users.map((u) => u.userId == user.userId ? user : u).toList();
+    final newData = JellyfinServerData(
+      baseUrl: data.baseUrl,
+      serverId: data.serverId,
+      serverName: data.serverName,
+      users: newUsers,
+      currentUserId: user.userId,
+    );
+    servers[index] = RegisteredServer.jellyfin(newData);
+    await saveServers(servers);
+    appLogger.d('Added/updated Jellyfin user: ${user.userName}');
+    return true;
+  }
+
+  /// Sets [primaryImageTag] on the stored user [userId] when missing or different (from Jellyfin `/Users/{id}`).
+  /// Returns `true` if disk was updated.
+  Future<bool> mergePrimaryImageTagForUser({required String userId, required String primaryImageTag}) async {
+    if (primaryImageTag.isEmpty) return false;
+    final servers = await getServers();
+    if (servers.isEmpty) return false;
+    const index = 0;
+    final data = servers[index].jellyfinData;
+    var changed = false;
+    final newUsers = data.users.map((u) {
+      if (u.userId != userId) return u;
+      if (u.primaryImageTag == primaryImageTag) return u;
+      changed = true;
+      return JellyfinStoredUser(
+        userId: u.userId,
+        accessToken: u.accessToken,
+        userName: u.userName,
+        primaryImageTag: primaryImageTag,
+      );
+    }).toList();
+    if (!changed) return false;
+    servers[index] = RegisteredServer.jellyfin(
+      JellyfinServerData(
+        baseUrl: data.baseUrl,
+        serverId: data.serverId,
+        serverName: data.serverName,
+        users: newUsers,
+        currentUserId: data.currentUserId,
+      ),
+    );
+    await saveServers(servers);
+    return true;
+  }
+
+  /// Set the current user (for switch profile). [userId] must be in the server's users list.
+  Future<bool> setCurrentJellyfinUser(String userId) async {
+    final servers = await getServers();
+    if (servers.isEmpty) return false;
+    final index = 0;
+    final data = servers[index].jellyfinData;
+    if (!data.users.any((u) => u.userId == userId)) return false;
+    final newData = JellyfinServerData(
+      baseUrl: data.baseUrl,
+      serverId: data.serverId,
+      serverName: data.serverName,
+      users: data.users,
+      currentUserId: userId,
+    );
+    servers[index] = RegisteredServer.jellyfin(newData);
+    await saveServers(servers);
+    return true;
   }
 
   /// Remove a server
   Future<void> removeServer(String serverId) async {
     final servers = await getServers();
-    servers.removeWhere((s) => s.clientIdentifier == serverId);
+    servers.removeWhere((s) => s.serverId == serverId);
     await saveServers(servers);
-
     appLogger.i('Removed server: $serverId');
   }
 
@@ -81,59 +148,5 @@ class ServerRegistry {
   Future<void> clearAllServers() async {
     await _storage.clearServersList();
     appLogger.i('Cleared all servers from registry');
-  }
-
-  /// Refresh servers from Plex API and update storage.
-  /// This updates connection info (IPs, ports) that may have changed.
-  /// Returns [ServerRefreshResult.authError] when the stored token is rejected
-  /// (e.g. after removing a Plex profile PIN), so the caller can redirect to re-auth.
-  Future<ServerRefreshResult> refreshServersFromApi() async {
-    final token = _storage.getPlexToken();
-    if (token == null || token.isEmpty) {
-      appLogger.d('No Plex token available, skipping server refresh');
-      return ServerRefreshResult.noToken;
-    }
-
-    try {
-      appLogger.d('Refreshing servers from Plex API...');
-      final authService = await PlexAuthService.create();
-      final freshServers = await authService.fetchServers(token);
-
-      if (freshServers.isEmpty) {
-        appLogger.w('API returned no servers, keeping existing data');
-        return ServerRefreshResult.success;
-      }
-
-      // Get existing servers to preserve any local-only data
-      final existingServers = await getServers();
-      final existingIds = existingServers.map((s) => s.clientIdentifier).toSet();
-
-      // Update existing servers with fresh connection info, add new ones
-      final updatedServers = <PlexServer>[];
-      for (final fresh in freshServers) {
-        if (existingIds.contains(fresh.clientIdentifier)) {
-          // Server exists - use fresh data (updated IPs, connections)
-          updatedServers.add(fresh);
-        } else {
-          // New server - add it
-          updatedServers.add(fresh);
-          appLogger.i('Discovered new server: ${fresh.name}');
-        }
-      }
-
-      await saveServers(updatedServers);
-      appLogger.i('Refreshed ${updatedServers.length} servers from API');
-      return ServerRefreshResult.success;
-    } on PlexHttpException catch (e) {
-      if (e.statusCode == 401) {
-        appLogger.w('Plex token is invalid (401), re-authentication required');
-        return ServerRefreshResult.authError;
-      }
-      appLogger.w('Failed to refresh servers from API, using cached data', error: e);
-      return ServerRefreshResult.networkError;
-    } catch (e, stackTrace) {
-      appLogger.w('Failed to refresh servers from API, using cached data', error: e, stackTrace: stackTrace);
-      return ServerRefreshResult.networkError;
-    }
   }
 }

@@ -1,17 +1,17 @@
+import '../models/registered_server.dart';
 import '../providers/libraries_provider.dart';
 import '../providers/multi_server_provider.dart';
 import '../utils/app_logger.dart';
 import '../utils/connection_constants.dart';
+import 'jellyfin_client.dart';
 import 'offline_watch_sync_service.dart';
-import 'plex_auth_service.dart';
-import 'plex_client.dart';
 
 /// Result of a connection attempt to one or more servers.
 class ConnectionResult {
   final int connectedCount;
 
   /// The first client that connected successfully, or null if none did.
-  final PlexClient? firstClient;
+  final JellyfinClient? firstClient;
 
   ConnectionResult({required this.connectedCount, this.firstClient});
 
@@ -31,29 +31,24 @@ class ServerConnectionOrchestrator {
   /// Throws only on unexpected errors; individual server failures are
   /// handled internally (logged + counted).
   static Future<ConnectionResult> connectAndInitialize({
-    required List<PlexServer> servers,
+    required List<RegisteredServer> servers,
     required MultiServerProvider multiServerProvider,
     required LibrariesProvider librariesProvider,
     required OfflineWatchSyncService syncService,
     String? clientIdentifier,
-    Duration timeout = ConnectionTimeouts.perServerConnect,
-    void Function(String serverId, bool success)? onServerStatus,
+    String? deviceId,
+    Duration timeout = ConnectionTimeouts.connectAll,
   }) async {
     appLogger.i('Connecting to ${servers.length} servers...');
 
     final connectedCount = await multiServerProvider.serverManager.connectToAllServers(
       servers,
       clientIdentifier: clientIdentifier,
+      deviceId: deviceId,
       timeout: timeout,
-      onServerConnected: onServerStatus != null
-          ? (serverId, _) => onServerStatus(serverId, true)
-          : null,
-      onServerFailed: onServerStatus != null
-          ? (serverId, _) => onServerStatus(serverId, false)
-          : null,
     );
 
-    PlexClient? firstClient;
+    JellyfinClient? firstClient;
 
     if (connectedCount > 0) {
       appLogger.i('Successfully connected to $connectedCount servers');
@@ -63,7 +58,7 @@ class ServerConnectionOrchestrator {
       try {
         await librariesProvider.loadLibraries();
       } catch (e) {
-        appLogger.w('Failed to load libraries during connection', error: e);
+        appLogger.w('loadLibraries failed', error: e);
         // Continue anyway — MainScreen will retry
       }
 
@@ -75,8 +70,6 @@ class ServerConnectionOrchestrator {
       if (onlineClients.isNotEmpty) {
         firstClient = onlineClients.values.first;
       }
-    } else {
-      appLogger.w('Failed to connect to any servers');
     }
 
     return ConnectionResult(connectedCount: connectedCount, firstClient: firstClient);

@@ -1,0 +1,362 @@
+import 'package:flutter/services.dart';
+
+import '../../utils/app_logger.dart';
+import '../../utils/error_message_utils.dart';
+import '../models.dart';
+import 'player_base.dart';
+
+/// Android implementation of [Player] using ExoPlayer.
+/// Provides hardware-accelerated playback with ASS subtitle support via libass-android.
+class PlayerAndroid extends PlayerBase {
+  static const _methodChannel = MethodChannel('com.jelzy/exo_player');
+
+  /// Get approximate heap size limit in MB for OOM prevention (Android only).
+  static Future<int> getHeapSize() async {
+    try {
+      final r = await _methodChannel.invokeMethod<int>('getHeapSize');
+      return r ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+  static const _eventChannel = EventChannel('com.jelzy/exo_player/events');
+
+  int? _bufferSizeBytes;
+
+  @override
+  MethodChannel get methodChannel => _methodChannel;
+
+  @override
+  EventChannel get eventChannel => _eventChannel;
+
+  @override
+  String get logPrefix => 'ExoPlayer';
+
+  @override
+  String get playerType => 'exoplayer';
+
+  // ============================================
+  // Platform-Specific Event Handling
+  // ============================================
+
+  @override
+  void handlePlayerEvent(String name, Map? data) {
+    // Handle Android-specific events
+    if (name == 'backend-switched') {
+      // Native player switched from ExoPlayer to MPV due to unsupported format
+      backendSwitchedController.add(null);
+      return;
+    }
+
+    // Delegate to base class for common events
+    super.handlePlayerEvent(name, data);
+  }
+
+  // ============================================
+  // Initialization
+  // ============================================
+
+  Future<void> _ensureInitialized() async {
+    if (initialized) return;
+
+    try {
+      final result = await methodChannel.invokeMethod<bool>('initialize', {
+        'bufferSizeBytes': _bufferSizeBytes,
+      });
+      initialized = result == true;
+      if (!initialized) {
+        throw Exception('Failed to initialize ExoPlayer');
+      }
+
+      // Register property observers so the plugin knows propId mappings
+      await observeProperty('time-pos', 'double');
+      await observeProperty('duration', 'double');
+      await observeProperty('pause', 'flag');
+      await observeProperty('paused-for-cache', 'flag');
+      await observeProperty('track-list', 'string');
+      await observeProperty('eof-reached', 'flag');
+      await observeProperty('volume', 'double');
+      await observeProperty('speed', 'double');
+      await observeProperty('aid', 'string');
+      await observeProperty('sid', 'string');
+      await observeProperty('demuxer-cache-time', 'double');
+    } catch (e, st) {
+      appLogger.e('MPV initialization failed', error: e, stackTrace: st);
+      errorController.add('Initialization failed: ${safeUserMessage(e)}');
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // Playback Control
+  // ============================================
+
+  @override
+  Future<void> open(Media media, {bool play = true, bool isLive = false, List<SubtitleTrack>? externalSubtitles}) async {
+    if (disposed) return;
+    await _ensureInitialized();
+
+    // Show the video layer
+    await setVisible(true);
+
+    await invoke('open', {
+      'uri': media.uri,
+      'headers': media.headers,
+      'startPositionMs': media.start?.inMilliseconds ?? 0,
+      'autoPlay': play,
+      'isLive': isLive,
+    });
+
+    // Load external subtitle tracks after opening
+    if (externalSubtitles != null) {
+      for (final sub in externalSubtitles) {
+        if (sub.uri != null) {
+          await addSubtitleTrack(uri: sub.uri!, title: sub.title, language: sub.language);
+        }
+      }
+    }
+  }
+
+  @override
+  Future<void> play() async {
+    await invoke('play');
+  }
+
+  @override
+  Future<void> pause() async {
+    await invoke('pause');
+  }
+
+  @override
+  Future<void> stop() async {
+    await invoke('stop');
+    await setVisible(false);
+  }
+
+  @override
+  Future<void> seek(Duration position) async {
+    await invoke('seek', {'positionMs': position.inMilliseconds});
+  }
+
+  // ============================================
+  // Track Selection
+  // ============================================
+
+  @override
+  Future<void> selectAudioTrack(AudioTrack track) async {
+    await invoke('selectAudioTrack', {'trackId': track.id});
+  }
+
+  @override
+  Future<void> selectSubtitleTrack(SubtitleTrack track) async {
+    await invoke('selectSubtitleTrack', {'trackId': track.id});
+  }
+
+  @override
+  Future<void> addSubtitleTrack({required String uri, String? title, String? language, bool select = false}) async {
+    await invoke('addSubtitleTrack', {
+      'uri': uri,
+      'title': title,
+      'language': language,
+      'select': select,
+    });
+  }
+
+  // ============================================
+  // Volume and Rate
+  // ============================================
+
+  @override
+  Future<void> setVolume(double volume) async {
+    await invoke('setVolume', {'volume': volume});
+  }
+
+  @override
+  Future<void> setRate(double rate) async {
+    await invoke('setRate', {'rate': rate});
+  }
+
+  // ============================================
+  // MPV Properties (Compatibility Layer)
+  // ============================================
+
+  @override
+  Future<void> setProperty(String name, String value) async {
+    if (disposed) return;
+    // ExoPlayer doesn't use MPV properties, but we handle common ones
+    switch (name) {
+      case 'pause':
+        if (value == 'yes') {
+          await pause();
+        } else {
+          await play();
+        }
+        break;
+      case 'volume':
+        await setVolume(double.tryParse(value) ?? 100);
+        break;
+      case 'speed':
+        await setRate(double.tryParse(value) ?? 1.0);
+        break;
+      case 'demuxer-max-bytes':
+        _bufferSizeBytes = int.tryParse(value);
+        break;
+      case 'demuxer-max-back-bytes':
+        // No-op for ExoPlayer (buffer set in initialize)
+        break;
+      default:
+        // Forward unknown properties to Kotlin for MPV fallback
+        await invoke('setMpvProperty', {'name': name, 'value': value});
+    }
+  }
+
+  @override
+  Future<String?> getProperty(String name) async {
+    if (disposed) return null;
+    // Return state-based values for common properties
+    switch (name) {
+      case 'pause':
+        return state.playing ? 'no' : 'yes';
+      case 'volume':
+        return state.volume.toString();
+      case 'speed':
+        return state.rate.toString();
+      case 'time-pos':
+        return (state.position.inMilliseconds / 1000.0).toString();
+      case 'duration':
+        return (state.duration.inMilliseconds / 1000.0).toString();
+      // Video dimensions - query from ExoPlayer stats
+      case 'width':
+      case 'dwidth':
+        final stats = await getStats();
+        final width = stats['videoWidth'];
+        return width?.toString();
+      case 'height':
+      case 'dheight':
+        final stats = await getStats();
+        final height = stats['videoHeight'];
+        return height?.toString();
+      default:
+        return null;
+    }
+  }
+
+  /// Get all playback stats from ExoPlayer.
+  /// Returns a map with video/audio codec info, buffer state, and performance metrics.
+  Future<Map<String, dynamic>> getStats() async {
+    try {
+      final result = await invoke<Map>('getStats');
+      return Map<String, dynamic>.from(result ?? {});
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// Get the current player type ('exoplayer' or 'mpv' if fallback is active).
+  Future<String> getPlayerType() async {
+    try {
+      final result = await invoke<String>('getPlayerType');
+      return result ?? 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  @override
+  Future<void> command(List<String> args) async {
+    if (disposed) return;
+    // Handle MPV commands by translating to ExoPlayer equivalents
+    if (args.isEmpty) return;
+
+    switch (args.first) {
+      case 'loadfile':
+        if (args.length > 1) {
+          await open(Media(args[1]));
+        }
+        break;
+      case 'seek':
+        if (args.length > 1) {
+          final seconds = double.tryParse(args[1]) ?? 0;
+          final mode = args.length > 2 ? args[2] : 'relative';
+          if (mode == 'absolute') {
+            await seek(Duration(milliseconds: (seconds * 1000).toInt()));
+          } else {
+            final newPos = state.position + Duration(milliseconds: (seconds * 1000).toInt());
+            await seek(newPos);
+          }
+        }
+        break;
+      case 'stop':
+        await stop();
+        break;
+      case 'sub-add':
+        if (args.length > 1) {
+          final select = args.length > 2 && args[2] == 'select';
+          await addSubtitleTrack(uri: args[1], select: select);
+        }
+        break;
+    }
+  }
+
+  // ============================================
+  // Subtitle Styling (ExoPlayer Native)
+  // ============================================
+
+  /// Apply subtitle styling to the native ExoPlayer layer.
+  ///
+  /// For non-ASS subtitles, applies CaptionStyleCompat (color, border, background).
+  /// For ASS subtitles, applies font scale via libass setFontScale().
+  Future<void> setSubtitleStyle({
+    required double fontSize,
+    required String textColor,
+    required double borderSize,
+    required String borderColor,
+    required String bgColor,
+    required int bgOpacity,
+    int subtitlePosition = 100,
+  }) async {
+    if (disposed || !initialized) return;
+    await invoke('setSubtitleStyle', {
+      'fontSize': fontSize,
+      'textColor': textColor,
+      'borderSize': borderSize,
+      'borderColor': borderColor,
+      'bgColor': bgColor,
+      'bgOpacity': bgOpacity,
+      'subtitlePosition': subtitlePosition,
+    });
+  }
+
+  // ============================================
+  // Frame Rate Matching
+  // ============================================
+
+  @override
+  Future<void> setVideoFrameRate(double fps, int durationMs) async {
+    if (disposed || !initialized) return;
+    await invoke('setVideoFrameRate', {'fps': fps, 'duration': durationMs});
+  }
+
+  @override
+  Future<void> clearVideoFrameRate() async {
+    if (disposed || !initialized) return;
+    await invoke('clearVideoFrameRate');
+  }
+
+  // ============================================
+  // Audio Focus
+  // ============================================
+
+  @override
+  Future<bool> requestAudioFocus() async {
+    if (disposed || !initialized) return false;
+    final result = await invoke<bool>('requestAudioFocus');
+    return result ?? false;
+  }
+
+  @override
+  Future<void> abandonAudioFocus() async {
+    if (disposed || !initialized) return;
+    await invoke('abandonAudioFocus');
+  }
+}

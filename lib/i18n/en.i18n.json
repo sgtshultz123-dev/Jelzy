@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Plezy"
+    "title": "Jelzy"
   },
   "auth": {
     "signInWithPlex": "Sign in with Plex",
@@ -9,7 +9,17 @@
     "authenticationTimeout": "Authentication timed out. Please try again.",
     "scanQRToSignIn": "Scan this QR code to sign in",
     "waitingForAuth": "Waiting for authentication...\nPlease complete sign-in in your browser.",
-    "useBrowser": "Use browser"
+    "useBrowser": "Use browser",
+    "jellyfinServerUrl": "Server URL",
+    "jellyfinServerUrlHint": "https://your-jellyfin-server.com",
+    "jellyfinUsername": "Username",
+    "jellyfinPassword": "Password",
+    "jellyfinSignIn": "Sign In",
+    "connectionTimeout": "Connection timed out. Please check the server URL.",
+    "serverUnreachable": "Server unreachable. Please check your connection.",
+    "invalidPassword": "Invalid username or password.",
+    "notAuthorized": "Not authorized. Please check your credentials.",
+    "serverError": "Server error. Please try again later."
   },
   "common": {
     "cancel": "Cancel",
@@ -54,7 +64,15 @@
     "loadingServers": "Loading servers...",
     "connectingToServers": "Connecting to servers...",
     "startingOfflineMode": "Starting offline mode...",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "goOnline": "Go Online",
+    "connectionAvailable": "Connection available",
+    "quickConnect": "Quick Connect",
+    "quickConnectSuccess": "Quick Connect authorized!",
+    "quickConnectError": "Quick Connect failed. Please try again.",
+    "quickConnectDescription": "Enter the Quick Connect code shown on your other device.",
+    "quickConnectCode": "Quick Connect Code",
+    "authorize": "Authorize"
   },
   "screens": {
     "licenses": "Licenses",
@@ -70,7 +88,8 @@
     "skipVersion": "Skip This Version",
     "viewRelease": "View Release",
     "latestVersion": "You are on the latest version",
-    "checkFailed": "Failed to check for updates"
+    "checkFailed": "Failed to check for updates",
+    "updateInStore": "Update in Store"
   },
   "settings": {
     "title": "Settings",
@@ -246,7 +265,16 @@
     "hint": "Search movies, shows, music...",
     "tryDifferentTerm": "Try a different search term",
     "searchYourMedia": "Search your media",
-    "enterTitleActorOrKeyword": "Enter a title, actor, or keyword"
+    "enterTitleActorOrKeyword": "Enter a title, actor, or keyword",
+    "categories": {
+      "movies": "Movies",
+      "shows": "Shows",
+      "episodes": "Episodes",
+      "people": "People",
+      "collections": "Collections",
+      "programs": "Programs",
+      "channels": "Channels"
+    }
   },
   "hotkeys": {
     "setShortcutFor": "Set Shortcut for ${actionName}",
@@ -331,7 +359,8 @@
     "shufflePlay": "Shuffle play",
     "playTrailer": "Play trailer",
     "markAsWatched": "Mark as watched",
-    "markAsUnwatched": "Mark as unwatched"
+    "markAsUnwatched": "Mark as unwatched",
+    "playFromStart": "Play from start"
   },
   "videoControls": {
     "audioLabel": "Audio",
@@ -387,7 +416,7 @@
     "pipErrors": {
       "androidVersion": "Requires Android 8.0 or newer",
       "iosVersion": "Requires iOS 15.0 or newer",
-      "permissionDisabled": "Picture-in-picture permission is disabled. Enable it in Settings > Apps > Plezy > Picture-in-picture",
+      "permissionDisabled": "Picture-in-picture permission is disabled. Enable it in Settings > Apps > Jelzy > Picture-in-picture",
       "notSupported": "Device doesn't support picture-in-picture mode",
       "voSwitchFailed": "Failed to switch video output for picture-in-picture",
       "failed": "Picture-in-picture failed to start",
@@ -444,7 +473,8 @@
     "switchingToCompatiblePlayer": "Switching to compatible player...",
     "logsUploaded": "Logs uploaded",
     "logsUploadFailed": "Failed to upload logs",
-    "logId": "Log ID"
+    "logId": "Log ID",
+    "qualityRevertedOnError": "Playback quality reverted due to an error"
   },
   "subtitlingStyling": {
     "stylingOptions": "Styling Options",
@@ -493,7 +523,14 @@
     "rating": "Rating",
     "movie": "Movie",
     "tvShow": "TV Show",
-    "minutesLeft": "${minutes} min left"
+    "minutesLeft": "${minutes} min left",
+    "seasons": "Seasons",
+    "moreLikeThis": "More Like This",
+    "moviesAndShows": "Movies & Shows",
+    "noItemsFound": "No items found",
+    "categories": "Categories",
+    "episodeCount(count)": "${count} episode(s)",
+    "watchedProgress(watched, total)": "${watched} / ${total} watched"
   },
   "errors": {
     "searchFailed": "Search failed: ${error}",
@@ -524,6 +561,8 @@
     "failedToAnalyze": "Failed to analyze library: ${error}",
     "noLibrariesFound": "No libraries found",
     "thisLibraryIsEmpty": "This library is empty",
+    "noFavorites": "No favorites yet",
+    "noGenres": "No genres found",
     "all": "All",
     "clearAll": "Clear All",
     "scanLibraryConfirm": "Are you sure you want to scan \"${title}\"?",
@@ -549,7 +588,12 @@
       "recommended": "Recommended",
       "browse": "Browse",
       "collections": "Collections",
-      "playlists": "Playlists"
+      "playlists": "Playlists",
+      "favorites": "Favorites",
+      "genres": "Genres",
+      "movies": "Movies",
+      "shows": "TV Shows",
+      "suggestions": "Suggestions"
     },
     "groupings": {
       "title": "Grouping",
@@ -798,19 +842,19 @@
     },
     "pairing": {
       "pairWithDesktop": "Connect to Desktop",
-      "discoveryDescription": "Devices on your network running Plezy with the same Plex account will appear automatically",
+      "discoveryDescription": "Devices on your network running Jelzy with the same Plex account will appear automatically",
       "hostAddressHint": "192.168.1.100:48632",
       "connecting": "Connecting...",
       "searchingForDevices": "Looking for devices...",
       "noDevicesFound": "No devices found on your network",
-      "noDevicesHint": "Make sure Plezy is open on your desktop and both devices are on the same WiFi network",
+      "noDevicesHint": "Make sure Jelzy is open on your desktop and both devices are on the same WiFi network",
       "availableDevices": "Available Devices",
       "manualConnection": "Manual Connection",
       "cryptoInitFailed": "Could not initialize secure connection. Make sure you are signed in to a Plex account.",
       "validationHostRequired": "Please enter host address",
       "validationHostFormat": "Format must be IP:port (e.g., 192.168.1.100:48632)",
       "connectionTimedOut": "Connection timed out. Make sure both devices are on the same network.",
-      "sessionNotFound": "Could not find the device. Make sure Plezy is running on the host.",
+      "sessionNotFound": "Could not find the device. Make sure Jelzy is running on the host.",
       "authFailed": "Authentication failed. Make sure both devices are on the same Plex account.",
       "failedToConnect": "Failed to connect: ${error}"
     },

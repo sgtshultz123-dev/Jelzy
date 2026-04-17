@@ -143,7 +143,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
       final processedServers = <String>{};
       for (final serverInfo in liveTvServers) {
         if (!processedServers.add(serverInfo.serverId)) continue;
-        final enabledKeys = _extractEnabledChannelKeys(serverInfo.dvrs);
+        final enabledKeys = serverInfo.dvrs != null ? _extractEnabledChannelKeys(serverInfo.dvrs!) : null;
         if (enabledKeys != null) {
           enabledKeysByServer[serverInfo.serverId] = enabledKeys;
         }

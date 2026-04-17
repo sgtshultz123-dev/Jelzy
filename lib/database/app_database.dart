@@ -211,6 +211,13 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Compatibility extension providing Jellyfin-style `itemId` alias on the
+/// Drift-generated `DownloadedMediaItem` data class.
+extension DownloadedMediaItemCompat on DownloadedMediaItem {
+  /// Alias for [ratingKey] — consistent with Jellyfin itemId naming.
+  String get itemId => ratingKey;
+}
+
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = (Platform.isAndroid || Platform.isIOS)

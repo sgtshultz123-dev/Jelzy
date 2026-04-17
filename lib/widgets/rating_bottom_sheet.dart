@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../widgets/app_icon.dart';
-import '../widgets/overlay_sheet.dart';
+import 'app_icon.dart';
+import 'overlay_sheet.dart';
 import '../focus/dpad_navigator.dart';
 import '../focus/input_mode_tracker.dart';
 import '../i18n/strings.g.dart';

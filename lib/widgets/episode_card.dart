@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:plezy/widgets/app_icon.dart';
+import 'package:jelzy/widgets/app_icon.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 import '../focus/focus_theme.dart';
@@ -12,19 +12,19 @@ import '../providers/download_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/content_utils.dart';
 import '../widgets/collapsible_text.dart';
-import '../widgets/plex_optimized_image.dart';
-import '../models/plex_metadata.dart';
+import '../widgets/optimized_image.dart';
+import '../models/media_metadata.dart';
 import '../utils/platform_detector.dart';
 import '../utils/formatters.dart';
 import '../widgets/media_context_menu.dart';
 import '../widgets/placeholder_container.dart';
 import '../theme/mono_tokens.dart';
-import '../../services/plex_client.dart';
+import '../../services/jellyfin_client.dart';
 
 /// Episode card widget with D-pad long-press support
 class EpisodeCard extends StatefulWidget {
-  final PlexMetadata episode;
-  final PlexClient? client;
+  final MediaMetadata episode;
+  final JellyfinClient? client;
   final VoidCallback onTap;
   final Future<void> Function(String)? onRefresh;
   final Future<void> Function()? onListRefresh;
@@ -416,7 +416,7 @@ class _EpisodeCardState extends State<EpisodeCard> {
       );
     }
     if (widget.episode.thumb != null) {
-      return PlexOptimizedImage.thumb(
+      return OptimizedImage.thumb(
         client: widget.client,
         imagePath: widget.episode.thumb,
         filterQuality: FilterQuality.medium,

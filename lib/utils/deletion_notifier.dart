@@ -1,4 +1,4 @@
-import '../models/plex_metadata.dart';
+import '../models/media_metadata.dart';
 import 'app_logger.dart';
 import 'base_notifier.dart';
 import 'global_key_utils.dart';
@@ -6,9 +6,12 @@ import 'hierarchical_event_mixin.dart';
 
 /// Event representing a media item deletion with parent chain for hierarchical invalidation
 class DeletionEvent with HierarchicalEventMixin {
-  /// The ratingKey of the deleted item
+  /// The ratingKey (itemId) of the deleted item
   @override
   final String ratingKey;
+
+  /// Jellyfin-naming alias for ratingKey
+  String get itemId => ratingKey;
 
   /// Composite key: serverId:ratingKey
   @override
@@ -74,13 +77,13 @@ class DeletionNotifier extends BaseNotifier<DeletionEvent> {
   }
 
   /// Helper to emit a deletion event from metadata
-  void notifyDeleted({required PlexMetadata metadata, bool isDownloadOnly = false}) {
+  void notifyDeleted({required MediaMetadata metadata, bool isDownloadOnly = false}) {
     notify(
       DeletionEvent(
-        ratingKey: metadata.ratingKey,
+        ratingKey: metadata.itemId,
         serverId: metadata.serverId ?? '',
         parentChain: _buildParentChain(metadata),
-        mediaType: metadata.type ?? '',
+        mediaType: metadata.type,
         leafCount: metadata.leafCount ?? 1,
         isDownloadOnly: isDownloadOnly,
       ),
@@ -88,13 +91,13 @@ class DeletionNotifier extends BaseNotifier<DeletionEvent> {
   }
 
   /// Build parent chain from metadata's parent keys
-  List<String> _buildParentChain(PlexMetadata metadata) {
+  List<String> _buildParentChain(MediaMetadata metadata) {
     final chain = <String>[];
     if (metadata.parentRatingKey != null) {
       chain.add(metadata.parentRatingKey!);
     }
-    if (metadata.grandparentRatingKey != null) {
-      chain.add(metadata.grandparentRatingKey!);
+    if (metadata.seriesId != null) {
+      chain.add(metadata.seriesId!);
     }
     return chain;
   }

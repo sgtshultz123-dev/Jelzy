@@ -11,7 +11,7 @@ import 'package:slang/generated.dart';
 import 'strings.g.dart';
 
 // Path: <root>
-class TranslationsZh with BaseTranslations<AppLocale, Translations> implements Translations {
+class TranslationsZh extends Translations with BaseTranslations<AppLocale, Translations> {
 	/// You can call this constructor and build your own translation instance of this locale.
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	TranslationsZh({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver, TranslationMetadata<AppLocale, Translations>? meta})
@@ -21,7 +21,9 @@ class TranslationsZh with BaseTranslations<AppLocale, Translations> implements T
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
-		  ) {
+		  ),
+		  super(cardinalResolver: cardinalResolver, ordinalResolver: ordinalResolver) {
+		super.$meta.setFlatMapFunction($meta.getTranslation); // copy base translations to super.$meta
 		$meta.setFlatMapFunction(_flatMapFunction);
 	}
 
@@ -29,7 +31,7 @@ class TranslationsZh with BaseTranslations<AppLocale, Translations> implements T
 	@override final TranslationMetadata<AppLocale, Translations> $meta;
 
 	/// Access flat map
-	@override dynamic operator[](String key) => $meta.getTranslation(key);
+	@override dynamic operator[](String key) => $meta.getTranslation(key) ?? super.$meta.getTranslation(key);
 
 	late final TranslationsZh _root = this; // ignore: unused_field
 
@@ -78,18 +80,18 @@ class TranslationsZh with BaseTranslations<AppLocale, Translations> implements T
 }
 
 // Path: app
-class _TranslationsAppZh implements TranslationsAppEn {
-	_TranslationsAppZh._(this._root);
+class _TranslationsAppZh extends TranslationsAppEn {
+	_TranslationsAppZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
 	// Translations
-	@override String get title => 'Plezy';
+	@override String get title => 'Jelzy';
 }
 
 // Path: auth
-class _TranslationsAuthZh implements TranslationsAuthEn {
-	_TranslationsAuthZh._(this._root);
+class _TranslationsAuthZh extends TranslationsAuthEn {
+	_TranslationsAuthZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -101,11 +103,21 @@ class _TranslationsAuthZh implements TranslationsAuthEn {
 	@override String get scanQRToSignIn => '扫描二维码登录';
 	@override String get waitingForAuth => '等待验证中...\n请在你的浏览器中完成登录。';
 	@override String get useBrowser => '使用浏览器';
+	@override String get jellyfinServerUrl => '服务器 URL';
+	@override String get jellyfinServerUrlHint => 'https://your-jellyfin-server.com';
+	@override String get jellyfinUsername => '用户名';
+	@override String get jellyfinPassword => '密码';
+	@override String get jellyfinSignIn => '登录';
+	@override String get connectionTimeout => '连接超时，请检查服务器 URL。';
+	@override String get serverUnreachable => '服务器无法访问，请检查您的连接。';
+	@override String get invalidPassword => '用户名或密码无效。';
+	@override String get notAuthorized => '未授权，请检查您的凭据。';
+	@override String get serverError => '服务器错误，请稍后再试。';
 }
 
 // Path: common
-class _TranslationsCommonZh implements TranslationsCommonEn {
-	_TranslationsCommonZh._(this._root);
+class _TranslationsCommonZh extends TranslationsCommonEn {
+	_TranslationsCommonZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -153,11 +165,19 @@ class _TranslationsCommonZh implements TranslationsCommonEn {
 	@override String get connectingToServers => '正在连接服务器...';
 	@override String get startingOfflineMode => '正在启动离线模式...';
 	@override String get loading => '加载中...';
+	@override String get goOnline => '上线';
+	@override String get connectionAvailable => '连接可用';
+	@override String get quickConnect => '快速连接';
+	@override String get quickConnectSuccess => '快速连接已授权！';
+	@override String get quickConnectError => '快速连接失败，请重试。';
+	@override String get quickConnectDescription => '输入其他设备上显示的快速连接码。';
+	@override String get quickConnectCode => '快速连接码';
+	@override String get authorize => '授权';
 }
 
 // Path: screens
-class _TranslationsScreensZh implements TranslationsScreensEn {
-	_TranslationsScreensZh._(this._root);
+class _TranslationsScreensZh extends TranslationsScreensEn {
+	_TranslationsScreensZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -170,8 +190,8 @@ class _TranslationsScreensZh implements TranslationsScreensEn {
 }
 
 // Path: update
-class _TranslationsUpdateZh implements TranslationsUpdateEn {
-	_TranslationsUpdateZh._(this._root);
+class _TranslationsUpdateZh extends TranslationsUpdateEn {
+	_TranslationsUpdateZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -183,11 +203,12 @@ class _TranslationsUpdateZh implements TranslationsUpdateEn {
 	@override String get viewRelease => '查看发布详情';
 	@override String get latestVersion => '已安装的版本是可用的最新版本';
 	@override String get checkFailed => '无法检查更新';
+	@override String get updateInStore => '在商店更新';
 }
 
 // Path: settings
-class _TranslationsSettingsZh implements TranslationsSettingsEn {
-	_TranslationsSettingsZh._(this._root);
+class _TranslationsSettingsZh extends TranslationsSettingsEn {
+	_TranslationsSettingsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -363,8 +384,8 @@ class _TranslationsSettingsZh implements TranslationsSettingsEn {
 }
 
 // Path: search
-class _TranslationsSearchZh implements TranslationsSearchEn {
-	_TranslationsSearchZh._(this._root);
+class _TranslationsSearchZh extends TranslationsSearchEn {
+	_TranslationsSearchZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -373,11 +394,12 @@ class _TranslationsSearchZh implements TranslationsSearchEn {
 	@override String get tryDifferentTerm => '尝试不同的搜索词';
 	@override String get searchYourMedia => '搜索媒体';
 	@override String get enterTitleActorOrKeyword => '输入标题、演员或关键词';
+	@override late final _TranslationsSearchCategoriesZh categories = _TranslationsSearchCategoriesZh._(_root);
 }
 
 // Path: hotkeys
-class _TranslationsHotkeysZh implements TranslationsHotkeysEn {
-	_TranslationsHotkeysZh._(this._root);
+class _TranslationsHotkeysZh extends TranslationsHotkeysEn {
+	_TranslationsHotkeysZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -388,8 +410,8 @@ class _TranslationsHotkeysZh implements TranslationsHotkeysEn {
 }
 
 // Path: fileInfo
-class _TranslationsFileInfoZh implements TranslationsFileInfoEn {
-	_TranslationsFileInfoZh._(this._root);
+class _TranslationsFileInfoZh extends TranslationsFileInfoEn {
+	_TranslationsFileInfoZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -422,8 +444,8 @@ class _TranslationsFileInfoZh implements TranslationsFileInfoEn {
 }
 
 // Path: mediaMenu
-class _TranslationsMediaMenuZh implements TranslationsMediaMenuEn {
-	_TranslationsMediaMenuZh._(this._root);
+class _TranslationsMediaMenuZh extends TranslationsMediaMenuEn {
+	_TranslationsMediaMenuZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -446,8 +468,8 @@ class _TranslationsMediaMenuZh implements TranslationsMediaMenuEn {
 }
 
 // Path: accessibility
-class _TranslationsAccessibilityZh implements TranslationsAccessibilityEn {
-	_TranslationsAccessibilityZh._(this._root);
+class _TranslationsAccessibilityZh extends TranslationsAccessibilityEn {
+	_TranslationsAccessibilityZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -463,8 +485,8 @@ class _TranslationsAccessibilityZh implements TranslationsAccessibilityEn {
 }
 
 // Path: tooltips
-class _TranslationsTooltipsZh implements TranslationsTooltipsEn {
-	_TranslationsTooltipsZh._(this._root);
+class _TranslationsTooltipsZh extends TranslationsTooltipsEn {
+	_TranslationsTooltipsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -473,11 +495,12 @@ class _TranslationsTooltipsZh implements TranslationsTooltipsEn {
 	@override String get playTrailer => '播放预告片';
 	@override String get markAsWatched => '标记为已观看';
 	@override String get markAsUnwatched => '标记为未观看';
+	@override String get playFromStart => '从头播放';
 }
 
 // Path: videoControls
-class _TranslationsVideoControlsZh implements TranslationsVideoControlsEn {
-	_TranslationsVideoControlsZh._(this._root);
+class _TranslationsVideoControlsZh extends TranslationsVideoControlsEn {
+	_TranslationsVideoControlsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -546,8 +569,8 @@ class _TranslationsVideoControlsZh implements TranslationsVideoControlsEn {
 }
 
 // Path: userStatus
-class _TranslationsUserStatusZh implements TranslationsUserStatusEn {
-	_TranslationsUserStatusZh._(this._root);
+class _TranslationsUserStatusZh extends TranslationsUserStatusEn {
+	_TranslationsUserStatusZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -559,8 +582,8 @@ class _TranslationsUserStatusZh implements TranslationsUserStatusEn {
 }
 
 // Path: messages
-class _TranslationsMessagesZh implements TranslationsMessagesEn {
-	_TranslationsMessagesZh._(this._root);
+class _TranslationsMessagesZh extends TranslationsMessagesEn {
+	_TranslationsMessagesZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -599,11 +622,12 @@ class _TranslationsMessagesZh implements TranslationsMessagesEn {
 	@override String get logsUploaded => '日志已上传';
 	@override String get logsUploadFailed => '上传日志失败';
 	@override String get logId => '日志 ID';
+	@override String get qualityRevertedOnError => '由于错误，播放质量已还原';
 }
 
 // Path: subtitlingStyling
-class _TranslationsSubtitlingStylingZh implements TranslationsSubtitlingStylingEn {
-	_TranslationsSubtitlingStylingZh._(this._root);
+class _TranslationsSubtitlingStylingZh extends TranslationsSubtitlingStylingEn {
+	_TranslationsSubtitlingStylingZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -623,8 +647,8 @@ class _TranslationsSubtitlingStylingZh implements TranslationsSubtitlingStylingE
 }
 
 // Path: mpvConfig
-class _TranslationsMpvConfigZh implements TranslationsMpvConfigEn {
-	_TranslationsMpvConfigZh._(this._root);
+class _TranslationsMpvConfigZh extends TranslationsMpvConfigEn {
+	_TranslationsMpvConfigZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -646,8 +670,8 @@ class _TranslationsMpvConfigZh implements TranslationsMpvConfigEn {
 }
 
 // Path: dialog
-class _TranslationsDialogZh implements TranslationsDialogEn {
-	_TranslationsDialogZh._(this._root);
+class _TranslationsDialogZh extends TranslationsDialogEn {
+	_TranslationsDialogZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -656,8 +680,8 @@ class _TranslationsDialogZh implements TranslationsDialogEn {
 }
 
 // Path: discover
-class _TranslationsDiscoverZh implements TranslationsDiscoverEn {
-	_TranslationsDiscoverZh._(this._root);
+class _TranslationsDiscoverZh extends TranslationsDiscoverEn {
+	_TranslationsDiscoverZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -676,11 +700,18 @@ class _TranslationsDiscoverZh implements TranslationsDiscoverEn {
 	@override String get movie => '电影';
 	@override String get tvShow => '电视剧';
 	@override String minutesLeft({required Object minutes}) => '剩余 ${minutes} 分钟';
+	@override String get seasons => '季';
+	@override String get moreLikeThis => '相关推荐';
+	@override String get moviesAndShows => '电影与剧集';
+	@override String get noItemsFound => '未找到项目';
+	@override String get categories => '分类';
+	@override String episodeCount({required Object count}) => '${count} 集';
+	@override String watchedProgress({required Object watched, required Object total}) => '${watched} / ${total} 已观看';
 }
 
 // Path: errors
-class _TranslationsErrorsZh implements TranslationsErrorsEn {
-	_TranslationsErrorsZh._(this._root);
+class _TranslationsErrorsZh extends TranslationsErrorsEn {
+	_TranslationsErrorsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -699,8 +730,8 @@ class _TranslationsErrorsZh implements TranslationsErrorsEn {
 }
 
 // Path: libraries
-class _TranslationsLibrariesZh implements TranslationsLibrariesEn {
-	_TranslationsLibrariesZh._(this._root);
+class _TranslationsLibrariesZh extends TranslationsLibrariesEn {
+	_TranslationsLibrariesZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -741,13 +772,15 @@ class _TranslationsLibrariesZh implements TranslationsLibrariesEn {
 	@override String get noCollections => '此媒体库中没有合集';
 	@override String get noFoldersFound => '未找到文件夹';
 	@override String get folders => '文件夹';
+	@override String get noFavorites => '暂无收藏';
+	@override String get noGenres => '未找到类型';
 	@override late final _TranslationsLibrariesTabsZh tabs = _TranslationsLibrariesTabsZh._(_root);
 	@override late final _TranslationsLibrariesGroupingsZh groupings = _TranslationsLibrariesGroupingsZh._(_root);
 }
 
 // Path: about
-class _TranslationsAboutZh implements TranslationsAboutEn {
-	_TranslationsAboutZh._(this._root);
+class _TranslationsAboutZh extends TranslationsAboutEn {
+	_TranslationsAboutZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -760,8 +793,8 @@ class _TranslationsAboutZh implements TranslationsAboutEn {
 }
 
 // Path: serverSelection
-class _TranslationsServerSelectionZh implements TranslationsServerSelectionEn {
-	_TranslationsServerSelectionZh._(this._root);
+class _TranslationsServerSelectionZh extends TranslationsServerSelectionEn {
+	_TranslationsServerSelectionZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -772,8 +805,8 @@ class _TranslationsServerSelectionZh implements TranslationsServerSelectionEn {
 }
 
 // Path: hubDetail
-class _TranslationsHubDetailZh implements TranslationsHubDetailEn {
-	_TranslationsHubDetailZh._(this._root);
+class _TranslationsHubDetailZh extends TranslationsHubDetailEn {
+	_TranslationsHubDetailZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -786,8 +819,8 @@ class _TranslationsHubDetailZh implements TranslationsHubDetailEn {
 }
 
 // Path: logs
-class _TranslationsLogsZh implements TranslationsLogsEn {
-	_TranslationsLogsZh._(this._root);
+class _TranslationsLogsZh extends TranslationsLogsEn {
+	_TranslationsLogsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -798,8 +831,8 @@ class _TranslationsLogsZh implements TranslationsLogsEn {
 }
 
 // Path: licenses
-class _TranslationsLicensesZh implements TranslationsLicensesEn {
-	_TranslationsLicensesZh._(this._root);
+class _TranslationsLicensesZh extends TranslationsLicensesEn {
+	_TranslationsLicensesZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -811,8 +844,8 @@ class _TranslationsLicensesZh implements TranslationsLicensesEn {
 }
 
 // Path: navigation
-class _TranslationsNavigationZh implements TranslationsNavigationEn {
-	_TranslationsNavigationZh._(this._root);
+class _TranslationsNavigationZh extends TranslationsNavigationEn {
+	_TranslationsNavigationZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -823,8 +856,8 @@ class _TranslationsNavigationZh implements TranslationsNavigationEn {
 }
 
 // Path: liveTv
-class _TranslationsLiveTvZh implements TranslationsLiveTvEn {
-	_TranslationsLiveTvZh._(this._root);
+class _TranslationsLiveTvZh extends TranslationsLiveTvEn {
+	_TranslationsLiveTvZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -855,8 +888,8 @@ class _TranslationsLiveTvZh implements TranslationsLiveTvEn {
 }
 
 // Path: downloads
-class _TranslationsDownloadsZh implements TranslationsDownloadsEn {
-	_TranslationsDownloadsZh._(this._root);
+class _TranslationsDownloadsZh extends TranslationsDownloadsEn {
+	_TranslationsDownloadsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -890,8 +923,8 @@ class _TranslationsDownloadsZh implements TranslationsDownloadsEn {
 }
 
 // Path: playlists
-class _TranslationsPlaylistsZh implements TranslationsPlaylistsEn {
-	_TranslationsPlaylistsZh._(this._root);
+class _TranslationsPlaylistsZh extends TranslationsPlaylistsEn {
+	_TranslationsPlaylistsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -924,8 +957,8 @@ class _TranslationsPlaylistsZh implements TranslationsPlaylistsEn {
 }
 
 // Path: collections
-class _TranslationsCollectionsZh implements TranslationsCollectionsEn {
-	_TranslationsCollectionsZh._(this._root);
+class _TranslationsCollectionsZh extends TranslationsCollectionsEn {
+	_TranslationsCollectionsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -955,8 +988,8 @@ class _TranslationsCollectionsZh implements TranslationsCollectionsEn {
 }
 
 // Path: watchTogether
-class _TranslationsWatchTogetherZh implements TranslationsWatchTogetherEn {
-	_TranslationsWatchTogetherZh._(this._root);
+class _TranslationsWatchTogetherZh extends TranslationsWatchTogetherEn {
+	_TranslationsWatchTogetherZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1022,8 +1055,8 @@ class _TranslationsWatchTogetherZh implements TranslationsWatchTogetherEn {
 }
 
 // Path: shaders
-class _TranslationsShadersZh implements TranslationsShadersEn {
-	_TranslationsShadersZh._(this._root);
+class _TranslationsShadersZh extends TranslationsShadersEn {
+	_TranslationsShadersZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1043,8 +1076,8 @@ class _TranslationsShadersZh implements TranslationsShadersEn {
 }
 
 // Path: companionRemote
-class _TranslationsCompanionRemoteZh implements TranslationsCompanionRemoteEn {
-	_TranslationsCompanionRemoteZh._(this._root);
+class _TranslationsCompanionRemoteZh extends TranslationsCompanionRemoteEn {
+	_TranslationsCompanionRemoteZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1062,8 +1095,8 @@ class _TranslationsCompanionRemoteZh implements TranslationsCompanionRemoteEn {
 }
 
 // Path: videoSettings
-class _TranslationsVideoSettingsZh implements TranslationsVideoSettingsEn {
-	_TranslationsVideoSettingsZh._(this._root);
+class _TranslationsVideoSettingsZh extends TranslationsVideoSettingsEn {
+	_TranslationsVideoSettingsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1081,8 +1114,8 @@ class _TranslationsVideoSettingsZh implements TranslationsVideoSettingsEn {
 }
 
 // Path: externalPlayer
-class _TranslationsExternalPlayerZh implements TranslationsExternalPlayerEn {
-	_TranslationsExternalPlayerZh._(this._root);
+class _TranslationsExternalPlayerZh extends TranslationsExternalPlayerEn {
+	_TranslationsExternalPlayerZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1105,8 +1138,8 @@ class _TranslationsExternalPlayerZh implements TranslationsExternalPlayerEn {
 }
 
 // Path: metadataEdit
-class _TranslationsMetadataEditZh implements TranslationsMetadataEditEn {
-	_TranslationsMetadataEditZh._(this._root);
+class _TranslationsMetadataEditZh extends TranslationsMetadataEditEn {
+	_TranslationsMetadataEditZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1188,8 +1221,8 @@ class _TranslationsMetadataEditZh implements TranslationsMetadataEditEn {
 }
 
 // Path: serverTasks
-class _TranslationsServerTasksZh implements TranslationsServerTasksEn {
-	_TranslationsServerTasksZh._(this._root);
+class _TranslationsServerTasksZh extends TranslationsServerTasksEn {
+	_TranslationsServerTasksZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1199,9 +1232,25 @@ class _TranslationsServerTasksZh implements TranslationsServerTasksEn {
 	@override String get noTasks => '没有正在运行的任务';
 }
 
+// Path: search.categories
+class _TranslationsSearchCategoriesZh extends TranslationsSearchCategoriesEn {
+	_TranslationsSearchCategoriesZh._(TranslationsZh root) : this._root = root, super.internal(root);
+
+	final TranslationsZh _root; // ignore: unused_field
+
+	// Translations
+	@override String get movies => '电影';
+	@override String get shows => '剧集';
+	@override String get episodes => '单集';
+	@override String get people => '人物';
+	@override String get collections => '合集';
+	@override String get programs => '节目';
+	@override String get channels => '频道';
+}
+
 // Path: hotkeys.actions
-class _TranslationsHotkeysActionsZh implements TranslationsHotkeysActionsEn {
-	_TranslationsHotkeysActionsZh._(this._root);
+class _TranslationsHotkeysActionsZh extends TranslationsHotkeysActionsEn {
+	_TranslationsHotkeysActionsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1228,15 +1277,15 @@ class _TranslationsHotkeysActionsZh implements TranslationsHotkeysActionsEn {
 }
 
 // Path: videoControls.pipErrors
-class _TranslationsVideoControlsPipErrorsZh implements TranslationsVideoControlsPipErrorsEn {
-	_TranslationsVideoControlsPipErrorsZh._(this._root);
+class _TranslationsVideoControlsPipErrorsZh extends TranslationsVideoControlsPipErrorsEn {
+	_TranslationsVideoControlsPipErrorsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
 	// Translations
 	@override String get androidVersion => '需要 Android 8.0 或更高版本';
 	@override String get iosVersion => '需要 iOS 15.0 或更高版本';
-	@override String get permissionDisabled => '画中画权限已禁用。请在设置 > 应用 > Plezy > 画中画中启用';
+	@override String get permissionDisabled => '画中画权限已禁用。请在设置 > 应用 > Jelzy > 画中画中启用';
 	@override String get notSupported => '此设备不支持画中画模式';
 	@override String get voSwitchFailed => '无法切换画中画的视频输出';
 	@override String get failed => '画中画启动失败';
@@ -1244,8 +1293,8 @@ class _TranslationsVideoControlsPipErrorsZh implements TranslationsVideoControls
 }
 
 // Path: libraries.tabs
-class _TranslationsLibrariesTabsZh implements TranslationsLibrariesTabsEn {
-	_TranslationsLibrariesTabsZh._(this._root);
+class _TranslationsLibrariesTabsZh extends TranslationsLibrariesTabsEn {
+	_TranslationsLibrariesTabsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1254,11 +1303,16 @@ class _TranslationsLibrariesTabsZh implements TranslationsLibrariesTabsEn {
 	@override String get browse => '浏览';
 	@override String get collections => '合集';
 	@override String get playlists => '播放列表';
+	@override String get favorites => '收藏';
+	@override String get genres => '类型';
+	@override String get movies => '电影';
+	@override String get shows => '剧集';
+	@override String get suggestions => '推荐';
 }
 
 // Path: libraries.groupings
-class _TranslationsLibrariesGroupingsZh implements TranslationsLibrariesGroupingsEn {
-	_TranslationsLibrariesGroupingsZh._(this._root);
+class _TranslationsLibrariesGroupingsZh extends TranslationsLibrariesGroupingsEn {
+	_TranslationsLibrariesGroupingsZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1273,8 +1327,8 @@ class _TranslationsLibrariesGroupingsZh implements TranslationsLibrariesGrouping
 }
 
 // Path: companionRemote.session
-class _TranslationsCompanionRemoteSessionZh implements TranslationsCompanionRemoteSessionEn {
-	_TranslationsCompanionRemoteSessionZh._(this._root);
+class _TranslationsCompanionRemoteSessionZh extends TranslationsCompanionRemoteSessionEn {
+	_TranslationsCompanionRemoteSessionZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1294,33 +1348,33 @@ class _TranslationsCompanionRemoteSessionZh implements TranslationsCompanionRemo
 }
 
 // Path: companionRemote.pairing
-class _TranslationsCompanionRemotePairingZh implements TranslationsCompanionRemotePairingEn {
-	_TranslationsCompanionRemotePairingZh._(this._root);
+class _TranslationsCompanionRemotePairingZh extends TranslationsCompanionRemotePairingEn {
+	_TranslationsCompanionRemotePairingZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
 	// Translations
 	@override String get pairWithDesktop => '连接到桌面';
-	@override String get discoveryDescription => '网络上使用相同Plex账户运行Plezy的设备将自动显示';
+	@override String get discoveryDescription => '网络上使用相同Plex账户运行Jelzy的设备将自动显示';
 	@override String get hostAddressHint => '192.168.1.100:48632';
 	@override String get connecting => '正在连接...';
 	@override String get searchingForDevices => '正在搜索设备...';
 	@override String get noDevicesFound => '未在网络上找到设备';
-	@override String get noDevicesHint => '请确保桌面上已打开Plezy，且两台设备在同一WiFi网络上';
+	@override String get noDevicesHint => '请确保桌面上已打开Jelzy，且两台设备在同一WiFi网络上';
 	@override String get availableDevices => '可用设备';
 	@override String get manualConnection => '手动连接';
 	@override String get cryptoInitFailed => '无法初始化安全连接。请确保已登录Plex账户。';
 	@override String get validationHostRequired => '请输入主机地址';
 	@override String get validationHostFormat => '格式必须为IP:端口（例如 192.168.1.100:48632）';
 	@override String get connectionTimedOut => '连接超时。请确保两台设备在同一网络上。';
-	@override String get sessionNotFound => '未找到设备。请确保Plezy正在主机上运行。';
+	@override String get sessionNotFound => '未找到设备。请确保Jelzy正在主机上运行。';
 	@override String get authFailed => '认证失败。请确保两台设备使用相同的Plex账户。';
 	@override String failedToConnect({required Object error}) => '连接失败：${error}';
 }
 
 // Path: companionRemote.remote
-class _TranslationsCompanionRemoteRemoteZh implements TranslationsCompanionRemoteRemoteEn {
-	_TranslationsCompanionRemoteRemoteZh._(this._root);
+class _TranslationsCompanionRemoteRemoteZh extends TranslationsCompanionRemoteRemoteEn {
+	_TranslationsCompanionRemoteRemoteZh._(TranslationsZh root) : this._root = root, super.internal(root);
 
 	final TranslationsZh _root; // ignore: unused_field
 
@@ -1364,7 +1418,7 @@ class _TranslationsCompanionRemoteRemoteZh implements TranslationsCompanionRemot
 extension on TranslationsZh {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
-			'app.title' => 'Plezy',
+			'app.title' => 'Jelzy',
 			'auth.signInWithPlex' => '使用 Plex 登录',
 			'auth.showQRCode' => '显示二维码',
 			'auth.authenticate' => '验证',
@@ -1372,6 +1426,16 @@ extension on TranslationsZh {
 			'auth.scanQRToSignIn' => '扫描二维码登录',
 			'auth.waitingForAuth' => '等待验证中...\n请在你的浏览器中完成登录。',
 			'auth.useBrowser' => '使用浏览器',
+			'auth.jellyfinServerUrl' => '服务器 URL',
+			'auth.jellyfinServerUrlHint' => 'https://your-jellyfin-server.com',
+			'auth.jellyfinUsername' => '用户名',
+			'auth.jellyfinPassword' => '密码',
+			'auth.jellyfinSignIn' => '登录',
+			'auth.connectionTimeout' => '连接超时，请检查服务器 URL。',
+			'auth.serverUnreachable' => '服务器无法访问，请检查您的连接。',
+			'auth.invalidPassword' => '用户名或密码无效。',
+			'auth.notAuthorized' => '未授权，请检查您的凭据。',
+			'auth.serverError' => '服务器错误，请稍后再试。',
 			'common.cancel' => '取消',
 			'common.save' => '保存',
 			'common.close' => '关闭',
@@ -1415,6 +1479,14 @@ extension on TranslationsZh {
 			'common.connectingToServers' => '正在连接服务器...',
 			'common.startingOfflineMode' => '正在启动离线模式...',
 			'common.loading' => '加载中...',
+			'common.goOnline' => '上线',
+			'common.connectionAvailable' => '连接可用',
+			'common.quickConnect' => '快速连接',
+			'common.quickConnectSuccess' => '快速连接已授权！',
+			'common.quickConnectError' => '快速连接失败，请重试。',
+			'common.quickConnectDescription' => '输入其他设备上显示的快速连接码。',
+			'common.quickConnectCode' => '快速连接码',
+			'common.authorize' => '授权',
 			'screens.licenses' => '许可证',
 			'screens.switchProfile' => '切换用户',
 			'screens.subtitleStyling' => '字幕样式',
@@ -1427,6 +1499,7 @@ extension on TranslationsZh {
 			'update.viewRelease' => '查看发布详情',
 			'update.latestVersion' => '已安装的版本是可用的最新版本',
 			'update.checkFailed' => '无法检查更新',
+			'update.updateInStore' => '在商店更新',
 			'settings.title' => '设置',
 			'settings.language' => '语言',
 			'settings.theme' => '主题',
@@ -1599,6 +1672,13 @@ extension on TranslationsZh {
 			'search.tryDifferentTerm' => '尝试不同的搜索词',
 			'search.searchYourMedia' => '搜索媒体',
 			'search.enterTitleActorOrKeyword' => '输入标题、演员或关键词',
+			'search.categories.movies' => '电影',
+			'search.categories.shows' => '剧集',
+			'search.categories.episodes' => '单集',
+			'search.categories.people' => '人物',
+			'search.categories.collections' => '合集',
+			'search.categories.programs' => '节目',
+			'search.categories.channels' => '频道',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '为 ${actionName} 设置快捷键',
 			'hotkeys.clearShortcut' => '清除快捷键',
 			'hotkeys.actions.playPause' => '播放/暂停',
@@ -1672,6 +1752,7 @@ extension on TranslationsZh {
 			'tooltips.playTrailer' => '播放预告片',
 			'tooltips.markAsWatched' => '标记为已观看',
 			'tooltips.markAsUnwatched' => '标记为未观看',
+			'tooltips.playFromStart' => '从头播放',
 			'videoControls.audioLabel' => '音频',
 			'videoControls.subtitlesLabel' => '字幕',
 			'videoControls.resetToZero' => '重置为 0ms',
@@ -1724,7 +1805,7 @@ extension on TranslationsZh {
 			'videoControls.pipFailed' => '画中画启动失败',
 			'videoControls.pipErrors.androidVersion' => '需要 Android 8.0 或更高版本',
 			'videoControls.pipErrors.iosVersion' => '需要 iOS 15.0 或更高版本',
-			'videoControls.pipErrors.permissionDisabled' => '画中画权限已禁用。请在设置 > 应用 > Plezy > 画中画中启用',
+			'videoControls.pipErrors.permissionDisabled' => '画中画权限已禁用。请在设置 > 应用 > Jelzy > 画中画中启用',
 			'videoControls.pipErrors.notSupported' => '此设备不支持画中画模式',
 			'videoControls.pipErrors.voSwitchFailed' => '无法切换画中画的视频输出',
 			'videoControls.pipErrors.failed' => '画中画启动失败',
@@ -1777,6 +1858,7 @@ extension on TranslationsZh {
 			'messages.logsUploaded' => '日志已上传',
 			'messages.logsUploadFailed' => '上传日志失败',
 			'messages.logId' => '日志 ID',
+			'messages.qualityRevertedOnError' => '由于错误，播放质量已还原',
 			'subtitlingStyling.stylingOptions' => '样式选项',
 			'subtitlingStyling.text' => '文本',
 			'subtitlingStyling.border' => '边框',
@@ -1818,6 +1900,13 @@ extension on TranslationsZh {
 			'discover.movie' => '电影',
 			'discover.tvShow' => '电视剧',
 			'discover.minutesLeft' => ({required Object minutes}) => '剩余 ${minutes} 分钟',
+			'discover.seasons' => '季',
+			'discover.moreLikeThis' => '相关推荐',
+			'discover.moviesAndShows' => '电影与剧集',
+			'discover.noItemsFound' => '未找到项目',
+			'discover.categories' => '分类',
+			'discover.episodeCount' => ({required Object count}) => '${count} 集',
+			'discover.watchedProgress' => ({required Object watched, required Object total}) => '${watched} / ${total} 已观看',
 			'errors.searchFailed' => ({required Object error}) => '搜索失败: ${error}',
 			'errors.connectionTimeout' => ({required Object context}) => '加载 ${context} 时连接超时',
 			'errors.connectionFailed' => '无法连接到 Plex 服务器',
@@ -1841,6 +1930,8 @@ extension on TranslationsZh {
 			'libraries.failedToEmptyTrash' => ({required Object error}) => '无法清空回收站: ${error}',
 			'libraries.analyzing' => ({required Object title}) => '正在分析 “${title}”...',
 			'libraries.analysisStarted' => ({required Object title}) => '已开始分析 “${title}”',
+			_ => null,
+		} ?? switch (path) {
 			'libraries.failedToAnalyze' => ({required Object error}) => '无法分析媒体库: ${error}',
 			'libraries.noLibrariesFound' => '未找到媒体库',
 			'libraries.thisLibraryIsEmpty' => '此媒体库为空',
@@ -1865,10 +1956,17 @@ extension on TranslationsZh {
 			'libraries.noCollections' => '此媒体库中没有合集',
 			'libraries.noFoldersFound' => '未找到文件夹',
 			'libraries.folders' => '文件夹',
+			'libraries.noFavorites' => '暂无收藏',
+			'libraries.noGenres' => '未找到类型',
 			'libraries.tabs.recommended' => '推荐',
 			'libraries.tabs.browse' => '浏览',
 			'libraries.tabs.collections' => '合集',
 			'libraries.tabs.playlists' => '播放列表',
+			'libraries.tabs.favorites' => '收藏',
+			'libraries.tabs.genres' => '类型',
+			'libraries.tabs.movies' => '电影',
+			'libraries.tabs.shows' => '剧集',
+			'libraries.tabs.suggestions' => '推荐',
 			'libraries.groupings.title' => '分组',
 			'libraries.groupings.all' => '全部',
 			'libraries.groupings.movies' => '电影',
@@ -1876,8 +1974,6 @@ extension on TranslationsZh {
 			'libraries.groupings.seasons' => '季',
 			'libraries.groupings.episodes' => '集',
 			'libraries.groupings.folders' => '文件夹',
-			_ => null,
-		} ?? switch (path) {
 			'about.title' => '关于',
 			'about.openSourceLicenses' => '开源许可证',
 			'about.versionLabel' => ({required Object version}) => '版本 ${version}',
@@ -2087,19 +2183,19 @@ extension on TranslationsZh {
 			'companionRemote.session.stopServer' => '停止服务器',
 			'companionRemote.session.minimize' => '最小化',
 			'companionRemote.pairing.pairWithDesktop' => '连接到桌面',
-			'companionRemote.pairing.discoveryDescription' => '网络上使用相同Plex账户运行Plezy的设备将自动显示',
+			'companionRemote.pairing.discoveryDescription' => '网络上使用相同Plex账户运行Jelzy的设备将自动显示',
 			'companionRemote.pairing.hostAddressHint' => '192.168.1.100:48632',
 			'companionRemote.pairing.connecting' => '正在连接...',
 			'companionRemote.pairing.searchingForDevices' => '正在搜索设备...',
 			'companionRemote.pairing.noDevicesFound' => '未在网络上找到设备',
-			'companionRemote.pairing.noDevicesHint' => '请确保桌面上已打开Plezy，且两台设备在同一WiFi网络上',
+			'companionRemote.pairing.noDevicesHint' => '请确保桌面上已打开Jelzy，且两台设备在同一WiFi网络上',
 			'companionRemote.pairing.availableDevices' => '可用设备',
 			'companionRemote.pairing.manualConnection' => '手动连接',
 			'companionRemote.pairing.cryptoInitFailed' => '无法初始化安全连接。请确保已登录Plex账户。',
 			'companionRemote.pairing.validationHostRequired' => '请输入主机地址',
 			'companionRemote.pairing.validationHostFormat' => '格式必须为IP:端口（例如 192.168.1.100:48632）',
 			'companionRemote.pairing.connectionTimedOut' => '连接超时。请确保两台设备在同一网络上。',
-			'companionRemote.pairing.sessionNotFound' => '未找到设备。请确保Plezy正在主机上运行。',
+			'companionRemote.pairing.sessionNotFound' => '未找到设备。请确保Jelzy正在主机上运行。',
 			'companionRemote.pairing.authFailed' => '认证失败。请确保两台设备使用相同的Plex账户。',
 			'companionRemote.pairing.failedToConnect' => ({required Object error}) => '连接失败：${error}',
 			'companionRemote.remote.disconnectConfirm' => '是否要断开远程会话的连接？',
